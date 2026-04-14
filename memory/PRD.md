@@ -100,6 +100,12 @@ Sistema de gestión de reservas para eventos (bodas, quinceañeras, fiestas soci
 
 ---
 
+### App de Escritorio Portable (Iteración 9 - Abril 2026) ✅
+- Sección "App de Escritorio" en Ajustes con botón "Descargar para Windows (.zip)"
+- Endpoint /api/download/package genera .zip (~2MB): app.py standalone + React build + .env + start.bat + start.sh + README.txt
+- Al cambiar la BD en Ajustes y re-descargar: el .env del paquete tiene la nueva URL automáticamente
+- Doble clic en start.bat: Python instala deps y abre el navegador en localhost:8001
+
 ## Endpoints Backend
 
 | Método | Ruta | Descripción |

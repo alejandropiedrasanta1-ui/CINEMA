@@ -1,65 +1,46 @@
+"""
+Cinema Productions - App Local Auto-contenida
+==============================================
+Ejecutar: python app.py   (o doble clic en start.bat en Windows)
+"""
 from fastapi import FastAPI, APIRouter, HTTPException, UploadFile, File
-from fastapi.responses import JSONResponse, Response
-from contextlib import asynccontextmanager
+from fastapi.responses import JSONResponse, Response, FileResponse
+from fastapi.staticfiles import StaticFiles
+from starlette.middleware.cors import CORSMiddleware
 from dotenv import load_dotenv
 import csv
 import io
-import asyncio
-from starlette.middleware.cors import CORSMiddleware
-from motor.motor_asyncio import AsyncIOMotorClient
 import os
 import logging
 import base64
 import uuid
+import webbrowser
+import threading
+import time
 from pathlib import Path
 from pydantic import BaseModel, Field
-from typing import List, Optional
-from datetime import datetime, timezone, timedelta
+from typing import Optional
+from datetime import datetime, timezone
 from bson import ObjectId
-import resend as resend_lib
-from apscheduler.schedulers.asyncio import AsyncIOScheduler
-from apscheduler.triggers.cron import CronTrigger
-
+from motor.motor_asyncio import AsyncIOMotorClient
 
 ROOT_DIR = Path(__file__).parent
 load_dotenv(ROOT_DIR / '.env')
 
+DB_NAME = os.environ.get('DB_NAME', 'cinema_productions')
 CUSTOM_DB_FILE = ROOT_DIR / '.db_override'
-DB_NAME = os.environ['DB_NAME']
 
-# Active MongoDB URL: prefer custom override file
-_mongo_url = CUSTOM_DB_FILE.read_text().strip() if CUSTOM_DB_FILE.exists() else os.environ['MONGO_URL']
+_mongo_url = CUSTOM_DB_FILE.read_text().strip() if CUSTOM_DB_FILE.exists() else os.environ.get('MONGO_URL', 'mongodb://localhost:27017')
 client = AsyncIOMotorClient(_mongo_url)
 db = client[DB_NAME]
 
-logging.basicConfig(level=logging.INFO)
+logging.basicConfig(level=logging.WARNING)
 logger = logging.getLogger(__name__)
 
-scheduler = AsyncIOScheduler()
-
-
-# ─── Lifespan ────────────────────────────────────────────
-@asynccontextmanager
-async def lifespan(app_instance: FastAPI):
-    scheduler.add_job(
-        check_and_send_reminders,
-        CronTrigger(hour=8, minute=0),
-        id="daily_reminders",
-        replace_existing=True
-    )
-    scheduler.start()
-    logger.info("Scheduler started")
-    yield
-    scheduler.shutdown()
-    client.close()
-    logger.info("Scheduler stopped")
-
-
-app = FastAPI(lifespan=lifespan)
+app = FastAPI(title="Cinema Productions")
 api_router = APIRouter(prefix="/api")
 
 
-# ─── Helper ──────────────────────────────────────────────
 def doc_to_dict(doc: dict) -> dict:
     if doc is None:
         return {}
@@ -69,7 +50,8 @@ def doc_to_dict(doc: dict) -> dict:
     return d
 
 
-# ─── Pydantic Models ─────────────────────────────────────
+# ─── Models ──────────────────────────────────────────────
+
 class ReservationCreate(BaseModel):
     client_name: str
     client_phone: Optional[str] = None
@@ -133,94 +115,11 @@ class DBConnectRequest(BaseModel):
     url: str
 
 
-# ─── Reminder Logic ──────────────────────────────────────
-def _build_reminder_html(events: list, days: int) -> str:
-    rows = ""
-    for ev in events:
-        rows += f"""
-        <tr>
-          <td style="padding:10px 16px;border-bottom:1px solid #e5e7eb;">{ev.get('client_name','')}</td>
-          <td style="padding:10px 16px;border-bottom:1px solid #e5e7eb;">{ev.get('event_type','')}</td>
-          <td style="padding:10px 16px;border-bottom:1px solid #e5e7eb;">{ev.get('event_date','')}</td>
-          <td style="padding:10px 16px;border-bottom:1px solid #e5e7eb;">{ev.get('venue') or '—'}</td>
-        </tr>"""
-    return f"""
-    <div style="font-family:Arial,sans-serif;max-width:600px;margin:0 auto;background:#f8fafc;padding:32px;">
-      <div style="background:#6366f1;border-radius:16px 16px 0 0;padding:24px 32px;">
-        <h1 style="color:#fff;margin:0;font-size:22px;">Cinema Productions</h1>
-        <p style="color:rgba(255,255,255,0.8);margin:4px 0 0;">Recordatorio de eventos próximos</p>
-      </div>
-      <div style="background:#fff;border-radius:0 0 16px 16px;padding:24px 32px;">
-        <p style="color:#374151;font-size:16px;">
-          Tienes <strong>{len(events)} evento(s)</strong> programado(s) en <strong>{days} día(s)</strong>:
-        </p>
-        <table style="width:100%;border-collapse:collapse;margin-top:16px;">
-          <thead>
-            <tr style="background:#f1f5f9;">
-              <th style="padding:10px 16px;text-align:left;color:#6366f1;font-size:13px;">Cliente</th>
-              <th style="padding:10px 16px;text-align:left;color:#6366f1;font-size:13px;">Tipo</th>
-              <th style="padding:10px 16px;text-align:left;color:#6366f1;font-size:13px;">Fecha</th>
-              <th style="padding:10px 16px;text-align:left;color:#6366f1;font-size:13px;">Lugar</th>
-            </tr>
-          </thead>
-          <tbody>{rows}</tbody>
-        </table>
-        <p style="color:#9ca3af;font-size:12px;margin-top:24px;">
-          Cinema Productions — Sistema de Gestión de Reservas
-        </p>
-      </div>
-    </div>"""
-
-
-async def check_and_send_reminders():
-    """Daily cron job: send reminders for upcoming events."""
-    try:
-        settings_doc = await db.app_settings.find_one({}, {"_id": 0})
-        if not settings_doc or not settings_doc.get("reminders_enabled"):
-            return
-
-        days = int(settings_doc.get("reminder_days", 3))
-        target_date = (datetime.now(timezone.utc).date() + timedelta(days=days)).isoformat()
-
-        cursor = db.reservations.find(
-            {"event_date": target_date, "status": {"$nin": ["Cancelado", "Completado"]}},
-            {"client_name": 1, "event_date": 1, "event_type": 1, "venue": 1, "_id": 0}
-        )
-        upcoming = await cursor.to_list(100)
-
-        if not upcoming:
-            logger.info(f"No events on {target_date}, skipping reminders.")
-            return
-
-        channel = settings_doc.get("notification_channel", "email")
-        logger.info(f"Sending reminders for {len(upcoming)} events on {target_date} via {channel}")
-
-        if channel in ("email", "both"):
-            api_key = settings_doc.get("resend_api_key")
-            admin_email = settings_doc.get("admin_email")
-            if api_key and admin_email:
-                resend_lib.api_key = api_key
-                html = _build_reminder_html(upcoming, days)
-                params = {
-                    "from": "Cinema Productions <onboarding@resend.dev>",
-                    "to": [admin_email],
-                    "subject": f"Recordatorio: {len(upcoming)} evento(s) en {days} día(s)",
-                    "html": html,
-                }
-                await asyncio.to_thread(resend_lib.Emails.send, params)
-                logger.info(f"Reminder email sent to {admin_email}")
-            else:
-                logger.warning("Email reminders enabled but api_key or admin_email missing.")
-
-    except Exception as e:
-        logger.error(f"Error in reminder job: {e}")
-
-
 # ─── Routes ──────────────────────────────────────────────
 
 @api_router.get("/")
 async def root():
-    return {"message": "Event Reservation API"}
+    return {"message": "Cinema Productions API"}
 
 
 @api_router.get("/stats")
@@ -230,11 +129,10 @@ async def get_stats():
         "event_date": {"$gte": datetime.now(timezone.utc).strftime("%Y-%m-%d")},
         "status": {"$nin": ["Cancelado", "Completado"]}
     })
-    pending_payment_cursor = db.reservations.find(
+    pending_docs = await db.reservations.find(
         {"status": {"$nin": ["Cancelado"]}},
         {"total_amount": 1, "advance_paid": 1, "_id": 0}
-    )
-    pending_docs = await pending_payment_cursor.to_list(1000)
+    ).to_list(1000)
     total_pending = sum(
         max(0, (d.get("total_amount", 0) or 0) - (d.get("advance_paid", 0) or 0))
         for d in pending_docs
@@ -250,8 +148,7 @@ async def get_stats():
 
 @api_router.get("/reservations")
 async def list_reservations():
-    cursor = db.reservations.find({}, {"receipt_images.data": 0})
-    docs = await cursor.to_list(1000)
+    docs = await db.reservations.find({}, {"receipt_images.data": 0}).to_list(1000)
     return [doc_to_dict(d) for d in docs]
 
 
@@ -286,12 +183,11 @@ async def update_reservation(reservation_id: str, reservation: ReservationUpdate
         raise HTTPException(status_code=400, detail="ID inválido")
     update_data = {k: v for k, v in reservation.model_dump().items() if v is not None}
     if not update_data:
-        raise HTTPException(status_code=400, detail="No hay datos para actualizar")
+        raise HTTPException(status_code=400, detail="Sin datos para actualizar")
     result = await db.reservations.update_one({"_id": oid}, {"$set": update_data})
     if result.matched_count == 0:
         raise HTTPException(status_code=404, detail="Reserva no encontrada")
-    doc = await db.reservations.find_one({"_id": oid})
-    return doc_to_dict(doc)
+    return doc_to_dict(await db.reservations.find_one({"_id": oid}))
 
 
 @api_router.delete("/reservations/{reservation_id}")
@@ -323,9 +219,7 @@ async def upload_receipt(reservation_id: str, file: UploadFile = File(...)):
         "data": b64,
         "uploaded_at": datetime.now(timezone.utc).isoformat()
     }
-    result = await db.reservations.update_one(
-        {"_id": oid}, {"$push": {"receipt_images": receipt}}
-    )
+    result = await db.reservations.update_one({"_id": oid}, {"$push": {"receipt_images": receipt}})
     if result.matched_count == 0:
         raise HTTPException(status_code=404, detail="Reserva no encontrada")
     return {k: v for k, v in receipt.items() if k != "data"}
@@ -347,20 +241,14 @@ async def delete_receipt(reservation_id: str, receipt_id: str):
 
 @api_router.get("/export/reservations")
 async def export_reservations(format: str = "csv"):
-    cursor = db.reservations.find({}, {"receipt_images": 0})
-    docs = await cursor.to_list(10000)
+    docs = await db.reservations.find({}, {"receipt_images": 0}).to_list(10000)
     data = [doc_to_dict(d) for d in docs]
-
     if format == "json":
-        return JSONResponse(
-            content=data,
-            headers={"Content-Disposition": "attachment; filename=reservaciones.json"}
-        )
-
+        return JSONResponse(content=data,
+                            headers={"Content-Disposition": "attachment; filename=reservaciones.json"})
     if not data:
         return Response("", media_type="text/csv",
                         headers={"Content-Disposition": "attachment; filename=reservaciones.csv"})
-
     output = io.StringIO()
     fields = ["id", "client_name", "client_phone", "client_email", "event_type", "event_date",
               "event_time", "venue", "guests_count", "total_amount", "advance_paid", "status", "notes", "created_at"]
@@ -373,20 +261,16 @@ async def export_reservations(format: str = "csv"):
 
 @api_router.get("/calendar")
 async def get_calendar_events():
-    cursor = db.reservations.find(
+    docs = await db.reservations.find(
         {"status": {"$nin": ["Cancelado"]}},
         {"client_name": 1, "event_date": 1, "event_type": 1, "status": 1, "_id": 1}
-    )
-    docs = await cursor.to_list(1000)
+    ).to_list(1000)
     return [doc_to_dict(d) for d in docs]
 
 
-# ─── Socios ──────────────────────────────────────────────
-
 @api_router.get("/socios")
 async def list_socios():
-    cursor = db.socios.find({}, {"photo": 0, "photo_content_type": 0})
-    docs = await cursor.to_list(1000)
+    docs = await db.socios.find({}, {"photo": 0, "photo_content_type": 0}).to_list(1000)
     return [doc_to_dict(d) for d in docs]
 
 
@@ -422,12 +306,11 @@ async def update_socio(socio_id: str, socio: SocioUpdate):
         raise HTTPException(status_code=400, detail="ID inválido")
     update_data = {k: v for k, v in socio.model_dump().items() if v is not None}
     if not update_data:
-        raise HTTPException(status_code=400, detail="No hay datos para actualizar")
+        raise HTTPException(status_code=400, detail="Sin datos para actualizar")
     result = await db.socios.update_one({"_id": oid}, {"$set": update_data})
     if result.matched_count == 0:
         raise HTTPException(status_code=404, detail="Socio no encontrado")
-    doc = await db.socios.find_one({"_id": oid})
-    return doc_to_dict(doc)
+    return doc_to_dict(await db.socios.find_one({"_id": oid}))
 
 
 @api_router.delete("/socios/{socio_id}")
@@ -472,42 +355,36 @@ async def delete_socio_photo(socio_id: str):
 
 @api_router.get("/financials")
 async def get_financials():
-    cursor = db.reservations.find(
+    docs = await db.reservations.find(
         {"status": {"$nin": ["Cancelado"]}},
         {"total_amount": 1, "advance_paid": 1, "assigned_partners": 1}
-    )
-    docs = await cursor.to_list(10000)
+    ).to_list(10000)
     total_event_amount = sum((d.get("total_amount") or 0) for d in docs)
     total_advance = sum((d.get("advance_paid") or 0) for d in docs)
-    total_partner_cost = 0
-    total_paid_to_partners = 0
-    total_pending_to_partners = 0
+    total_partner_cost = total_paid = total_pending = 0
     for d in docs:
         for p in (d.get("assigned_partners") or []):
             amt = p.get("payment") or 0
             total_partner_cost += amt
             if p.get("payment_status") == "Pagado":
-                total_paid_to_partners += amt
+                total_paid += amt
             else:
-                total_pending_to_partners += amt
+                total_pending += amt
     return {
         "total_event_amount": round(total_event_amount, 2),
         "total_advance": round(total_advance, 2),
         "total_partner_cost": round(total_partner_cost, 2),
-        "total_paid_to_partners": round(total_paid_to_partners, 2),
-        "total_pending_to_partners": round(total_pending_to_partners, 2),
+        "total_paid_to_partners": round(total_paid, 2),
+        "total_pending_to_partners": round(total_pending, 2),
         "real_income": round(total_event_amount - total_partner_cost, 2),
     }
 
-
-# ─── App Settings ─────────────────────────────────────────
 
 @api_router.get("/settings")
 async def get_app_settings():
     doc = await db.app_settings.find_one({}, {"_id": 0})
     if not doc:
         return {}
-    # Mask API key in response
     if doc.get("resend_api_key"):
         key = doc["resend_api_key"]
         doc["resend_api_key"] = "re_" + "*" * 20 + key[-4:] if len(key) > 4 else "****"
@@ -520,18 +397,14 @@ async def get_app_settings():
 @api_router.put("/settings")
 async def update_app_settings(settings: NotificationSettingsModel):
     update_doc = settings.model_dump()
-
-    # If API key is masked (unchanged), don't overwrite the real key
     key = update_doc.get("resend_api_key") or ""
     if "****" in key or key.startswith("re_" + "*"):
         update_doc.pop("resend_api_key", None)
-
     existing = await db.app_settings.find_one({}, {"_id": 0})
     if existing:
         await db.app_settings.update_one({}, {"$set": update_doc})
     else:
         await db.app_settings.insert_one(update_doc)
-
     saved = await db.app_settings.find_one({}, {"_id": 0})
     if saved and saved.get("resend_api_key"):
         key = saved["resend_api_key"]
@@ -543,18 +416,13 @@ async def update_app_settings(settings: NotificationSettingsModel):
     return saved or {}
 
 
-# ─── Database Settings ────────────────────────────────────
-
 @api_router.get("/settings/database")
 async def get_db_stats():
-    global client, db
     try:
         raw = await db.command("dbstats")
         storage_bytes = raw.get("storageSize", 0)
         data_bytes = raw.get("dataSize", 0)
         index_bytes = raw.get("indexSize", 0)
-        objects = raw.get("objects", 0)
-        collections = raw.get("collections", 0)
 
         def fmt(b):
             if b < 1024:
@@ -564,18 +432,16 @@ async def get_db_stats():
             return f"{b / (1024 ** 2):.2f} MB"
 
         is_custom = CUSTOM_DB_FILE.exists()
-        current_url = CUSTOM_DB_FILE.read_text().strip() if is_custom else os.environ['MONGO_URL']
-        # Mask credentials in URL for display
+        current_url = CUSTOM_DB_FILE.read_text().strip() if is_custom else os.environ.get('MONGO_URL', '')
         display_url = current_url
         if "@" in current_url:
             proto_end = current_url.find("://") + 3
             at_pos = current_url.rfind("@")
             display_url = current_url[:proto_end] + "***:***@" + current_url[at_pos + 1:]
-
         return {
             "db_name": DB_NAME,
-            "collections": collections,
-            "objects": objects,
+            "collections": raw.get("collections", 0),
+            "objects": raw.get("objects", 0),
             "data_size": fmt(data_bytes),
             "storage_size": fmt(storage_bytes),
             "index_size": fmt(index_bytes),
@@ -591,8 +457,7 @@ async def get_db_stats():
 async def test_db_connection(req: DBConnectRequest):
     try:
         test_client = AsyncIOMotorClient(req.url, serverSelectionTimeoutMS=5000)
-        test_db = test_client[DB_NAME]
-        await test_db.command("ping")
+        await test_client[DB_NAME].command("ping")
         test_client.close()
         return {"success": True, "message": "Conexión exitosa"}
     except Exception as e:
@@ -611,7 +476,6 @@ async def switch_database(req: DBConnectRequest):
         db = new_db
         CUSTOM_DB_FILE.write_text(req.url)
         old_client.close()
-        logger.info(f"Database switched to: {req.url[:30]}...")
         return {"success": True, "message": "Base de datos cambiada correctamente"}
     except Exception as e:
         raise HTTPException(status_code=400, detail=f"Error al conectar: {e}")
@@ -621,7 +485,7 @@ async def switch_database(req: DBConnectRequest):
 async def reset_database():
     global client, db
     try:
-        original_url = os.environ['MONGO_URL']
+        original_url = os.environ.get('MONGO_URL', 'mongodb://localhost:27017')
         new_client = AsyncIOMotorClient(original_url)
         new_db = new_client[DB_NAME]
         await new_db.command("ping")
@@ -636,205 +500,64 @@ async def reset_database():
         raise HTTPException(status_code=400, detail=f"Error al restaurar: {e}")
 
 
-# ─── Reminders (manual trigger) ───────────────────────────
-
 @api_router.post("/reminders/send")
 async def trigger_reminders_manual():
-    """Manual trigger for testing reminders."""
-    try:
-        settings_doc = await db.app_settings.find_one({}, {"_id": 0})
-        if not settings_doc:
-            raise HTTPException(status_code=400, detail="Primero configura los ajustes de notificaciones")
-
-        days = int(settings_doc.get("reminder_days", 3))
-        target_date = (datetime.now(timezone.utc).date() + timedelta(days=days)).isoformat()
-
-        cursor = db.reservations.find(
-            {"event_date": target_date, "status": {"$nin": ["Cancelado", "Completado"]}},
-            {"client_name": 1, "event_date": 1, "event_type": 1, "venue": 1, "_id": 0}
-        )
-        upcoming = await cursor.to_list(100)
-
-        channel = settings_doc.get("notification_channel", "email")
-        sent = 0
-
-        if channel in ("email", "both"):
-            api_key = settings_doc.get("resend_api_key")
-            admin_email = settings_doc.get("admin_email")
-            if api_key and admin_email and upcoming:
-                resend_lib.api_key = api_key
-                html = _build_reminder_html(upcoming, days)
-                params = {
-                    "from": "Cinema Productions <onboarding@resend.dev>",
-                    "to": [admin_email],
-                    "subject": f"Recordatorio: {len(upcoming)} evento(s) en {days} día(s)",
-                    "html": html,
-                }
-                await asyncio.to_thread(resend_lib.Emails.send, params)
-                sent += 1
-
-        return {
-            "success": True,
-            "events_found": len(upcoming),
-            "target_date": target_date,
-            "sent": sent,
-            "message": f"Recordatorio enviado para {len(upcoming)} evento(s) en {target_date}"
-        }
-    except HTTPException:
-        raise
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Error: {e}")
+    return {"success": True, "events_found": 0, "sent": 0,
+            "message": "Recordatorios automáticos disponibles en la versión web"}
 
 
-# ─── Desktop Package Download ─────────────────────────────
-
-_START_BAT = r"""@echo off
-title Cinema Productions - Gestor de Reservas
-color 0A
-cls
-echo.
-echo  =============================================
-echo   CINEMA PRODUCTIONS - Gestor de Reservas
-echo  =============================================
-echo.
-
-REM Check Python
-python --version >nul 2>&1
-if errorlevel 1 (
-    py --version >nul 2>&1
-    if errorlevel 1 (
-        echo  ERROR: Python no esta instalado.
-        echo  Descargalo desde: https://www.python.org/downloads/
-        echo  IMPORTANTE: Marca "Add Python to PATH"
-        echo.
-        pause
-        exit /b 1
-    )
-    set PYTHON=py
-) else (
-    set PYTHON=python
-)
-
-echo  Instalando dependencias (solo la primera vez)...
-%PYTHON% -m pip install -r requirements.txt -q --no-warn-script-location
-
-echo.
-echo  Iniciando Cinema Productions...
-echo  La app se abrira en tu navegador automaticamente.
-echo.
-echo  ─────────────────────────────────────────────
-echo  Para cerrar la app: cierra esta ventana
-echo  ─────────────────────────────────────────────
-echo.
-%PYTHON% app.py
-pause
-"""
-
-_START_SH = """#!/bin/bash
-clear
-echo ""
-echo "  ============================================="
-echo "   CINEMA PRODUCTIONS - Gestor de Reservas"
-echo "  ============================================="
-echo ""
-
-if ! command -v python3 &> /dev/null; then
-    echo "  ERROR: Python3 no está instalado."
-    echo "  Instálalo desde: https://www.python.org/downloads/"
-    exit 1
-fi
-
-echo "  Instalando dependencias..."
-python3 -m pip install -r requirements.txt -q
-
-echo "  Iniciando Cinema Productions..."
-echo "  URL: http://localhost:8001"
-echo ""
-python3 app.py
-"""
-
-_REQUIREMENTS = """fastapi>=0.100.0
-uvicorn[standard]>=0.20.0
-motor>=3.0.0
-pymongo>=4.0.0
-python-dotenv>=1.0.0
-pydantic>=2.0.0
-resend>=2.0.0
-"""
-
-_README = """CINEMA PRODUCTIONS - Gestor de Reservas
-========================================
-
-PARA INICIAR LA APP:
-  Windows:    Doble clic en start.bat
-  Mac/Linux:  chmod +x start.sh && ./start.sh
-
-REQUISITO: Python 3.8+
-  Descargar en: https://www.python.org/downloads/
-  IMPORTANTE (Windows): marcar "Add Python to PATH"
-
-BASE DE DATOS:
-  La app usa MongoDB. La URL esta en el archivo .env
-  Para cambiar de base de datos:
-    1. Edita el archivo .env
-    2. Cambia MONGO_URL por tu nueva URL
-    3. Vuelve a ejecutar start.bat
-
-  O bien, desde la app: Ajustes > Base de Datos > Conectar
-  Luego vuelve a descargar el paquete para que el .env se actualice.
-
-SOPORTE:
-  Cinema Productions - Sistema de Gestion de Reservas
-"""
-
-
-@api_router.get("/download/package")
-async def download_package():
-    import zipfile
-
-    build_dir = ROOT_DIR.parent / "frontend" / "build"
-    if not build_dir.exists():
-        raise HTTPException(
-            status_code=503,
-            detail="El paquete aún no está listo. Espera 2 minutos e inténtalo de nuevo."
-        )
-
-    # Current MongoDB URL for the package
-    custom_file = ROOT_DIR / '.db_override'
-    mongo_url_pkg = custom_file.read_text().strip() if custom_file.exists() else os.environ['MONGO_URL']
-
-    env_content = f"MONGO_URL={mongo_url_pkg}\nDB_NAME={DB_NAME}\n"
-    standalone_py = (ROOT_DIR / 'standalone_app.py').read_text()
-
-    buf = io.BytesIO()
-    with zipfile.ZipFile(buf, 'w', zipfile.ZIP_DEFLATED) as zf:
-        zf.writestr('cinema-productions/app.py', standalone_py)
-        zf.writestr('cinema-productions/.env', env_content)
-        zf.writestr('cinema-productions/requirements.txt', _REQUIREMENTS)
-        zf.writestr('cinema-productions/start.bat', _START_BAT)
-        zf.writestr('cinema-productions/start.sh', _START_SH)
-        zf.writestr('cinema-productions/README.txt', _README)
-
-        # Bundle React build
-        for file_path in sorted(build_dir.rglob('*')):
-            if file_path.is_file():
-                arc_name = 'cinema-productions/build/' + str(file_path.relative_to(build_dir))
-                zf.write(str(file_path), arc_name)
-
-    buf.seek(0)
-    return Response(
-        content=buf.read(),
-        media_type='application/zip',
-        headers={'Content-Disposition': 'attachment; filename=cinema-productions-local.zip'}
-    )
-
-
+# ─── App config ──────────────────────────────────────────
 app.include_router(api_router)
-
 app.add_middleware(
     CORSMiddleware,
+    allow_origins=["*"],
     allow_credentials=True,
-    allow_origins=os.environ.get('CORS_ORIGINS', '*').split(','),
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# ─── Serve React build (SPA) ─────────────────────────────
+BUILD_DIR = ROOT_DIR / "build"
+if BUILD_DIR.exists():
+    app.mount("/static", StaticFiles(directory=str(BUILD_DIR / "static")), name="static")
+
+    @app.get("/favicon.ico")
+    async def favicon():
+        f = BUILD_DIR / "favicon.ico"
+        return FileResponse(str(f)) if f.exists() else Response(status_code=204)
+
+    @app.get("/manifest.json")
+    async def manifest():
+        f = BUILD_DIR / "manifest.json"
+        return FileResponse(str(f)) if f.exists() else Response("{}", media_type="application/json")
+
+    @app.get("/{path:path}")
+    async def serve_spa(path: str):
+        f = BUILD_DIR / path
+        if f.exists() and f.is_file():
+            return FileResponse(str(f))
+        return FileResponse(str(BUILD_DIR / "index.html"))
+
+    @app.get("/")
+    async def serve_index():
+        return FileResponse(str(BUILD_DIR / "index.html"))
+
+
+# ─── Entry point ─────────────────────────────────────────
+if __name__ == "__main__":
+    import uvicorn
+
+    def _open_browser():
+        time.sleep(2.5)
+        webbrowser.open("http://localhost:8001")
+
+    threading.Thread(target=_open_browser, daemon=True).start()
+
+    print("\n" + "=" * 50)
+    print("  CINEMA PRODUCTIONS - Gestor de Reservas")
+    print("=" * 50)
+    print("  URL: http://localhost:8001")
+    print("  Para cerrar: Ctrl+C en esta ventana")
+    print("=" * 50 + "\n")
+
+    uvicorn.run(app, host="0.0.0.0", port=8001, log_level="warning")

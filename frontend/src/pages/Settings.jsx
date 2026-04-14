@@ -3,7 +3,8 @@ import { motion } from "framer-motion";
 import {
   Download, Globe, DollarSign, Palette, FileText,
   Bell, Database, CheckCircle, XCircle, RefreshCw,
-  Wifi, WifiOff, MessageCircle, Mail, Loader2
+  Wifi, WifiOff, MessageCircle, Mail, Loader2, Monitor,
+  Package, AlertCircle
 } from "lucide-react";
 import { useSettings, THEMES, CURRENCIES } from "@/context/SettingsContext";
 import { useToast } from "@/hooks/use-toast";
@@ -72,6 +73,9 @@ export default function Settings() {
   const [testLoading, setTestLoading] = useState(false);
   const [testResult, setTestResult] = useState(null);
 
+  // Desktop download state
+  const [downloadLoading, setDownloadLoading] = useState(false);
+
   // DB state
   const [dbStats, setDbStats] = useState(null);
   const [dbLoading, setDbLoading] = useState(false);
@@ -104,6 +108,31 @@ export default function Settings() {
       .then(setDbStats)
       .catch(() => setDbStats(null))
       .finally(() => setDbLoading(false));
+  };
+
+  const handleDownloadPackage = async () => {
+    setDownloadLoading(true);
+    try {
+      const response = await fetch(`${process.env.REACT_APP_BACKEND_URL}/api/download/package`);
+      if (!response.ok) {
+        const err = await response.json().catch(() => ({}));
+        throw new Error(err.detail || "Error al generar el paquete");
+      }
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = "cinema-productions-local.zip";
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      window.URL.revokeObjectURL(url);
+      toast({ title: "Paquete descargado ✓ — Extrae el .zip y ejecuta start.bat" });
+    } catch (err) {
+      toast({ title: err.message || "Error al descargar", variant: "destructive" });
+    } finally {
+      setDownloadLoading(false);
+    }
   };
 
   const handleExport = async (format) => {
@@ -483,6 +512,56 @@ export default function Settings() {
                 </motion.button>
               )}
             </div>
+          </div>
+        </Section>
+
+        {/* Desktop App */}
+        <Section icon={Monitor} title={s.desktopTitle} desc={s.desktopDesc}
+          badge={
+            <span className="text-[10px] font-black px-2.5 py-1 rounded-full bg-indigo-100 text-indigo-700">
+              {s.desktopBadge}
+            </span>
+          }>
+          <div className="space-y-4">
+            {/* Feature list */}
+            <div className="grid grid-cols-2 gap-2">
+              {[s.desktopFeature1, s.desktopFeature2, s.desktopFeature3, s.desktopFeature4].map((f, i) => (
+                <div key={i} className="flex items-start gap-2 bg-white/50 rounded-xl p-3">
+                  <CheckCircle size={13} className="text-emerald-500 mt-0.5 shrink-0" />
+                  <span className="text-xs text-slate-600 font-medium">{f}</span>
+                </div>
+              ))}
+            </div>
+
+            {/* Python requirement */}
+            <div className="flex items-center gap-2 bg-amber-50/80 border border-amber-200/60 rounded-xl px-4 py-3">
+              <AlertCircle size={14} className="text-amber-500 shrink-0" />
+              <p className="text-xs text-amber-700 font-semibold">
+                {s.desktopReq} —{" "}
+                <a href="https://www.python.org/downloads/" target="_blank" rel="noreferrer"
+                  className="underline hover:text-amber-900">
+                  {s.desktopReqLink}
+                </a>
+                {" "}(marcar "Add Python to PATH")
+              </p>
+            </div>
+
+            {/* Download buttons */}
+            <div className="flex gap-3">
+              <motion.button whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.97 }}
+                onClick={handleDownloadPackage} disabled={downloadLoading}
+                data-testid="desktop-download-btn"
+                className="flex items-center gap-2 px-5 py-3 rounded-2xl btn-primary text-white text-sm font-bold flex-1 justify-center disabled:opacity-60">
+                {downloadLoading
+                  ? <><Loader2 size={15} className="animate-spin" /> {s.desktopDownloading}</>
+                  : <><Package size={15} /> {s.desktopDownload}</>}
+              </motion.button>
+            </div>
+
+            {/* Note */}
+            <p className="text-[11px] text-slate-400 leading-relaxed">
+              {s.desktopNote}
+            </p>
           </div>
         </Section>
 
