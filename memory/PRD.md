@@ -60,12 +60,12 @@ Sistema de gestión de reservas para eventos (bodas, quinceañeras, fiestas soci
 - Campos: dirección/nombre del lugar + link de Waze
 - Botón "Abrir en Waze" al visualizar
 
-### Modal Forms Fix (Iteración 7 - Febrero 2026) ✅
-- Modales de Reserva y Socio ahora muestran header + botones siempre visibles sin scroll de página
-- Implementado patrón: backdrop `overflow-hidden` + modal `max-h-full` + body `flex-1 min-h-0 overflow-y-auto`
-- Header (título + X) fijo en la parte superior del modal
-- Footer (Cancelar + Guardar/Crear) fijo en la parte inferior del modal
-- Solo el contenido de los campos scrollea internamente si la pantalla es pequeña
+### Formularios Full-Screen (Iteración 7 - Febrero 2026) ✅
+- ReservationForm y SocioForm rediseñados como páginas completas (no modales)
+- Diseño full-screen: fondo gradiente claro, sidebar visible, título grande, botones en top-bar
+- ReservationForm: grid 3-4 columnas, todos los campos visibles sin scroll
+- SocioForm: foto grande a la izquierda + campos a la derecha, sin scroll
+- Botón "Cancelar" con flecha ← en top-left, botón principal morado en top-right
 - Botones editar/eliminar siempre visibles en tarjetas de socios (antes ocultos en hover)
 - Toggle Pendiente/Pagado en sección "Fotógrafo / Equipo" de cada reserva
   - Ícono Clock (naranja) = Pendiente

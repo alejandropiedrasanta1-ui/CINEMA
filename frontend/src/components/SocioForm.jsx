@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { createSocio, updateSocio, uploadSocioPhoto } from "@/lib/api";
-import { X, Camera, Upload } from "lucide-react";
+import { ArrowLeft, Camera, Upload } from "lucide-react";
 import { motion } from "framer-motion";
 import { useToast } from "@/hooks/use-toast";
 
@@ -9,16 +9,16 @@ const ROLES = ["Fotógrafo", "Videógrafo", "Asistente"];
 export default function SocioForm({ socio, onClose, onSaved }) {
   const { toast } = useToast();
   const isEdit = !!socio;
-  const [saving, setSaving] = useState(false);
+  const [saving, setSaving]           = useState(false);
   const [photoPreview, setPhotoPreview] = useState(null);
-  const [photoFile, setPhotoFile] = useState(null);
+  const [photoFile, setPhotoFile]     = useState(null);
   const [form, setForm] = useState({
-    name: "", role: "Fotógrafo", phone: "", email: "", notes: "", rate_per_event: "",
+    name:"", role:"Fotógrafo", phone:"", email:"", notes:"", rate_per_event:"",
   });
 
   useEffect(() => {
     if (socio) {
-      setForm({ name: socio.name || "", role: socio.role || "Fotógrafo", phone: socio.phone || "", email: socio.email || "", notes: socio.notes || "", rate_per_event: socio.rate_per_event || "" });
+      setForm({ name:socio.name||"", role:socio.role||"Fotógrafo", phone:socio.phone||"", email:socio.email||"", notes:socio.notes||"", rate_per_event:socio.rate_per_event||"" });
       if (socio.photo && socio.photo_content_type)
         setPhotoPreview(`data:${socio.photo_content_type};base64,${socio.photo}`);
     }
@@ -37,129 +37,131 @@ export default function SocioForm({ socio, onClose, onSaved }) {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!form.name.trim()) { toast({ title: "Nombre requerido", variant: "destructive" }); return; }
+    if (!form.name.trim()) { toast({ title:"Nombre requerido", variant:"destructive" }); return; }
     setSaving(true);
     try {
       const payload = {
-        name: form.name.trim(),
-        role: form.role,
-        phone: form.phone || null,
-        email: form.email || null,
-        notes: form.notes || null,
+        name: form.name.trim(), role: form.role,
+        phone: form.phone||null, email: form.email||null, notes: form.notes||null,
         rate_per_event: form.rate_per_event !== "" && form.rate_per_event !== null ? parseFloat(form.rate_per_event) : null,
       };
       let saved;
       if (isEdit) saved = await updateSocio(socio.id, payload);
-      else saved = await createSocio(payload);
+      else        saved = await createSocio(payload);
       if (photoFile) await uploadSocioPhoto(saved.id, photoFile);
       toast({ title: isEdit ? "Socio actualizado" : "Socio creado" });
       onSaved();
     } catch (err) {
       console.error("Error guardando socio:", err);
-      const msg = err.response?.data?.detail || err.message || "Error inesperado";
-      toast({ title: "Error al guardar", description: msg, variant: "destructive" });
+      toast({ title:"Error al guardar", description:err.response?.data?.detail||err.message||"Error", variant:"destructive" });
     } finally { setSaving(false); }
   };
 
-  const inputClass = "w-full text-sm px-4 py-2.5 rounded-2xl bg-white/50 border border-white/60 focus:outline-none focus:ring-2 focus:ring-[var(--t-from)]/40 text-slate-800 placeholder-slate-400 font-medium transition-all";
+  const inp = "w-full text-base px-5 py-4 rounded-2xl bg-white/70 border-2 border-white/80 focus:outline-none focus:border-[var(--t-from)] focus:bg-white text-slate-800 placeholder-slate-400 font-medium transition-all duration-200";
 
   return (
-    <div
-      className="fixed inset-0 z-50 flex items-center justify-center p-4 overflow-hidden"
-      style={{ backdropFilter: "blur(12px)", backgroundColor: "rgba(15,23,42,0.35)" }}
+    <motion.div
+      initial={{ opacity:0, y:30 }} animate={{ opacity:1, y:0 }}
+      exit={{ opacity:0, y:20 }} transition={{ duration:0.3, ease:[0.22,1,0.36,1] }}
+      className="fixed inset-0 z-50 flex flex-col"
+      style={{ background:"linear-gradient(135deg, rgba(238,242,255,0.98) 0%, rgba(248,250,255,0.98) 50%, rgba(240,248,255,0.98) 100%)", backdropFilter:"blur(20px)" }}
+      data-testid="socio-form"
     >
-      <motion.div
-        initial={{ opacity: 0, y: 20, scale: 0.96 }} animate={{ opacity: 1, y: 0, scale: 1 }}
-        exit={{ opacity: 0, scale: 0.96 }} transition={{ duration: 0.3, ease: [0.22, 1, 0.36, 1] }}
-        className="glass-modal rounded-3xl w-full max-w-md flex flex-col max-h-full overflow-hidden"
-        data-testid="socio-form"
-      >
-        {/* Header — fijo */}
-        <div className="flex-shrink-0 flex items-center justify-between px-7 py-5 border-b border-white/40">
-          <h2 className="text-base font-black text-slate-900" style={{ fontFamily: 'Cabinet Grotesk, sans-serif' }}>
+      {/* ── TOP BAR ── */}
+      <div className="flex-shrink-0 flex items-center justify-between px-10 py-5 border-b border-slate-200/60 bg-white/40">
+        <div className="flex items-center gap-4">
+          <motion.button whileHover={{ scale:1.05 }} whileTap={{ scale:0.95 }} type="button" onClick={onClose}
+            className="flex items-center gap-2 px-4 py-2.5 rounded-full glass border-slate-200/60 text-slate-600 font-bold text-sm hover:bg-white/80 transition-colors">
+            <ArrowLeft size={16}/> Cancelar
+          </motion.button>
+          <h1 className="text-2xl font-black text-slate-900" style={{ fontFamily:'Cabinet Grotesk, sans-serif' }}>
             {isEdit ? "Editar Socio" : "Nuevo Socio"}
-          </h2>
-          <motion.button whileHover={{ scale: 1.1, rotate: 90 }} whileTap={{ scale: 0.9 }} onClick={onClose} type="button"
-            className="p-2 rounded-full glass hover:bg-white/60 text-slate-500"><X size={15} /></motion.button>
+          </h1>
         </div>
+        <motion.button whileHover={{ scale:1.03 }} whileTap={{ scale:0.97 }} type="button" onClick={handleSubmit}
+          disabled={saving}
+          className="px-8 py-3 rounded-full btn-primary text-white font-bold text-base disabled:opacity-60 shadow-lg"
+          data-testid="submit-socio-btn">
+          {saving ? "Guardando…" : isEdit ? "Guardar cambios" : "Crear socio"}
+        </motion.button>
+      </div>
 
-        {/* Contenido scrolleable */}
-        <form onSubmit={handleSubmit} className="flex flex-col flex-1 min-h-0">
-          <div className="flex-1 min-h-0 overflow-y-auto px-7 py-5 space-y-4">
+      {/* ── FORM BODY ── */}
+      <form onSubmit={handleSubmit} className="flex-1 flex items-center justify-center px-10 py-8">
+        <div className="w-full max-w-3xl flex gap-10 items-start">
 
-            {/* Photo upload */}
-            <div className="flex justify-center">
-              <label className="relative cursor-pointer group">
-                <div className="w-20 h-20 rounded-full overflow-hidden ring-4 ring-white/60 shadow-lg">
-                  {photoPreview ? (
-                    <img src={photoPreview} alt="foto" className="w-full h-full object-cover" />
-                  ) : (
-                    <div className="w-full h-full btn-primary flex items-center justify-center">
-                      <Camera size={28} className="text-white/80" />
-                    </div>
-                  )}
-                </div>
-                <div className="absolute bottom-0 right-0 w-7 h-7 rounded-full btn-primary flex items-center justify-center ring-2 ring-white opacity-0 group-hover:opacity-100 transition-opacity">
-                  <Upload size={12} className="text-white" />
-                </div>
-                <input type="file" accept="image/*" className="hidden" onChange={handlePhotoChange} data-testid="socio-photo-input" />
-              </label>
+          {/* ── FOTO (izquierda) ── */}
+          <div className="flex-shrink-0 flex flex-col items-center gap-4">
+            <label className="relative cursor-pointer group">
+              <div className="w-40 h-40 rounded-3xl overflow-hidden ring-4 ring-white shadow-xl">
+                {photoPreview
+                  ? <img src={photoPreview} alt="foto" className="w-full h-full object-cover"/>
+                  : <div className="w-full h-full btn-primary flex flex-col items-center justify-center gap-2">
+                      <Camera size={40} className="text-white/80"/>
+                      <span className="text-white/70 text-xs font-bold">Agregar foto</span>
+                    </div>}
+              </div>
+              <div className="absolute bottom-2 right-2 w-9 h-9 rounded-full btn-primary flex items-center justify-center ring-2 ring-white opacity-0 group-hover:opacity-100 transition-opacity shadow-lg">
+                <Upload size={15} className="text-white"/>
+              </div>
+              <input type="file" accept="image/*" className="hidden" onChange={handlePhotoChange} data-testid="socio-photo-input"/>
+            </label>
+            <p className="text-xs text-slate-400 font-bold text-center">Foto de perfil<br/>(opcional)</p>
+          </div>
+
+          {/* ── CAMPOS (derecha) ── */}
+          <div className="flex-1 flex flex-col gap-6">
+
+            {/* Nombre */}
+            <div>
+              <Label>Nombre completo *</Label>
+              <input value={form.name} onChange={set("name")} placeholder="Ej: Carlos Pérez" required data-testid="input-socio-name" className={inp}/>
             </div>
 
+            {/* Rol */}
             <div>
-              <label className="block text-xs font-black text-slate-500 uppercase tracking-wider mb-1.5">Nombre *</label>
-              <input value={form.name} onChange={set("name")} placeholder="Ej: Carlos Pérez" required data-testid="input-socio-name" className={inputClass} />
-            </div>
-
-            <div>
-              <label className="block text-xs font-black text-slate-500 uppercase tracking-wider mb-1.5">Rol *</label>
-              <div className="flex gap-2">
+              <Label>Rol *</Label>
+              <div className="grid grid-cols-3 gap-3">
                 {ROLES.map(r => (
-                  <motion.button key={r} type="button" whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.97 }}
-                    onClick={() => setForm(p => ({ ...p, role: r }))}
-                    className={`flex-1 py-2.5 rounded-2xl text-xs font-bold transition-all ${form.role === r ? "btn-primary text-white" : "glass border-white/60 text-slate-600 hover:bg-white/50"}`}
+                  <motion.button key={r} type="button" whileHover={{ scale:1.02 }} whileTap={{ scale:0.97 }}
+                    onClick={() => setForm(p => ({ ...p, role:r }))}
+                    className={`py-4 rounded-2xl text-sm font-bold transition-all ${form.role===r ? "btn-primary text-white shadow-md" : "bg-white/70 border-2 border-white/80 text-slate-600 hover:bg-white"}`}
                     data-testid={`role-${r.toLowerCase()}`}>
-                    {r === "Fotógrafo" ? "📷" : r === "Videógrafo" ? "🎥" : "👤"} {r}
+                    {r==="Fotógrafo"?"📷":r==="Videógrafo"?"🎥":"👤"} {r}
                   </motion.button>
                 ))}
               </div>
             </div>
 
-            <div className="grid grid-cols-2 gap-3">
+            {/* Teléfono + Tarifa + Email */}
+            <div className="grid grid-cols-3 gap-5">
               <div>
-                <label className="block text-xs font-black text-slate-500 uppercase tracking-wider mb-1.5">Teléfono</label>
-                <input value={form.phone} onChange={set("phone")} placeholder="+502 1234 5678" data-testid="input-socio-phone" className={inputClass} />
+                <Label>Teléfono</Label>
+                <input value={form.phone} onChange={set("phone")} placeholder="+502 1234 5678" data-testid="input-socio-phone" className={inp}/>
               </div>
               <div>
-                <label className="block text-xs font-black text-slate-500 uppercase tracking-wider mb-1.5">Tarifa por evento</label>
-                <input type="number" value={form.rate_per_event} onChange={set("rate_per_event")} placeholder="Q 2,000" min="0" data-testid="input-socio-rate" className={inputClass} />
+                <Label>Tarifa por evento</Label>
+                <input type="number" value={form.rate_per_event} onChange={set("rate_per_event")} placeholder="Q 2,000" min="0" data-testid="input-socio-rate" className={inp}/>
+              </div>
+              <div>
+                <Label>Email</Label>
+                <input type="email" value={form.email} onChange={set("email")} placeholder="correo@email.com" data-testid="input-socio-email" className={inp}/>
               </div>
             </div>
 
+            {/* Notas */}
             <div>
-              <label className="block text-xs font-black text-slate-500 uppercase tracking-wider mb-1.5">Email</label>
-              <input type="email" value={form.email} onChange={set("email")} placeholder="correo@email.com" data-testid="input-socio-email" className={inputClass} />
+              <Label>Notas</Label>
+              <input value={form.notes} onChange={set("notes")} placeholder="Especialidades, equipo, disponibilidad…" data-testid="input-socio-notes" className={inp}/>
             </div>
-            <div>
-              <label className="block text-xs font-black text-slate-500 uppercase tracking-wider mb-1.5">Notas</label>
-              <textarea value={form.notes} onChange={set("notes")} placeholder="Especialidades, equipo..." rows={2} data-testid="input-socio-notes" className={`${inputClass} resize-none`} />
-            </div>
-          </div>
 
-          {/* Footer con botones — fijo */}
-          <div className="flex-shrink-0 flex justify-end gap-3 px-7 py-4 border-t border-white/40 bg-white/10">
-            <motion.button whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }} type="button" onClick={onClose}
-              className="px-5 py-2.5 rounded-full glass border-white/60 text-sm font-bold text-slate-700 hover:bg-white/60">
-              Cancelar
-            </motion.button>
-            <motion.button whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }} type="submit" disabled={saving}
-              data-testid="submit-socio-btn" className="px-6 py-2.5 rounded-full btn-primary text-white text-sm font-bold disabled:opacity-60">
-              {saving ? "Guardando..." : isEdit ? "Guardar" : "Crear socio"}
-            </motion.button>
           </div>
-        </form>
-
-      </motion.div>
-    </div>
+        </div>
+      </form>
+    </motion.div>
   );
+}
+
+function Label({ children }) {
+  return <label className="block text-xs font-black text-slate-500 uppercase tracking-widest mb-2">{children}</label>;
 }

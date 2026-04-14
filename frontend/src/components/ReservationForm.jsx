@@ -1,15 +1,12 @@
 import { useState, useEffect } from "react";
 import { createReservation, updateReservation } from "@/lib/api";
-import { X } from "lucide-react";
-import { motion, AnimatePresence } from "framer-motion";
+import { ArrowLeft } from "lucide-react";
+import { motion } from "framer-motion";
 import { useToast } from "@/hooks/use-toast";
 import { useSettings } from "@/context/SettingsContext";
 
 const EVENT_TYPES = ["Boda","Quinceañera","Fiesta Social","Evento Corporativo","Conferencia","Otro"];
-const STATUSES = ["Pendiente","Confirmado","Completado","Cancelado"];
-
-const inputClass = "w-full text-sm px-4 py-2.5 rounded-2xl bg-white/50 border border-white/60 focus:outline-none focus:ring-2 focus:ring-[var(--t-from)]/40 focus:bg-white/70 text-slate-800 placeholder-slate-400 font-medium transition-all duration-200";
-const selectClass = "w-full text-sm px-4 py-2.5 rounded-2xl bg-white/50 border border-white/60 focus:outline-none focus:ring-2 focus:ring-[var(--t-from)]/40 text-slate-800 font-medium transition-all duration-200";
+const STATUSES   = ["Pendiente","Confirmado","Completado","Cancelado"];
 
 export default function ReservationForm({ reservation, onClose, onSaved }) {
   const { toast } = useToast();
@@ -27,120 +24,153 @@ export default function ReservationForm({ reservation, onClose, onSaved }) {
 
   useEffect(() => {
     if (reservation) setForm({
-      client_name: reservation.client_name||"", client_phone: reservation.client_phone||"",
-      client_email: reservation.client_email||"", event_type: reservation.event_type||"Boda",
-      event_date: reservation.event_date||"", event_time: reservation.event_time||"",
-      venue: reservation.venue||"", guests_count: reservation.guests_count||"",
-      total_amount: reservation.total_amount||"", advance_paid: reservation.advance_paid||"0",
-      status: reservation.status||"Pendiente", notes: reservation.notes||"",
+      client_name: reservation.client_name||"",
+      client_phone: reservation.client_phone||"",
+      client_email: reservation.client_email||"",
+      event_type: reservation.event_type||"Boda",
+      event_date: reservation.event_date||"",
+      event_time: reservation.event_time||"",
+      venue: reservation.venue||"",
+      guests_count: reservation.guests_count||"",
+      total_amount: reservation.total_amount||"",
+      advance_paid: reservation.advance_paid||"0",
+      status: reservation.status||"Pendiente",
+      notes: reservation.notes||"",
     });
   }, [reservation]);
 
-  const set = (field) => (e) => setForm(prev => ({ ...prev, [field]: e.target.value }));
+  const set = (field) => (e) => setForm(p => ({ ...p, [field]: e.target.value }));
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!form.client_name.trim()) { toast({ title: f.validations?.nameRequired||"Nombre requerido", variant:"destructive" }); return; }
-    if (!form.event_date) { toast({ title: f.validations?.dateRequired||"Fecha requerida", variant:"destructive" }); return; }
-    if (!form.total_amount || isNaN(Number(form.total_amount))) { toast({ title: f.validations?.amountInvalid||"Monto inválido", variant:"destructive" }); return; }
+    if (!form.client_name.trim()) { toast({ title: "Nombre requerido", variant:"destructive" }); return; }
+    if (!form.event_date)         { toast({ title: "Fecha requerida",  variant:"destructive" }); return; }
+    if (!form.total_amount || isNaN(Number(form.total_amount))) {
+      toast({ title: "Monto inválido", variant:"destructive" }); return;
+    }
     setSaving(true);
-    const payload = { ...form, guests_count: form.guests_count ? parseInt(form.guests_count) : null, total_amount: parseFloat(form.total_amount), advance_paid: parseFloat(form.advance_paid)||0 };
+    const payload = {
+      ...form,
+      guests_count: form.guests_count ? parseInt(form.guests_count) : null,
+      total_amount: parseFloat(form.total_amount),
+      advance_paid: parseFloat(form.advance_paid) || 0,
+    };
     try {
-      if (isEdit) { await updateReservation(reservation.id, payload); toast({ title: f.toasts?.updated||"Actualizado" }); }
-      else { await createReservation(payload); toast({ title: f.toasts?.created||"Creado" }); }
+      if (isEdit) { await updateReservation(reservation.id, payload); toast({ title: "Reserva actualizada" }); }
+      else        { await createReservation(payload);                  toast({ title: "Reserva creada" }); }
       onSaved();
     } catch (err) {
-      toast({ title: f.validations?.saveError||"Error al guardar", description: err.response?.data?.detail||"Error", variant:"destructive" });
+      toast({ title: "Error al guardar", description: err.response?.data?.detail || "Error", variant:"destructive" });
     } finally { setSaving(false); }
   };
 
+  const inp = "w-full text-base px-5 py-4 rounded-2xl bg-white/70 border-2 border-white/80 focus:outline-none focus:border-[var(--t-from)] focus:bg-white text-slate-800 placeholder-slate-400 font-medium transition-all duration-200";
+  const sel = `${inp} cursor-pointer`;
+
   return (
-    <AnimatePresence>
-      <motion.div
-        initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-        className="fixed inset-0 z-50 flex items-center justify-center p-4 overflow-hidden"
-        style={{ backdropFilter: "blur(12px)", backgroundColor: "rgba(15,23,42,0.35)" }}
-      >
-        <motion.div
-          initial={{ opacity: 0, y: 24, scale: 0.96 }} animate={{ opacity: 1, y: 0, scale: 1 }}
-          exit={{ opacity: 0, y: 16, scale: 0.96 }} transition={{ duration: 0.35, ease: [0.22,1,0.36,1] }}
-          className="glass-modal rounded-3xl w-full max-w-xl flex flex-col max-h-full overflow-hidden"
-          data-testid="reservation-form"
-        >
-          {/* Header — fijo */}
-          <div className="flex-shrink-0 flex items-center justify-between px-7 py-5 border-b border-white/40">
-            <h2 className="text-lg font-black text-slate-900" style={{ fontFamily:'Cabinet Grotesk, sans-serif' }}>
-              {isEdit ? f.editTitle : f.newTitle}
-            </h2>
-            <motion.button whileHover={{ scale:1.1, rotate:90 }} whileTap={{ scale:0.9 }} onClick={onClose} type="button"
-              className="p-2 rounded-full glass hover:bg-white/60 text-slate-500 transition-colors" data-testid="close-form-btn">
-              <X size={15} />
-            </motion.button>
+    <motion.div
+      initial={{ opacity: 0, y: 30 }} animate={{ opacity: 1, y: 0 }}
+      exit={{ opacity: 0, y: 20 }} transition={{ duration: 0.3, ease: [0.22,1,0.36,1] }}
+      className="fixed inset-0 z-50 flex flex-col"
+      style={{ background: "linear-gradient(135deg, rgba(238,242,255,0.98) 0%, rgba(248,250,255,0.98) 50%, rgba(240,248,255,0.98) 100%)", backdropFilter: "blur(20px)" }}
+      data-testid="reservation-form"
+    >
+      {/* ── TOP BAR ── */}
+      <div className="flex-shrink-0 flex items-center justify-between px-10 py-5 border-b border-slate-200/60 bg-white/40">
+        <div className="flex items-center gap-4">
+          <motion.button whileHover={{ scale:1.05 }} whileTap={{ scale:0.95 }} type="button" onClick={onClose}
+            className="flex items-center gap-2 px-4 py-2.5 rounded-full glass border-slate-200/60 text-slate-600 font-bold text-sm hover:bg-white/80 transition-colors"
+            data-testid="cancel-form-btn">
+            <ArrowLeft size={16}/> Cancelar
+          </motion.button>
+          <h1 className="text-2xl font-black text-slate-900" style={{ fontFamily:'Cabinet Grotesk, sans-serif' }}>
+            {isEdit ? "Editar Reserva" : "Nueva Reserva"}
+          </h1>
+        </div>
+        <motion.button whileHover={{ scale:1.03 }} whileTap={{ scale:0.97 }} type="button" onClick={handleSubmit}
+          disabled={saving}
+          className="px-8 py-3 rounded-full btn-primary text-white font-bold text-base disabled:opacity-60 shadow-lg"
+          data-testid="submit-form-btn">
+          {saving ? "Guardando…" : isEdit ? "Guardar cambios" : "Crear reserva"}
+        </motion.button>
+      </div>
+
+      {/* ── FORM BODY ── */}
+      <form onSubmit={handleSubmit} className="flex-1 flex flex-col justify-center px-10 py-8 gap-5">
+
+        {/* Row 1 */}
+        <div className="grid grid-cols-3 gap-5">
+          <div className="col-span-1">
+            <Label>{f.clientName}</Label>
+            <input value={form.client_name} onChange={set("client_name")} placeholder="Ej: María García" required data-testid="input-client-name" className={inp}/>
           </div>
+          <div>
+            <Label>{f.phone}</Label>
+            <input value={form.client_phone} onChange={set("client_phone")} placeholder="+502 1234 5678" data-testid="input-phone" className={inp}/>
+          </div>
+          <div>
+            <Label>{f.email}</Label>
+            <input type="email" value={form.client_email} onChange={set("client_email")} placeholder="correo@email.com" data-testid="input-email" className={inp}/>
+          </div>
+        </div>
 
-          {/* Contenido scrolleable */}
-          <form onSubmit={handleSubmit} className="flex flex-col flex-1 min-h-0">
-            <div className="flex-1 min-h-0 overflow-y-auto px-7 py-5 space-y-3">
-              <Field label={f.clientName}>
-                <input value={form.client_name} onChange={set("client_name")} placeholder={f.placeholders?.name||"Ej: María García"} required data-testid="input-client-name" className={inputClass} />
-              </Field>
-              <div className="grid grid-cols-2 gap-3">
-                <Field label={f.phone}><input value={form.client_phone} onChange={set("client_phone")} placeholder={f.placeholders?.phone||"+502 1234 5678"} data-testid="input-phone" className={inputClass} /></Field>
-                <Field label={f.email}><input value={form.client_email} onChange={set("client_email")} placeholder={f.placeholders?.email||"correo@email.com"} type="email" data-testid="input-email" className={inputClass} /></Field>
-              </div>
-              <div className="grid grid-cols-2 gap-3">
-                <Field label={f.eventType}>
-                  <select value={form.event_type} onChange={set("event_type")} required data-testid="input-event-type" className={selectClass}>
-                    {EVENT_TYPES.map(t => <option key={t} className="bg-white">{t}</option>)}
-                  </select>
-                </Field>
-                <Field label={f.status}>
-                  <select value={form.status} onChange={set("status")} data-testid="input-status" className={selectClass}>
-                    {STATUSES.map(s => <option key={s} value={s} className="bg-white">{tr.statuses[s]||s}</option>)}
-                  </select>
-                </Field>
-              </div>
-              <div className="grid grid-cols-2 gap-3">
-                <Field label={f.eventDate}><input type="date" value={form.event_date} onChange={set("event_date")} required data-testid="input-event-date" className={inputClass} /></Field>
-                <Field label={f.time}><input type="time" value={form.event_time} onChange={set("event_time")} data-testid="input-event-time" className={inputClass} /></Field>
-              </div>
-              <div className="grid grid-cols-2 gap-3">
-                <Field label={f.venue}><input value={form.venue} onChange={set("venue")} placeholder={f.placeholders?.venue||"Salón..."} data-testid="input-venue" className={inputClass} /></Field>
-                <Field label={f.guests}><input type="number" value={form.guests_count} onChange={set("guests_count")} placeholder={f.placeholders?.guests||"150"} min="0" data-testid="input-guests" className={inputClass} /></Field>
-              </div>
-              <div className="grid grid-cols-2 gap-3">
-                <Field label={f.totalAmount}><input type="number" value={form.total_amount} onChange={set("total_amount")} placeholder="50000" min="0" step="0.01" required data-testid="input-total" className={inputClass} /></Field>
-                <Field label={f.advancePaid}><input type="number" value={form.advance_paid} onChange={set("advance_paid")} placeholder="10000" min="0" step="0.01" data-testid="input-advance" className={inputClass} /></Field>
-              </div>
-              <Field label={f.notes}>
-                <textarea value={form.notes} onChange={set("notes")} placeholder={f.placeholders?.notes||"Detalles especiales..."} rows={2} data-testid="input-notes" className={`${inputClass} resize-none`} />
-              </Field>
-            </div>
+        {/* Row 2 */}
+        <div className="grid grid-cols-4 gap-5">
+          <div>
+            <Label>{f.eventType}</Label>
+            <select value={form.event_type} onChange={set("event_type")} required data-testid="input-event-type" className={sel}>
+              {EVENT_TYPES.map(t => <option key={t} className="bg-white">{t}</option>)}
+            </select>
+          </div>
+          <div>
+            <Label>{f.status}</Label>
+            <select value={form.status} onChange={set("status")} data-testid="input-status" className={sel}>
+              {STATUSES.map(s => <option key={s} value={s} className="bg-white">{tr.statuses[s]||s}</option>)}
+            </select>
+          </div>
+          <div>
+            <Label>{f.eventDate}</Label>
+            <input type="date" value={form.event_date} onChange={set("event_date")} required data-testid="input-event-date" className={inp}/>
+          </div>
+          <div>
+            <Label>{f.time}</Label>
+            <input type="time" value={form.event_time} onChange={set("event_time")} data-testid="input-event-time" className={inp}/>
+          </div>
+        </div>
 
-            {/* Footer con botones — fijo */}
-            <div className="flex-shrink-0 flex justify-end gap-3 px-7 py-4 border-t border-white/40 bg-white/10">
-              <motion.button whileHover={{ scale:1.02 }} whileTap={{ scale:0.98 }} type="button" onClick={onClose} data-testid="cancel-form-btn"
-                className="px-5 py-2.5 rounded-full glass border-white/60 text-sm font-bold text-slate-700 hover:bg-white/60 transition-colors">
-                {tr.common.cancel}
-              </motion.button>
-              <motion.button whileHover={{ scale:1.02 }} whileTap={{ scale:0.98 }} type="submit" disabled={saving} data-testid="submit-form-btn"
-                className="px-6 py-2.5 rounded-full btn-primary text-white text-sm font-bold disabled:opacity-60">
-                {saving ? tr.common.saving : isEdit ? tr.common.save : tr.common.create}
-              </motion.button>
-            </div>
-          </form>
+        {/* Row 3 */}
+        <div className="grid grid-cols-4 gap-5">
+          <div className="col-span-2">
+            <Label>{f.venue}</Label>
+            <input value={form.venue} onChange={set("venue")} placeholder="Salón / Hotel / Iglesia…" data-testid="input-venue" className={inp}/>
+          </div>
+          <div>
+            <Label>{f.guests}</Label>
+            <input type="number" value={form.guests_count} onChange={set("guests_count")} placeholder="150" min="0" data-testid="input-guests" className={inp}/>
+          </div>
+          <div>
+            <Label>{f.totalAmount}</Label>
+            <input type="number" value={form.total_amount} onChange={set("total_amount")} placeholder="50,000" min="0" step="0.01" required data-testid="input-total" className={inp}/>
+          </div>
+        </div>
 
-        </motion.div>
-      </motion.div>
-    </AnimatePresence>
+        {/* Row 4 */}
+        <div className="grid grid-cols-4 gap-5">
+          <div>
+            <Label>{f.advancePaid}</Label>
+            <input type="number" value={form.advance_paid} onChange={set("advance_paid")} placeholder="10,000" min="0" step="0.01" data-testid="input-advance" className={inp}/>
+          </div>
+          <div className="col-span-3">
+            <Label>{f.notes}</Label>
+            <input value={form.notes} onChange={set("notes")} placeholder="Detalles especiales, temas, requerimientos…" data-testid="input-notes" className={inp}/>
+          </div>
+        </div>
+
+      </form>
+    </motion.div>
   );
 }
 
-function Field({ label, children }) {
-  return (
-    <div>
-      <label className="block text-xs font-black text-slate-500 uppercase tracking-wider mb-1.5">{label}</label>
-      {children}
-    </div>
-  );
+function Label({ children }) {
+  return <label className="block text-xs font-black text-slate-500 uppercase tracking-widest mb-2">{children}</label>;
 }
