@@ -36,3 +36,16 @@ export const uploadSocioPhoto = (id, file) => {
 };
 export const deleteSocioPhoto = (id) => api.delete(`/socios/${id}/photo`).then(r => r.data);
 export const getFinancials = () => api.get("/financials").then(r => r.data);
+
+// App Settings
+export const getAppSettings = () => api.get("/settings").then(r => r.data);
+export const updateAppSettings = (data) => api.put("/settings", data).then(r => r.data);
+
+// Database Settings
+export const getDbStats = () => api.get("/settings/database").then(r => r.data);
+export const testDbConnection = (url) => api.post("/settings/database/test", { url }).then(r => r.data);
+export const switchDatabase = (url) => api.post("/settings/database/connect", { url }).then(r => r.data);
+export const resetDatabase = () => api.post("/settings/database/reset").then(r => r.data);
+
+// Reminders
+export const sendTestReminder = () => api.post("/reminders/send").then(r => r.data);
