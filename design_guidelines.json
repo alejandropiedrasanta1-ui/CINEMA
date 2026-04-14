@@ -1,72 +1,93 @@
 {
-  "theme": "light",
-  "archetype": "4",
-  "archetype_name": "Swiss & High-Contrast",
-  "domain": "SaaS / Admin Dashboard",
-  "language": "es",
-  "colors": {
-    "background": "#FAFAFA",
-    "surface": "#FFFFFF",
-    "primary": "#0A0A0A",
-    "primary_hover": "#27272A",
-    "secondary": "#F4F4F5",
-    "secondary_text": "#71717A",
-    "border": "#E4E4E7",
-    "error": "#EF4444",
-    "success": "#22C55E",
-    "warning": "#F59E0B"
+  "design_system": {
+    "theme": "LIGHT",
+    "archetype": "3 (Pastel & Soft) combined with Apple-style Liquid Glass",
+    "mood": "Premium, fluido, orgánico, moderno y vibrante pero elegante."
   },
   "typography": {
-    "font_pair": {
-      "heading": "Cabinet Grotesk",
-      "body": "Satoshi"
-    },
-    "heading_rules": "Use tracking-tight for all headings. Maximum heading size is text-5xl.",
-    "body_rules": "Use leading-relaxed for long text, clean legible sizes like text-sm for tables."
-  },
-  "layout_and_spacing": {
-    "container": "max-w-7xl mx-auto px-4 sm:px-6 lg:px-8",
-    "spacing_scale": "Use generous spacing. p-6 or p-8 inside cards, gap-6 or gap-8 in grids.",
-    "borders_and_radius": "Subtle border-zinc-200 everywhere instead of heavy shadows. rounded-md or rounded-sm for a sharp, technical SaaS feel.",
-    "shadows": "Minimal shadows. Prefer flat, 1px bordered containers. For floating elements, use shadow-sm."
-  },
-  "components": {
-    "dashboard_grid": "Gridcols-1 md:grid-cols-3 gap-6. First row for key metrics (upcoming events, pending payments), next row for a wider table/list of recent reservations.",
-    "tables": "Use Shadcn Table. Clean rows with border-b, no vertical lines. Status badges should be minimal (e.g., small dot + text or a subtly colored background badge).",
-    "forms": "Left-aligned labels. Use Shadcn Input, Select, DatePicker. Subdued borders (border-zinc-300).",
-    "buttons": "Sharp corners or slightly rounded (rounded-md). Primary buttons should be deep black (#0A0A0A) with white text. Secondary buttons white with 1px border.",
-    "calendar": "Shadcn Calendar component in a full-page view or card. Highlight booked dates clearly.",
-    "receipt_upload": "Use a subtle dashed border dropzone area. Show a thumbnail grid once uploaded.",
-    "navigation": "Top navigation or sleek minimal sidebar. White background, 1px bottom or right border."
-  },
-  "motion": {
-    "hover_states": "Subtle background color shifts on rows and buttons. No heavy translations or scales.",
-    "transitions": "transition-colors duration-200 ease-in-out."
-  },
-  "icons": {
-    "library": "lucide-react",
-    "style": "Minimalist outline icons, 1.5px stroke width."
-  },
-  "images": {
-    "event_placeholder": {
-      "url": "https://images.unsplash.com/photo-1764380746366-f4d8cc52e1e3?crop=entropy&cs=srgb&fm=jpg&ixid=M3w4NjAzMzN8MHwxfHNlYXJjaHwxfHx3ZWRkaW5nJTIwZXZlbnQlMjB0YWJsZSUyMHNldHRpbmd8ZW58MHx8fHwxNzc2MTM2NTU4fDA&ixlib=rb-4.1.0&q=85",
-      "description": "Elegant table setting placeholder for event details without an uploaded image."
+    "primary_font": "Cabinet Grotesk (Para encabezados - H1 a H4)",
+    "secondary_font": "Satoshi (Para cuerpo de texto y etiquetas)",
+    "instructions": "Asegúrate de importar las fuentes en el index.css o layout. Configura Tailwind para usar estas fuentes en fontFamily.",
+    "hierarchy": {
+      "h1": "text-4xl sm:text-5xl lg:text-6xl font-black tracking-tighter text-slate-900",
+      "h2": "text-2xl sm:text-3xl lg:text-4xl font-bold tracking-tight text-slate-800",
+      "h3": "text-xl sm:text-2xl font-bold tracking-tight text-slate-800",
+      "body": "text-base font-medium text-slate-600 leading-relaxed",
+      "small_label": "text-xs font-bold uppercase tracking-[0.2em] text-slate-500"
     }
   },
-  "accessibility_and_testing": {
-    "contrast": "Ensure APCA/WCAG AA contrast for text. Avoid light gray text on white background.",
-    "test_ids": "Mandatory data-testid attributes (kebab-case, role-based) on all interactive elements: buttons, inputs, table rows, links, tabs."
+  "colors": {
+    "background_base": "bg-slate-50",
+    "background_mesh_orbs": [
+      "Rosa Suave: bg-rose-300/40",
+      "Índigo Claro: bg-indigo-300/40",
+      "Cielo Vibrante: bg-sky-300/40"
+    ],
+    "text": {
+      "primary": "text-slate-900",
+      "secondary": "text-slate-600",
+      "muted": "text-slate-400"
+    },
+    "primary_cta": {
+      "default": "bg-indigo-600 text-white shadow-lg shadow-indigo-200",
+      "hover": "hover:bg-indigo-700 hover:scale-[1.02] hover:shadow-indigo-300 transition-all duration-300"
+    },
+    "surface_liquid_glass": {
+      "cards": "bg-white/40 backdrop-blur-2xl border border-white/60 shadow-[0_8px_32px_0_rgba(31,38,135,0.07)]",
+      "panels_inner": "bg-white/60 backdrop-blur-xl border border-white/40 shadow-sm",
+      "modals": "bg-white/70 backdrop-blur-3xl border border-white/50 shadow-2xl"
+    }
+  },
+  "layout_and_spacing": {
+    "border_radius": {
+      "cards_and_modals": "rounded-3xl",
+      "inner_elements": "rounded-2xl",
+      "buttons_and_badges": "rounded-full"
+    },
+    "spacing_strategy": "Generoso. Usa p-8 o p-12 para contenedores principales (cards). Usa gap-6 o gap-8 en grids. NINGUNA esquina debe ser cuadrada.",
+    "dashboard_grid": "Usa Bento Grid asimétrico. Ej: Stats en top, Lista principal ocupando col-span-2, Calendario en col-span-1."
+  },
+  "components_instructions": {
+    "stats_cards": "Aplicar clase surface_liquid_glass.cards, bordes rounded-3xl. Iconos con fondo circular bg-white/50.",
+    "reservations_table": "Contenedor con surface_liquid_glass.cards. Filas de tabla con hover:bg-white/50 transition-colors y sin bordes divisorios duros (usar border-b border-white/20).",
+    "reservation_form_modal": "Backdrop debe ser bg-slate-900/20 backdrop-blur-md. El modal en sí usa surface_liquid_glass.modals con rounded-3xl. Inputs deben ser rounded-2xl bg-white/50 border-white/50 focus:bg-white/80 focus:ring-2 focus:ring-indigo-400.",
+    "calendar_view": "Días del calendario con estilo glassmorphism (bg-white/30 hover:bg-white/60 border border-white/40 rounded-2xl). Eventos como pastillas rounded-full bg-indigo-100 text-indigo-700.",
+    "upload_zone": "Zona drop glassmorphism: border-2 border-dashed border-indigo-300/50 bg-indigo-50/30 backdrop-blur-md rounded-3xl p-12 flex flex-col items-center hover:bg-indigo-50/50 transition-colors."
+  },
+  "motion_and_interactions": {
+    "hover_states": "Micro-interacciones en todo. Tarjetas hover:-translate-y-1 hover:shadow-xl hover:bg-white/50 duration-300.",
+    "page_transitions": "Animaciones fluidas al cambiar de vista. Usa Framer Motion si es posible (initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}).",
+    "buttons": "Todos los botones interactivos hover:scale-[1.02] active:scale-[0.98]."
+  },
+  "media_and_icons": {
+    "icons_library": "lucide-react",
+    "icon_style": "Trazo fino, elegante, color indigo o slate-700.",
+    "images_for_demo": {
+      "dashboard_hero": {
+        "url": "https://images.unsplash.com/photo-1768508950319-0e4b01063fbe?crop=entropy&cs=srgb&fm=jpg&ixid=M3w3NDQ2NDF8MHwxfHNlYXJjaHwxfHxlbGVnYW50JTIwY29ycG9yYXRlJTIwZXZlbnR8ZW58MHx8fHwxNzc2MTM3Njc0fDA&ixlib=rb-4.1.0&q=85",
+        "description": "Evento corporativo elegante para usar en estados vacíos o hero del dashboard."
+      },
+      "wedding_setup": {
+        "url": "https://images.unsplash.com/photo-1700062069869-0c59ff21fa3b?crop=entropy&cs=srgb&fm=jpg&ixid=M3w3NDQ2NDF8MHwxfHNlYXJjaHwyfHxsdXh1cnklMjB3ZWRkaW5nJTIwc2V0dXB8ZW58MHx8fHwxNzc2MTM3Njc0fDA&ixlib=rb-4.1.0&q=85",
+        "description": "Setup de boda lujosa para detalle de reservación visual."
+      },
+      "planner_working": {
+        "url": "https://images.unsplash.com/photo-1712903276004-ea6b4a916abe?crop=entropy&cs=srgb&fm=jpg&ixid=M3w4NjAzMzJ8MHwxfHNlYXJjaHwzfHxldmVudCUyMHBsYW5uZXIlMjB3b3JraW5nfGVufDB8fHx8MTc3NjEzNzY3NHww&ixlib=rb-4.1.0&q=85",
+        "description": "Planner trabajando, ideal para perfil de usuario o sidebar."
+      }
+    }
+  },
+  "testing_attributes": {
+    "instructions": "Todos los elementos interactivos DEBEN incluir el atributo data-testid (ej. data-testid='reservation-submit-button')."
   },
   "instructions_to_main_agent": [
-    "Design a minimalist Spanish-language dashboard for managing event reservations.",
-    "Implement 'Cabinet Grotesk' for headings and 'Satoshi' for body text. Do not use 'Inter'.",
-    "Create a clean Layout shell (Sidebar or Topnav) showing 'Dashboard', 'Reservaciones', 'Calendario'.",
-    "Dashboard page: Overview cards (Próximos eventos, Pagos pendientes, Total) and a summary table.",
-    "Reservations page: A detailed table showing Client, Date, Event Type, Total, Advance, and Status (Pendiente, Confirmado, Completado, Cancelado).",
-    "Reservation Detail view: Show all details and include an Image Upload section for 'Comprobantes de Pago' (Payment Receipts).",
-    "Forms: Implement a New/Edit Reservation form supporting all required fields (client info, event type, date/time, venue, guests, total amount, advance paid, notes).",
-    "Calendar: Display a monthly view with visual indicators for reserved dates.",
-    "Styling: Keep it strictly high-contrast, 'Swiss minimalist' style. Use sharp lines (rounded-md max), 1px borders, and flat designs instead of heavy drop shadows.",
-    "Ensure all interactive elements have valid data-testid attributes."
+    "Usa un fondo base (bg-slate-50) y crea blobs de color (divs con blur-[100px] o blur-3xl y colores vibrantes como bg-indigo-300, bg-rose-300, bg-sky-300) posicionados de forma absoluta en el layout principal para dar el efecto de colores vibrantes detrás del cristal.",
+    "NO USES NINGUNA ESQUINA CUADRADA. Usa rounded-2xl y rounded-3xl en todo, y rounded-full para botones e inputs si aplica.",
+    "Asegúrate de que la navegación principal también aplique Liquid Glass (backdrop-blur-2xl).",
+    "Los modales deben tener un fondo oscuro con blur (bg-slate-900/20 backdrop-blur-md) para dar peso y enfoque al formulario de cristal encima.",
+    "Agrega Framer Motion para las transiciones de página y micro-interacciones suaves si te es posible, si no usa clases transition-all duration-300 de Tailwind.",
+    "Aplica las tipografías Cabinet Grotesk y Satoshi correctamente importándolas o usando links en el index.css.",
+    "NO cambies la funcionalidad existente de la aplicación; solo rediseña el aspecto visual integrando estilos por defecto al estilo Liquid Glass.",
+    "El app debe mantenerse en español."
   ]
 }
