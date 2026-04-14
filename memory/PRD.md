@@ -1,5 +1,5 @@
 # PRD — Cinema Productions · Gestión de Reservas de Eventos
-_Última actualización: Febrero 2026_
+_Última actualización: Abril 2026_
 
 ---
 
@@ -8,7 +8,7 @@ Sistema de gestión de reservas para eventos (bodas, quinceañeras, fiestas soci
 
 ## Arquitectura
 - **Frontend**: React 18 + Tailwind CSS + Framer Motion (Liquid Glass UI)
-- **Backend**: FastAPI + MongoDB
+- **Backend**: FastAPI + MongoDB (Motor async) + APScheduler
 - **Autenticación**: Sin login (acceso directo de administrador)
 - **Moneda por defecto**: GTQ (Quetzal Guatemalteco)
 
@@ -62,21 +62,41 @@ Sistema de gestión de reservas para eventos (bodas, quinceañeras, fiestas soci
 
 ### Formularios Full-Screen (Iteración 7 - Febrero 2026) ✅
 - ReservationForm y SocioForm rediseñados como páginas completas (no modales)
-- Diseño full-screen: fondo gradiente claro, sidebar visible, título grande, botones en top-bar
-- ReservationForm: grid 3-4 columnas, todos los campos visibles sin scroll
-- SocioForm: foto grande a la izquierda + campos a la derecha, sin scroll
-- Botón "Cancelar" con flecha ← en top-left, botón principal morado en top-right
-- Botones editar/eliminar siempre visibles en tarjetas de socios (antes ocultos en hover)
 - Toggle Pendiente/Pagado en sección "Fotógrafo / Equipo" de cada reserva
-  - Ícono Clock (naranja) = Pendiente
-  - Ícono CheckCircle (verde) = Pagado
-  - Monto aparece tachado cuando está pagado
-- Monto pagado al socio se tacha visualmente cuando está marcado como Pagado
 - Sub-totales en TeamSection: "Pagado al equipo" y "Pendiente equipo"
 - Panel en página Socios: 4 cards → Total Eventos, Costo Equipo, Pagado Equipo, Ingreso Real
-- Tarjetas de socios muestran: Eventos asignados, Monto Pagado, Monto Pendiente
-- Eventos recientes por socio muestran badge Pagado/Pendiente
-- `/api/financials` retorna: `total_paid_to_partners`, `total_pending_to_partners`
+
+### Recordatorios y Notificaciones (Iteración 8 - Abril 2026) ✅
+- Sección "Recordatorios" en Ajustes:
+  - Toggle activar/desactivar recordatorios automáticos
+  - Slider de días de anticipación (1-30 días, default: 3)
+  - Selector de canal: Email / WhatsApp / Ambos
+  - Input email del administrador
+  - Input número WhatsApp (con botón "Abrir WhatsApp" → wa.me link)
+  - Campo Clave API de Resend (enmascarado en almacenamiento)
+  - Botón "Guardar configuración"
+  - Botón "Enviar recordatorio de prueba"
+- APScheduler cron diario a las 8:00am que revisa eventos próximos y envía emails (Resend)
+- Endpoint manual: POST /api/reminders/send
+
+### Base de Datos Dinámica (Iteración 8 - Abril 2026) ✅
+- Sección "Base de Datos" en Ajustes:
+  - Estadísticas en tiempo real: Colecciones, Documentos, Datos, Almacenamiento, Índices, Total
+  - Conexión activa (URL actual enmascarada si tiene credenciales)
+  - Badge "Original" / "Personalizada"
+  - Input para nueva URL de MongoDB
+  - Botón "Probar conexión" (timeout 5s)
+  - Botón "Conectar" (cambia DB en caliente, persiste en .db_override)
+  - Botón "Restaurar original" (aparece solo cuando hay URL custom)
+- Cambio de DB en caliente sin reiniciar servidor
+- Persistencia en /app/backend/.db_override (cargado al inicio)
+
+### Búsqueda por Mes/Año en Calendario (Iteración 8 - Abril 2026) ✅
+- Botón lupa en esquina superior del calendario
+- Barra animada con dropdowns de Mes y Año
+- Rango de años: ±10 años del año actual
+- Botón "Hoy" para volver al mes actual
+- Clic en título del mes también abre/cierra la barra
 
 ---
 
@@ -88,7 +108,7 @@ Sistema de gestión de reservas para eventos (bodas, quinceañeras, fiestas soci
 | GET | /api/reservations | Listar reservas (sin imágenes) |
 | POST | /api/reservations | Crear reserva |
 | GET | /api/reservations/{id} | Detalle con imágenes |
-| PUT | /api/reservations/{id} | Actualizar reserva (incluye locations, assigned_partners) |
+| PUT | /api/reservations/{id} | Actualizar reserva |
 | DELETE | /api/reservations/{id} | Eliminar reserva |
 | POST | /api/reservations/{id}/receipts | Subir comprobante (max 10MB) |
 | DELETE | /api/reservations/{id}/receipts/{rid} | Eliminar comprobante |
@@ -101,15 +121,21 @@ Sistema de gestión de reservas para eventos (bodas, quinceañeras, fiestas soci
 | DELETE | /api/socios/{id} | Eliminar socio |
 | POST | /api/socios/{id}/photo | Subir foto de perfil (max 5MB) |
 | DELETE | /api/socios/{id}/photo | Eliminar foto de perfil |
-| GET | /api/financials | Totales globales: eventos, equipo, ingreso real |
+| GET | /api/financials | Totales globales |
+| GET | /api/settings | Obtener configuración de notificaciones |
+| PUT | /api/settings | Guardar configuración (API key enmascarada) |
+| GET | /api/settings/database | Estadísticas de almacenamiento MongoDB |
+| POST | /api/settings/database/test | Probar nueva conexión |
+| POST | /api/settings/database/connect | Cambiar conexión activa |
+| POST | /api/settings/database/reset | Restaurar URL original |
+| POST | /api/reminders/send | Trigger manual de recordatorios |
 
 ---
 
-## Backlog / Próximas mejoras (P1/P2)
+## Backlog / Próximas mejoras
 
 ### P1 (Próximo sprint)
-- [ ] Notificaciones / recordatorios automáticos por WhatsApp o email
-- [ ] Buscar reservas por mes/año en el calendario
+- [ ] WhatsApp automático vía Twilio (actualmente es link manual wa.me)
 - [ ] Imprimir comprobante directamente desde el detalle
 
 ### P2
