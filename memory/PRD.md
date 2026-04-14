@@ -60,7 +60,12 @@ Sistema de gestión de reservas para eventos (bodas, quinceañeras, fiestas soci
 - Campos: dirección/nombre del lugar + link de Waze
 - Botón "Abrir en Waze" al visualizar
 
-### Estado de Pago por Socio (Iteración 6 - Febrero 2026) ✅
+### Modal Forms Fix (Iteración 7 - Febrero 2026) ✅
+- Modales de Reserva y Socio ahora muestran header + botones siempre visibles sin scroll de página
+- Implementado patrón: backdrop `overflow-hidden` + modal `max-h-full` + body `flex-1 min-h-0 overflow-y-auto`
+- Header (título + X) fijo en la parte superior del modal
+- Footer (Cancelar + Guardar/Crear) fijo en la parte inferior del modal
+- Solo el contenido de los campos scrollea internamente si la pantalla es pequeña
 - Botones editar/eliminar siempre visibles en tarjetas de socios (antes ocultos en hover)
 - Toggle Pendiente/Pagado en sección "Fotógrafo / Equipo" de cada reserva
   - Ícono Clock (naranja) = Pendiente
