@@ -1,4 +1,4 @@
-@import url('https://api.fontshare.com/v2/css?f[]=cabinet-grotesk@400,500,600,700,800&f[]=satoshi@400,500,600,700&display=swap');
+@import url('https://api.fontshare.com/v2/css?f[]=cabinet-grotesk@400,500,600,700,800,900&f[]=satoshi@400,500,600,700&display=swap');
 
 @tailwind base;
 @tailwind components;
@@ -9,46 +9,49 @@ body {
   font-family: 'Satoshi', -apple-system, BlinkMacSystemFont, sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
-  background-color: #FAFAFA;
+  background-color: #f8fafc;
+  overflow-x: hidden;
 }
 
 h1, h2, h3, h4, h5, h6 {
   font-family: 'Cabinet Grotesk', sans-serif;
-  letter-spacing: -0.025em;
+  letter-spacing: -0.03em;
 }
+
+/* Scrollbar */
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: rgba(99,102,241,0.2); border-radius: 9999px; }
+::-webkit-scrollbar-thumb:hover { background: rgba(99,102,241,0.4); }
 
 @layer base {
   :root {
-    --background: 0 0% 98%;
-    --foreground: 0 0% 4%;
+    --background: 210 40% 98%;
+    --foreground: 222 47% 11%;
     --card: 0 0% 100%;
-    --card-foreground: 0 0% 4%;
+    --card-foreground: 222 47% 11%;
     --popover: 0 0% 100%;
-    --popover-foreground: 0 0% 4%;
-    --primary: 0 0% 4%;
-    --primary-foreground: 0 0% 98%;
-    --secondary: 0 0% 96%;
-    --secondary-foreground: 0 0% 4%;
-    --muted: 0 0% 96%;
-    --muted-foreground: 0 0% 44%;
-    --accent: 0 0% 96%;
-    --accent-foreground: 0 0% 4%;
+    --popover-foreground: 222 47% 11%;
+    --primary: 239 84% 67%;
+    --primary-foreground: 0 0% 100%;
+    --secondary: 210 40% 96%;
+    --secondary-foreground: 222 47% 11%;
+    --muted: 210 40% 96%;
+    --muted-foreground: 215 16% 47%;
+    --accent: 210 40% 96%;
+    --accent-foreground: 222 47% 11%;
     --destructive: 0 84% 60%;
     --destructive-foreground: 0 0% 98%;
-    --border: 0 0% 90%;
-    --input: 0 0% 90%;
-    --ring: 0 0% 4%;
-    --radius: 0.375rem;
+    --border: 214 32% 91%;
+    --input: 214 32% 91%;
+    --ring: 239 84% 67%;
+    --radius: 1.5rem;
   }
 }
 
 @layer base {
-  * {
-    @apply border-border;
-  }
-  body {
-    @apply bg-background text-foreground;
-  }
+  * { @apply border-border; }
+  body { @apply bg-background text-foreground; }
 }
 
 @layer base {
@@ -56,28 +59,105 @@ h1, h2, h3, h4, h5, h6 {
     display: contents !important;
   }
   [data-debug-wrapper="true"] > * {
-    margin-left: inherit;
-    margin-right: inherit;
-    margin-top: inherit;
-    margin-bottom: inherit;
-    padding-left: inherit;
-    padding-right: inherit;
-    padding-top: inherit;
-    padding-bottom: inherit;
-    column-gap: inherit;
-    row-gap: inherit;
-    gap: inherit;
-    border-left-width: inherit;
-    border-right-width: inherit;
-    border-top-width: inherit;
-    border-bottom-width: inherit;
-    border-left-style: inherit;
-    border-right-style: inherit;
-    border-top-style: inherit;
-    border-bottom-style: inherit;
-    border-left-color: inherit;
-    border-right-color: inherit;
-    border-top-color: inherit;
-    border-bottom-color: inherit;
+    margin-left: inherit; margin-right: inherit;
+    margin-top: inherit; margin-bottom: inherit;
+    padding-left: inherit; padding-right: inherit;
+    padding-top: inherit; padding-bottom: inherit;
+    column-gap: inherit; row-gap: inherit; gap: inherit;
+    border-left-width: inherit; border-right-width: inherit;
+    border-top-width: inherit; border-bottom-width: inherit;
+    border-left-style: inherit; border-right-style: inherit;
+    border-top-style: inherit; border-bottom-style: inherit;
+    border-left-color: inherit; border-right-color: inherit;
+    border-top-color: inherit; border-bottom-color: inherit;
   }
+}
+
+/* Glass card utility */
+.glass {
+  background: rgba(255, 255, 255, 0.45);
+  backdrop-filter: blur(20px) saturate(180%);
+  -webkit-backdrop-filter: blur(20px) saturate(180%);
+  border: 1px solid rgba(255, 255, 255, 0.65);
+  box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.07), 0 1px 0 rgba(255,255,255,0.8) inset;
+}
+
+.glass-strong {
+  background: rgba(255, 255, 255, 0.65);
+  backdrop-filter: blur(40px) saturate(200%);
+  -webkit-backdrop-filter: blur(40px) saturate(200%);
+  border: 1px solid rgba(255, 255, 255, 0.75);
+  box-shadow: 0 16px 48px 0 rgba(31, 38, 135, 0.10), 0 1px 0 rgba(255,255,255,0.9) inset;
+}
+
+.glass-modal {
+  background: rgba(255, 255, 255, 0.75);
+  backdrop-filter: blur(60px) saturate(200%);
+  -webkit-backdrop-filter: blur(60px) saturate(200%);
+  border: 1px solid rgba(255, 255, 255, 0.8);
+  box-shadow: 0 24px 64px 0 rgba(31, 38, 135, 0.15), 0 1px 0 rgba(255,255,255,0.95) inset;
+}
+
+.glass-sidebar {
+  background: rgba(255, 255, 255, 0.60);
+  backdrop-filter: blur(40px) saturate(180%);
+  -webkit-backdrop-filter: blur(40px) saturate(180%);
+  border-right: 1px solid rgba(255, 255, 255, 0.70);
+  box-shadow: 4px 0 24px 0 rgba(31, 38, 135, 0.06);
+}
+
+/* Gradient text */
+.gradient-text {
+  background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 50%, #ec4899 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+/* Mesh blob background */
+.mesh-bg {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+.blob {
+  position: absolute;
+  border-radius: 9999px;
+  filter: blur(100px);
+  opacity: 0.35;
+  animation: float 8s ease-in-out infinite;
+}
+
+.blob-1 {
+  width: 600px; height: 600px;
+  background: radial-gradient(circle, #a5b4fc, #818cf8);
+  top: -15%; left: -10%;
+  animation-delay: 0s;
+}
+.blob-2 {
+  width: 500px; height: 500px;
+  background: radial-gradient(circle, #fda4af, #fb7185);
+  top: 30%; right: -10%;
+  animation-delay: -3s;
+}
+.blob-3 {
+  width: 450px; height: 450px;
+  background: radial-gradient(circle, #7dd3fc, #38bdf8);
+  bottom: -10%; left: 20%;
+  animation-delay: -6s;
+}
+.blob-4 {
+  width: 350px; height: 350px;
+  background: radial-gradient(circle, #d9f99d, #86efac);
+  top: 60%; left: 55%;
+  animation-delay: -2s;
+}
+
+@keyframes float {
+  0%, 100% { transform: translate(0, 0) scale(1); }
+  33% { transform: translate(30px, -30px) scale(1.05); }
+  66% { transform: translate(-20px, 20px) scale(0.95); }
 }

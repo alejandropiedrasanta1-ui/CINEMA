@@ -1,16 +1,16 @@
 import { useEffect, useState, useRef } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { getReservation, updateReservation, uploadReceipt, deleteReceipt } from "@/lib/api";
-import { ArrowLeft, Upload, Trash2, Edit2, X, ImageIcon, CheckCircle } from "lucide-react";
-import { Button } from "@/components/ui/button";
+import { ArrowLeft, Upload, Trash2, Edit2, X, ImageIcon } from "lucide-react";
+import { motion, AnimatePresence } from "framer-motion";
 import { useToast } from "@/hooks/use-toast";
 import ReservationForm from "@/components/ReservationForm";
 
 const STATUS_COLORS = {
-  Pendiente: "bg-amber-50 text-amber-700 border-amber-200",
-  Confirmado: "bg-blue-50 text-blue-700 border-blue-200",
-  Completado: "bg-green-50 text-green-700 border-green-200",
-  Cancelado: "bg-red-50 text-red-700 border-red-200",
+  Pendiente: "bg-amber-100/80 text-amber-700 border-amber-200/60",
+  Confirmado: "bg-blue-100/80 text-blue-700 border-blue-200/60",
+  Completado: "bg-emerald-100/80 text-emerald-700 border-emerald-200/60",
+  Cancelado: "bg-red-100/80 text-red-700 border-red-200/60",
 };
 
 const STATUSES = ["Pendiente", "Confirmado", "Completado", "Cancelado"];
@@ -46,24 +46,23 @@ export default function ReservationDetail() {
     const [y, m, day] = d.split("-");
     return `${day}/${m}/${y}`;
   };
-
   const formatCurrency = (n) =>
-    new Intl.NumberFormat("es-MX", { style: "currency", currency: "MXN" }).format(n || 0);
+    new Intl.NumberFormat("es-MX", { style: "currency", currency: "MXN", maximumFractionDigits: 0 }).format(n || 0);
 
   const handleFileUpload = async (files) => {
     const allowed = ["image/jpeg", "image/png", "image/gif", "image/webp", "application/pdf"];
     for (const file of files) {
       if (!allowed.includes(file.type)) {
-        toast({ title: "Tipo de archivo no soportado", description: "Solo imágenes y PDF", variant: "destructive" });
+        toast({ title: "Tipo no soportado", description: "Solo imágenes y PDF", variant: "destructive" });
         continue;
       }
       setUploading(true);
       try {
         await uploadReceipt(id, file);
-        toast({ title: "Comprobante subido exitosamente" });
+        toast({ title: "Comprobante subido" });
         load();
       } catch (e) {
-        toast({ title: "Error al subir", description: e.response?.data?.detail || "Error desconocido", variant: "destructive" });
+        toast({ title: "Error al subir", description: e.response?.data?.detail || "Error", variant: "destructive" });
       } finally {
         setUploading(false);
       }
@@ -77,7 +76,7 @@ export default function ReservationDetail() {
   };
 
   const handleDeleteReceipt = async (receiptId) => {
-    if (!window.confirm("¿Eliminar este comprobante?")) return;
+    if (!window.confirm("¿Eliminar comprobante?")) return;
     try {
       await deleteReceipt(id, receiptId);
       toast({ title: "Comprobante eliminado" });
@@ -89,29 +88,26 @@ export default function ReservationDetail() {
 
   const handleStatusChange = async (newStatus) => {
     try {
-      await updateReservation(id, { status: newStatus });
-      toast({ title: `Estado actualizado: ${newStatus}` });
-      load();
+      const updated = await updateReservation(id, { status: newStatus });
+      setReservation(updated);
+      toast({ title: `Estado: ${newStatus}` });
     } catch {
-      toast({ title: "Error al actualizar estado", variant: "destructive" });
+      toast({ title: "Error al actualizar", variant: "destructive" });
     }
   };
 
   if (loading) {
     return (
-      <div className="px-6 py-8 max-w-4xl mx-auto">
-        <div className="h-8 w-48 bg-zinc-100 rounded animate-pulse mb-8" />
-        <div className="h-64 bg-zinc-100 rounded animate-pulse" />
+      <div className="px-6 py-8 max-w-4xl mx-auto space-y-4">
+        <div className="h-10 w-64 glass rounded-2xl animate-pulse" />
+        <div className="h-56 glass rounded-3xl animate-pulse" />
+        <div className="h-40 glass rounded-3xl animate-pulse" />
       </div>
     );
   }
 
   if (!reservation) {
-    return (
-      <div className="px-6 py-8 max-w-4xl mx-auto text-center text-zinc-400">
-        Reserva no encontrada
-      </div>
-    );
+    return <div className="px-6 py-8 text-center text-slate-400 font-medium">Reserva no encontrada</div>;
   }
 
   const remaining = (reservation.total_amount || 0) - (reservation.advance_paid || 0);
@@ -121,77 +117,96 @@ export default function ReservationDetail() {
 
   return (
     <div className="px-6 py-8 max-w-4xl mx-auto">
-      {/* Back + Header */}
-      <div className="flex items-center gap-3 mb-6">
-        <button
+      {/* Header */}
+      <motion.div
+        initial={{ opacity: 0, y: -16 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.4 }}
+        className="flex items-center gap-3 mb-7"
+      >
+        <motion.button
+          whileHover={{ scale: 1.1, x: -2 }}
+          whileTap={{ scale: 0.9 }}
           onClick={() => navigate(-1)}
-          className="p-2 rounded-md hover:bg-zinc-100 text-zinc-500 transition-colors"
+          className="p-2.5 rounded-2xl glass hover:bg-white/60 text-slate-600 transition-colors"
           data-testid="back-btn"
         >
           <ArrowLeft size={16} />
-        </button>
+        </motion.button>
         <div className="flex-1">
-          <h1 className="text-3xl font-bold text-zinc-900 tracking-tight" style={{ fontFamily: 'Cabinet Grotesk, sans-serif' }}>
+          <h1 className="text-4xl font-black text-slate-900 tracking-tight" style={{ fontFamily: 'Cabinet Grotesk, sans-serif' }}>
             {reservation.client_name}
           </h1>
-          <p className="text-sm text-zinc-400">{reservation.event_type}</p>
+          <p className="text-sm text-slate-400 font-medium">{reservation.event_type}</p>
         </div>
         <div className="flex items-center gap-2">
           <select
             value={reservation.status}
             onChange={(e) => handleStatusChange(e.target.value)}
-            className={`text-xs px-2.5 py-1.5 rounded border font-medium cursor-pointer focus:outline-none ${STATUS_COLORS[reservation.status]}`}
+            className={`text-xs px-3 py-1.5 rounded-full border font-bold cursor-pointer focus:outline-none focus:ring-2 focus:ring-indigo-300/60 ${STATUS_COLORS[reservation.status]}`}
             data-testid="status-select"
           >
-            {STATUSES.map(s => <option key={s}>{s}</option>)}
+            {STATUSES.map(s => <option key={s} className="bg-white">{s}</option>)}
           </select>
-          <Button
-            variant="outline"
-            size="sm"
+          <motion.button
+            whileHover={{ scale: 1.05 }}
+            whileTap={{ scale: 0.95 }}
             onClick={() => setShowEdit(true)}
             data-testid="edit-btn"
-            className="flex items-center gap-1.5 text-xs"
+            className="flex items-center gap-1.5 px-4 py-2 rounded-full glass border-white/60 text-sm font-bold text-slate-700 hover:bg-white/60 transition-colors"
           >
-            <Edit2 size={12} />
+            <Edit2 size={13} />
             Editar
-          </Button>
+          </motion.button>
         </div>
-      </div>
+      </motion.div>
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
         {/* Left: Details */}
-        <div className="md:col-span-2 space-y-4">
-          {/* Client Info */}
-          <div className="bg-white border border-zinc-200 rounded-md p-6">
-            <h2 className="text-sm font-semibold text-zinc-900 mb-4 uppercase tracking-wide" style={{ fontFamily: 'Cabinet Grotesk, sans-serif' }}>
+        <div className="md:col-span-2 space-y-5">
+          {/* Event Info */}
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.1 }}
+            className="glass rounded-3xl p-6"
+          >
+            <h2 className="text-xs font-black text-slate-500 uppercase tracking-widest mb-5">
               Información del Evento
             </h2>
-            <dl className="grid grid-cols-2 gap-4">
+            <dl className="grid grid-cols-2 gap-5">
               <InfoItem label="Fecha del evento" value={formatDate(reservation.event_date)} />
               {reservation.event_time && <InfoItem label="Hora" value={reservation.event_time} />}
               {reservation.venue && <InfoItem label="Lugar" value={reservation.venue} />}
-              {reservation.guests_count && <InfoItem label="Invitados" value={reservation.guests_count} />}
+              {reservation.guests_count && <InfoItem label="Invitados" value={`${reservation.guests_count} personas`} />}
               {reservation.client_phone && <InfoItem label="Teléfono" value={reservation.client_phone} />}
               {reservation.client_email && <InfoItem label="Email" value={reservation.client_email} />}
             </dl>
             {reservation.notes && (
-              <div className="mt-4 pt-4 border-t border-zinc-100">
-                <p className="text-xs font-medium text-zinc-500 mb-1">Notas</p>
-                <p className="text-sm text-zinc-700 leading-relaxed">{reservation.notes}</p>
+              <div className="mt-5 pt-5 border-t border-white/40">
+                <p className="text-xs font-black text-slate-400 uppercase tracking-widest mb-2">Notas</p>
+                <p className="text-sm text-slate-700 leading-relaxed">{reservation.notes}</p>
               </div>
             )}
-          </div>
+          </motion.div>
 
           {/* Receipts */}
-          <div className="bg-white border border-zinc-200 rounded-md p-6">
-            <h2 className="text-sm font-semibold text-zinc-900 mb-4 uppercase tracking-wide" style={{ fontFamily: 'Cabinet Grotesk, sans-serif' }}>
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.2 }}
+            className="glass rounded-3xl p-6"
+          >
+            <h2 className="text-xs font-black text-slate-500 uppercase tracking-widest mb-5">
               Comprobantes de Pago
             </h2>
 
-            {/* Drop Zone */}
-            <div
-              className={`border-2 border-dashed rounded-md p-8 text-center cursor-pointer transition-colors ${
-                dragOver ? "border-zinc-500 bg-zinc-50" : "border-zinc-300 hover:border-zinc-400"
+            <motion.div
+              whileHover={{ scale: 1.01 }}
+              className={`border-2 border-dashed rounded-3xl p-8 text-center cursor-pointer transition-all duration-300 ${
+                dragOver
+                  ? "border-indigo-400 bg-indigo-50/60 scale-[1.02]"
+                  : "border-indigo-200/60 bg-indigo-50/20 hover:bg-indigo-50/40 hover:border-indigo-300"
               }`}
               onDrop={handleDrop}
               onDragOver={(e) => { e.preventDefault(); setDragOver(true); }}
@@ -199,11 +214,13 @@ export default function ReservationDetail() {
               onClick={() => fileRef.current?.click()}
               data-testid="upload-zone"
             >
-              <Upload size={20} className="mx-auto text-zinc-400 mb-2" />
-              <p className="text-sm text-zinc-500">
-                {uploading ? "Subiendo..." : "Arrastra o haz clic para subir comprobante"}
+              <div className="w-12 h-12 rounded-2xl bg-indigo-100/80 flex items-center justify-center mx-auto mb-3">
+                <Upload size={20} className="text-indigo-500" />
+              </div>
+              <p className="text-sm font-bold text-slate-600">
+                {uploading ? "Subiendo..." : "Arrastra o haz clic para subir"}
               </p>
-              <p className="text-xs text-zinc-400 mt-1">JPG, PNG, PDF — máx 10MB</p>
+              <p className="text-xs text-slate-400 mt-1">JPG, PNG, PDF — máx 10MB</p>
               <input
                 ref={fileRef}
                 type="file"
@@ -213,120 +230,158 @@ export default function ReservationDetail() {
                 data-testid="file-input"
                 onChange={(e) => handleFileUpload(Array.from(e.target.files))}
               />
-            </div>
+            </motion.div>
 
-            {/* Thumbnail Grid */}
-            {reservation.receipt_images && reservation.receipt_images.length > 0 && (
-              <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 mt-4" data-testid="receipts-grid">
-                {reservation.receipt_images.map((img) => (
-                  <div key={img.id} className="relative group rounded-md overflow-hidden border border-zinc-200 bg-zinc-50 aspect-video flex items-center justify-center">
-                    {img.content_type?.startsWith("image/") ? (
-                      <img
-                        src={`data:${img.content_type};base64,${img.data}`}
-                        alt={img.filename}
-                        className="object-cover w-full h-full cursor-pointer"
-                        onClick={() => setLightbox(img)}
-                        data-testid={`receipt-img-${img.id}`}
-                      />
-                    ) : (
-                      <div
-                        className="flex flex-col items-center gap-1 cursor-pointer py-4"
-                        onClick={() => setLightbox(img)}
-                      >
-                        <ImageIcon size={24} className="text-zinc-400" />
-                        <p className="text-xs text-zinc-500 truncate max-w-full px-2">{img.filename}</p>
-                      </div>
-                    )}
-                    <button
-                      onClick={() => handleDeleteReceipt(img.id)}
-                      className="absolute top-1 right-1 p-1 rounded bg-white/80 opacity-0 group-hover:opacity-100 hover:bg-red-50 text-zinc-500 hover:text-red-500 transition-all"
-                      data-testid={`delete-receipt-${img.id}`}
+            <AnimatePresence>
+              {reservation.receipt_images && reservation.receipt_images.length > 0 && (
+                <motion.div
+                  initial={{ opacity: 0, height: 0 }}
+                  animate={{ opacity: 1, height: "auto" }}
+                  className="grid grid-cols-2 sm:grid-cols-3 gap-3 mt-5"
+                  data-testid="receipts-grid"
+                >
+                  {reservation.receipt_images.map((img, i) => (
+                    <motion.div
+                      key={img.id}
+                      initial={{ opacity: 0, scale: 0.8 }}
+                      animate={{ opacity: 1, scale: 1 }}
+                      transition={{ delay: i * 0.06 }}
+                      className="relative group rounded-2xl overflow-hidden glass aspect-video flex items-center justify-center"
                     >
-                      <Trash2 size={12} />
-                    </button>
-                    <p className="absolute bottom-0 left-0 right-0 bg-white/80 text-xs text-zinc-500 px-2 py-0.5 truncate opacity-0 group-hover:opacity-100 transition-all">
-                      {img.filename}
-                    </p>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
+                      {img.content_type?.startsWith("image/") ? (
+                        <img
+                          src={`data:${img.content_type};base64,${img.data}`}
+                          alt={img.filename}
+                          className="object-cover w-full h-full cursor-pointer"
+                          onClick={() => setLightbox(img)}
+                          data-testid={`receipt-img-${img.id}`}
+                        />
+                      ) : (
+                        <div className="flex flex-col items-center gap-1 cursor-pointer py-4" onClick={() => setLightbox(img)}>
+                          <ImageIcon size={24} className="text-slate-400" />
+                          <p className="text-xs text-slate-500 truncate max-w-full px-2">{img.filename}</p>
+                        </div>
+                      )}
+                      <motion.button
+                        whileHover={{ scale: 1.1 }}
+                        onClick={() => handleDeleteReceipt(img.id)}
+                        className="absolute top-2 right-2 p-1.5 rounded-full bg-white/80 opacity-0 group-hover:opacity-100 hover:bg-red-100 text-slate-500 hover:text-red-500 transition-all"
+                        data-testid={`delete-receipt-${img.id}`}
+                      >
+                        <Trash2 size={11} />
+                      </motion.button>
+                    </motion.div>
+                  ))}
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </motion.div>
         </div>
 
-        {/* Right: Payment Summary */}
-        <div className="space-y-4">
-          <div className="bg-white border border-zinc-200 rounded-md p-6">
-            <h2 className="text-sm font-semibold text-zinc-900 mb-4 uppercase tracking-wide" style={{ fontFamily: 'Cabinet Grotesk, sans-serif' }}>
+        {/* Right: Payment */}
+        <div className="space-y-5">
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.15 }}
+            className="glass rounded-3xl p-6"
+          >
+            <h2 className="text-xs font-black text-slate-500 uppercase tracking-widest mb-5">
               Resumen de Pago
             </h2>
-            <div className="space-y-3">
+            <div className="space-y-4">
               <div className="flex justify-between items-center">
-                <span className="text-sm text-zinc-500">Total</span>
-                <span className="text-sm font-semibold text-zinc-900">{formatCurrency(reservation.total_amount)}</span>
+                <span className="text-sm text-slate-500 font-medium">Total</span>
+                <span className="text-sm font-black text-slate-900">{formatCurrency(reservation.total_amount)}</span>
               </div>
               <div className="flex justify-between items-center">
-                <span className="text-sm text-zinc-500">Anticipo pagado</span>
-                <span className="text-sm font-semibold text-green-700">{formatCurrency(reservation.advance_paid)}</span>
+                <span className="text-sm text-slate-500 font-medium">Anticipo pagado</span>
+                <span className="text-sm font-black text-emerald-600">{formatCurrency(reservation.advance_paid)}</span>
               </div>
-              <div className="pt-2 border-t border-zinc-100">
-                <div className="flex justify-between items-center mb-2">
-                  <span className="text-sm font-medium text-zinc-700">Saldo pendiente</span>
-                  <span className={`text-sm font-bold ${remaining > 0 ? "text-amber-600" : "text-green-600"}`}>
+              <div className="pt-3 border-t border-white/40">
+                <div className="flex justify-between items-center mb-3">
+                  <span className="text-sm font-bold text-slate-700">Saldo pendiente</span>
+                  <span className={`text-sm font-black ${remaining > 0 ? "text-amber-600" : "text-emerald-600"}`}>
                     {formatCurrency(remaining)}
                   </span>
                 </div>
-                <div className="w-full h-2 bg-zinc-100 rounded-full">
-                  <div
-                    className="h-2 bg-zinc-800 rounded-full transition-all"
-                    style={{ width: `${paidPct}%` }}
+                <div className="w-full h-2.5 bg-slate-100 rounded-full overflow-hidden">
+                  <motion.div
+                    initial={{ width: 0 }}
+                    animate={{ width: `${paidPct}%` }}
+                    transition={{ duration: 0.8, ease: "easeOut", delay: 0.3 }}
+                    className="h-full rounded-full bg-gradient-to-r from-emerald-400 to-emerald-600"
                     data-testid="payment-progress"
                   />
                 </div>
-                <p className="text-xs text-zinc-400 mt-1">{Math.round(paidPct)}% pagado</p>
+                <p className="text-xs text-slate-400 mt-1.5 font-medium">{Math.round(paidPct)}% pagado</p>
               </div>
             </div>
-          </div>
+          </motion.div>
 
-          <div className="bg-white border border-zinc-200 rounded-md p-6">
-            <h2 className="text-sm font-semibold text-zinc-900 mb-3 uppercase tracking-wide" style={{ fontFamily: 'Cabinet Grotesk, sans-serif' }}>
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.2 }}
+            className="glass rounded-3xl p-6"
+          >
+            <h2 className="text-xs font-black text-slate-500 uppercase tracking-widest mb-4">
               Comprobantes
             </h2>
-            <div className="flex items-center gap-2">
-              <ImageIcon size={16} className="text-zinc-400" />
-              <span className="text-sm text-zinc-600">
-                {(reservation.receipt_images || []).length} archivo(s) subido(s)
-              </span>
+            <div className="flex items-center gap-3">
+              <div className="w-9 h-9 rounded-2xl bg-indigo-100/80 flex items-center justify-center">
+                <ImageIcon size={15} className="text-indigo-500" />
+              </div>
+              <div>
+                <p className="text-sm font-bold text-slate-900">{(reservation.receipt_images || []).length}</p>
+                <p className="text-xs text-slate-400">archivo(s) subido(s)</p>
+              </div>
             </div>
-          </div>
+          </motion.div>
         </div>
       </div>
 
       {/* Lightbox */}
-      {lightbox && (
-        <div
-          className="fixed inset-0 z-50 bg-black/80 flex items-center justify-center p-4"
-          onClick={() => setLightbox(null)}
-          data-testid="lightbox"
-        >
-          <button className="absolute top-4 right-4 text-white hover:text-zinc-300" onClick={() => setLightbox(null)}>
-            <X size={24} />
-          </button>
-          {lightbox.content_type?.startsWith("image/") ? (
-            <img
-              src={`data:${lightbox.content_type};base64,${lightbox.data}`}
-              alt={lightbox.filename}
-              className="max-w-full max-h-[90vh] object-contain rounded"
-              onClick={(e) => e.stopPropagation()}
-            />
-          ) : (
-            <div className="bg-white rounded p-8 text-center">
-              <ImageIcon size={48} className="mx-auto text-zinc-400 mb-2" />
-              <p className="text-zinc-600">{lightbox.filename}</p>
-            </div>
-          )}
-        </div>
-      )}
+      <AnimatePresence>
+        {lightbox && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-50 flex items-center justify-center p-6"
+            style={{ backdropFilter: "blur(20px)", backgroundColor: "rgba(15,23,42,0.7)" }}
+            onClick={() => setLightbox(null)}
+            data-testid="lightbox"
+          >
+            <motion.button
+              whileHover={{ scale: 1.1 }}
+              className="absolute top-6 right-6 p-2.5 rounded-full glass text-white"
+              onClick={() => setLightbox(null)}
+            >
+              <X size={20} />
+            </motion.button>
+            {lightbox.content_type?.startsWith("image/") ? (
+              <motion.img
+                initial={{ scale: 0.8, opacity: 0 }}
+                animate={{ scale: 1, opacity: 1 }}
+                src={`data:${lightbox.content_type};base64,${lightbox.data}`}
+                alt={lightbox.filename}
+                className="max-w-full max-h-[85vh] object-contain rounded-3xl shadow-2xl"
+                onClick={(e) => e.stopPropagation()}
+              />
+            ) : (
+              <motion.div
+                initial={{ scale: 0.8 }}
+                animate={{ scale: 1 }}
+                className="glass-modal rounded-3xl p-10 text-center"
+              >
+                <ImageIcon size={48} className="mx-auto text-slate-400 mb-3" />
+                <p className="text-slate-700 font-bold">{lightbox.filename}</p>
+              </motion.div>
+            )}
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {showEdit && (
         <ReservationForm
@@ -342,8 +397,8 @@ export default function ReservationDetail() {
 function InfoItem({ label, value }) {
   return (
     <div>
-      <dt className="text-xs text-zinc-400 mb-0.5">{label}</dt>
-      <dd className="text-sm font-medium text-zinc-900">{value}</dd>
+      <dt className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">{label}</dt>
+      <dd className="text-sm font-bold text-slate-900">{value}</dd>
     </div>
   );
 }

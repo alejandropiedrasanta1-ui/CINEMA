@@ -4,5 +4,6 @@
 
 .App {
   min-height: 100vh;
-  background-color: #FAFAFA;
+  position: relative;
+  background-color: #f1f5f9;
 }
