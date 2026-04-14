@@ -60,10 +60,18 @@ Sistema de gestión de reservas para eventos (bodas, quinceañeras, fiestas soci
 - Campos: dirección/nombre del lugar + link de Waze
 - Botón "Abrir en Waze" al visualizar
 
-### Ingreso Real (Iteración 5 - Febrero 2026) ✅
-- Fórmula: Ingreso Real = Total del evento − Costo del equipo (socios asignados)
-- Visible en sección "Fotógrafo / Equipo" de cada reserva
-- Panel global en página de Socios: total_event_amount, total_partner_cost, real_income
+### Estado de Pago por Socio (Iteración 6 - Febrero 2026) ✅
+- Botones editar/eliminar siempre visibles en tarjetas de socios (antes ocultos en hover)
+- Toggle Pendiente/Pagado en sección "Fotógrafo / Equipo" de cada reserva
+  - Ícono Clock (naranja) = Pendiente
+  - Ícono CheckCircle (verde) = Pagado
+  - Monto aparece tachado cuando está pagado
+- Monto pagado al socio se tacha visualmente cuando está marcado como Pagado
+- Sub-totales en TeamSection: "Pagado al equipo" y "Pendiente equipo"
+- Panel en página Socios: 4 cards → Total Eventos, Costo Equipo, Pagado Equipo, Ingreso Real
+- Tarjetas de socios muestran: Eventos asignados, Monto Pagado, Monto Pendiente
+- Eventos recientes por socio muestran badge Pagado/Pendiente
+- `/api/financials` retorna: `total_paid_to_partners`, `total_pending_to_partners`
 
 ---
 
