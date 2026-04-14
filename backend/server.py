@@ -693,64 +693,155 @@ title Cinema Productions - Gestor de Reservas
 color 0A
 cls
 echo.
-echo  =============================================
-echo   CINEMA PRODUCTIONS - Gestor de Reservas
-echo  =============================================
+echo  ====================================================
+echo    CINEMA PRODUCTIONS  ^|  Gestor de Reservas
+echo  ====================================================
 echo.
 
-REM Check Python
+REM ── PASO 1: Verificar Python ─────────────────────────
+echo  [1/4] Verificando Python...
 python --version >nul 2>&1
-if errorlevel 1 (
-    py --version >nul 2>&1
-    if errorlevel 1 (
-        echo  ERROR: Python no esta instalado.
-        echo  Descargalo desde: https://www.python.org/downloads/
-        echo  IMPORTANTE: Marca "Add Python to PATH"
-        echo.
-        pause
-        exit /b 1
-    )
-    set PYTHON=py
-) else (
+if not errorlevel 1 (
     set PYTHON=python
+    goto PYTHON_OK
 )
+py --version >nul 2>&1
+if not errorlevel 1 (
+    set PYTHON=py
+    goto PYTHON_OK
+)
+echo.
+echo  ERROR: Python no esta instalado.
+echo  Descargalo desde: https://www.python.org/downloads/
+echo  IMPORTANTE: Marca "Add Python to PATH" al instalar.
+echo.
+pause
+exit /b 1
 
-echo  Instalando dependencias (solo la primera vez)...
+:PYTHON_OK
+echo  OK: Python encontrado.
+
+REM ── PASO 2: Instalar dependencias ───────────────────
+echo.
+echo  [2/4] Instalando/verificando dependencias...
 %PYTHON% -m pip install -r requirements.txt -q --no-warn-script-location
+if errorlevel 1 (
+    echo.
+    echo  ADVERTENCIA: Algunas dependencias pueden no haberse instalado.
+    echo  Intenta manualmente: pip install -r requirements.txt
+)
+echo  OK: Dependencias listas.
 
+REM ── PASO 3: Iniciar servidor en ventana separada ────
 echo.
-echo  Iniciando Cinema Productions...
-echo  La app se abrira en tu navegador automaticamente.
+echo  [3/4] Iniciando servidor...
+start "Cinema Productions [servidor - no cierres]" /min %PYTHON% app.py
+
+echo  Esperando que el servidor este listo (max 25 seg)...
+set /a TRIES=0
+
+:WAIT_LOOP
+    timeout /t 1 /nobreak >nul
+    %PYTHON% -c "import urllib.request,sys; urllib.request.urlopen('http://localhost:8001/api/'); sys.exit(0)" >nul 2>&1
+    if not errorlevel 1 goto SERVER_READY
+    set /a TRIES+=1
+    if %TRIES% GEQ 25 goto SERVER_FAILED
+    goto WAIT_LOOP
+
+:SERVER_FAILED
 echo.
-echo  ─────────────────────────────────────────────
-echo  Para cerrar la app: cierra esta ventana
-echo  ─────────────────────────────────────────────
+echo  ====================================================
+echo   ERROR: El servidor no respondio en 25 segundos.
 echo.
-%PYTHON% app.py
+echo   Posibles causas:
+echo   - El puerto 8001 esta ocupado (cierra otras copias)
+echo   - Falta algun paquete de Python
+echo.
+echo   Revisa la ventana "Cinema Productions [servidor]"
+echo  ====================================================
+echo.
+pause
+exit /b 1
+
+:SERVER_READY
+echo  OK: Servidor verificado y funcionando.
+
+REM ── PASO 4: Abrir navegador ──────────────────────────
+echo.
+echo  [4/4] Abriendo Cinema Productions en el navegador...
+start http://localhost:8001
+echo.
+echo  ====================================================
+echo    La app esta corriendo en: http://localhost:8001
+echo    Base de datos: LOCAL (cinema_data.json)
+echo    Datos guardados automaticamente.
+echo  ====================================================
+echo.
+echo  Para CERRAR la app:
+echo    Cierra la ventana "Cinema Productions [servidor]"
+echo.
 pause
 """
 
 _START_SH = """#!/bin/bash
 clear
 echo ""
-echo "  ============================================="
-echo "   CINEMA PRODUCTIONS - Gestor de Reservas"
-echo "  ============================================="
+echo "  =================================================="
+echo "   CINEMA PRODUCTIONS | Gestor de Reservas"
+echo "  =================================================="
 echo ""
 
-if ! command -v python3 &> /dev/null; then
-    echo "  ERROR: Python3 no está instalado."
-    echo "  Instálalo desde: https://www.python.org/downloads/"
+echo "  [1/4] Verificando Python..."
+if command -v python3 &>/dev/null; then
+    PYTHON=python3
+elif command -v python &>/dev/null; then
+    PYTHON=python
+else
+    echo "  ERROR: Python3 no esta instalado."
+    echo "  Instalalo desde: https://www.python.org/downloads/"
     exit 1
 fi
+echo "  OK: Python encontrado."
 
-echo "  Instalando dependencias..."
-python3 -m pip install -r requirements.txt -q
-
-echo "  Iniciando Cinema Productions..."
-echo "  URL: http://localhost:8001"
 echo ""
-python3 app.py
+echo "  [2/4] Instalando dependencias..."
+$PYTHON -m pip install -r requirements.txt -q
+echo "  OK: Dependencias listas."
+
+echo ""
+echo "  [3/4] Iniciando servidor..."
+$PYTHON app.py &
+SERVER_PID=$!
+
+echo "  Esperando que el servidor arranque (max 25 seg)..."
+TRIES=0
+while true; do
+    sleep 1
+    $PYTHON -c "import urllib.request; urllib.request.urlopen('http://localhost:8001/api/')" 2>/dev/null && break
+    TRIES=$((TRIES + 1))
+    if [ $TRIES -ge 25 ]; then
+        echo "  ERROR: El servidor no respondio."
+        kill $SERVER_PID 2>/dev/null
+        exit 1
+    fi
+done
+echo "  OK: Servidor verificado."
+
+echo ""
+echo "  [4/4] Abriendo Cinema Productions..."
+if command -v xdg-open &>/dev/null; then
+    xdg-open http://localhost:8001
+elif command -v open &>/dev/null; then
+    open http://localhost:8001
+fi
+
+echo ""
+echo "  =================================================="
+echo "   URL: http://localhost:8001"
+echo "   BD:  LOCAL (cinema_data.json)"
+echo "   Para cerrar: Ctrl+C"
+echo "  =================================================="
+wait $SERVER_PID
 """
 
 _REQUIREMENTS = """fastapi>=0.100.0
@@ -760,31 +851,38 @@ pymongo>=4.0.0
 python-dotenv>=1.0.0
 pydantic>=2.0.0
 resend>=2.0.0
+mongomock-motor>=0.0.36
 """
 
 _README = """CINEMA PRODUCTIONS - Gestor de Reservas
 ========================================
 
-PARA INICIAR LA APP:
+INICIO RAPIDO:
   Windows:    Doble clic en start.bat
   Mac/Linux:  chmod +x start.sh && ./start.sh
 
 REQUISITO: Python 3.8+
-  Descargar en: https://www.python.org/downloads/
+  Descargar: https://www.python.org/downloads/
   IMPORTANTE (Windows): marcar "Add Python to PATH"
 
-BASE DE DATOS:
-  La app usa MongoDB. La URL esta en el archivo .env
-  Para cambiar de base de datos:
-    1. Edita el archivo .env
-    2. Cambia MONGO_URL por tu nueva URL
-    3. Vuelve a ejecutar start.bat
+BASE DE DATOS (predeterminado: EMBEBIDA):
+  Los datos se guardan en el archivo cinema_data.json
+  No necesitas instalar MongoDB ni tener internet.
+  Cambio automatico cada 60 segundos.
 
-  O bien, desde la app: Ajustes > Base de Datos > Conectar
-  Luego vuelve a descargar el paquete para que el .env se actualice.
+CAMBIAR A MONGODB EXTERNO (opcional):
+  1. Edita el archivo .env
+  2. Cambia: MONGO_URL=embedded
+     Por:    MONGO_URL=mongodb://host:27017
+     O bien: MONGO_URL=mongodb+srv://...@cluster.mongodb.net (Atlas)
+  3. Guarda y vuelve a ejecutar start.bat
 
-SOPORTE:
-  Cinema Productions - Sistema de Gestion de Reservas
+VERIFICACION:
+  El start.bat verifica automaticamente que el servidor
+  este funcionando antes de abrir el navegador.
+  Si ves ERROR revisa la ventana del servidor.
+
+Cinema Productions - Sistema de Gestion de Reservas
 """
 
 
@@ -803,7 +901,8 @@ async def download_package():
     custom_file = ROOT_DIR / '.db_override'
     mongo_url_pkg = custom_file.read_text().strip() if custom_file.exists() else os.environ['MONGO_URL']
 
-    env_content = f"MONGO_URL={mongo_url_pkg}\nDB_NAME={DB_NAME}\n"
+    # .env: use embedded by default (no external MongoDB needed)
+    env_content = f"MONGO_URL=embedded\nDB_NAME={DB_NAME}\n"
     standalone_py = (ROOT_DIR / 'standalone_app.py').read_text()
 
     buf = io.BytesIO()

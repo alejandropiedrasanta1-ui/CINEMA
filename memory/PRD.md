@@ -100,11 +100,13 @@ Sistema de gestión de reservas para eventos (bodas, quinceañeras, fiestas soci
 
 ---
 
-### App de Escritorio Portable (Iteración 9 - Abril 2026) ✅
-- Sección "App de Escritorio" en Ajustes con botón "Descargar para Windows (.zip)"
-- Endpoint /api/download/package genera .zip (~2MB): app.py standalone + React build + .env + start.bat + start.sh + README.txt
-- Al cambiar la BD en Ajustes y re-descargar: el .env del paquete tiene la nueva URL automáticamente
-- Doble clic en start.bat: Python instala deps y abre el navegador en localhost:8001
+### App de Escritorio Portable v2 (Iteración 10 - Abril 2026) ✅
+- MongoDB embebido con mongomock-motor: sin necesidad de instalar MongoDB
+- Datos guardados automáticamente en `cinema_data.json` (auto-save cada 60 seg + al cerrar)
+- start.bat rediseñado con 4 pasos visibles + verificación HTTP real del servidor antes de abrir el navegador
+- Si el servidor falla, muestra error claro con causas probables
+- .env del paquete usa `MONGO_URL=embedded` por defecto
+- requirements.txt incluye `mongomock-motor`
 
 ## Endpoints Backend
 
