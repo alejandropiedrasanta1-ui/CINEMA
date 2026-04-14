@@ -7,6 +7,8 @@ import { useToast } from "@/hooks/use-toast";
 import { useSettings } from "@/context/SettingsContext";
 import ReservationForm from "@/components/ReservationForm";
 import { generateReservationPDF } from "@/lib/generatePDF";
+import LocationsSection from "@/components/LocationsSection";
+import TeamSection from "@/components/TeamSection";
 
 const STATUS_COLORS = {
   Pendiente: "bg-amber-100/80 text-amber-700 border-amber-200/60",
@@ -124,6 +126,10 @@ export default function ReservationDetail() {
               </div>
             )}
           </motion.div>
+
+          <LocationsSection reservation={reservation} onUpdated={load} />
+
+          <TeamSection reservation={reservation} onUpdated={load} />
 
           <motion.div initial={{ opacity:0, y:20 }} animate={{ opacity:1, y:0 }} transition={{ delay:0.2 }} className="glass rounded-3xl p-6">
             <h2 className="text-xs font-black text-slate-500 uppercase tracking-widest mb-5">{dt.receipts}</h2>

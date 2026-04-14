@@ -1,5 +1,5 @@
 import { NavLink } from "react-router-dom";
-import { LayoutDashboard, CalendarDays, List, Menu, X, Sparkles, SlidersHorizontal } from "lucide-react";
+import { LayoutDashboard, CalendarDays, List, Menu, X, SlidersHorizontal, Users } from "lucide-react";
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useSettings } from "@/context/SettingsContext";
@@ -12,6 +12,7 @@ export default function Layout({ children }) {
     { path: "/dashboard",     label: tr.nav.dashboard,     icon: LayoutDashboard },
     { path: "/reservaciones", label: tr.nav.reservations,  icon: List },
     { path: "/calendario",    label: tr.nav.calendar,      icon: CalendarDays },
+    { path: "/socios",        label: tr.nav.socios || "Socios", icon: Users },
     { path: "/ajustes",       label: tr.nav.settings,      icon: SlidersHorizontal },
   ];
 

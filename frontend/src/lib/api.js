@@ -22,3 +22,17 @@ export const uploadReceipt = (id, file) => {
 
 export const deleteReceipt = (id, receiptId) =>
   api.delete(`/reservations/${id}/receipts/${receiptId}`).then(r => r.data);
+
+// Socios
+export const getSocios = () => api.get("/socios").then(r => r.data);
+export const getSocio = (id) => api.get(`/socios/${id}`).then(r => r.data);
+export const createSocio = (data) => api.post("/socios", data).then(r => r.data);
+export const updateSocio = (id, data) => api.put(`/socios/${id}`, data).then(r => r.data);
+export const deleteSocio = (id) => api.delete(`/socios/${id}`).then(r => r.data);
+export const uploadSocioPhoto = (id, file) => {
+  const form = new FormData();
+  form.append("file", file);
+  return api.post(`/socios/${id}/photo`, form, { headers: { "Content-Type": "multipart/form-data" } }).then(r => r.data);
+};
+export const deleteSocioPhoto = (id) => api.delete(`/socios/${id}/photo`).then(r => r.data);
+export const getFinancials = () => api.get("/financials").then(r => r.data);

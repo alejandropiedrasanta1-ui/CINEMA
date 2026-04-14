@@ -84,6 +84,26 @@ class ReservationUpdate(BaseModel):
     advance_paid: Optional[float] = None
     status: Optional[str] = None
     notes: Optional[str] = None
+    locations: Optional[list] = None
+    assigned_partners: Optional[list] = None
+
+
+class SocioCreate(BaseModel):
+    name: str
+    role: str = "Fotógrafo"
+    phone: Optional[str] = None
+    email: Optional[str] = None
+    notes: Optional[str] = None
+    rate_per_event: Optional[float] = None
+
+
+class SocioUpdate(BaseModel):
+    name: Optional[str] = None
+    role: Optional[str] = None
+    phone: Optional[str] = None
+    email: Optional[str] = None
+    notes: Optional[str] = None
+    rate_per_event: Optional[float] = None
 
 
 # ─── Routes ──────────────────────────────────────────────
@@ -261,6 +281,117 @@ async def get_calendar_events():
     )
     docs = await cursor.to_list(1000)
     return [doc_to_dict(d) for d in docs]
+
+
+# ─── Socios ──────────────────────────────────────────────
+
+@api_router.get("/socios")
+async def list_socios():
+    cursor = db.socios.find({}, {"photo": 0, "photo_content_type": 0})
+    docs = await cursor.to_list(1000)
+    return [doc_to_dict(d) for d in docs]
+
+
+@api_router.post("/socios", status_code=201)
+async def create_socio(socio: SocioCreate):
+    doc = socio.model_dump()
+    doc["photo"] = None
+    doc["photo_content_type"] = None
+    doc["created_at"] = datetime.now(timezone.utc).isoformat()
+    result = await db.socios.insert_one(doc)
+    doc["id"] = str(result.inserted_id)
+    doc.pop("_id", None)
+    return doc
+
+
+@api_router.get("/socios/{socio_id}")
+async def get_socio(socio_id: str):
+    try:
+        oid = ObjectId(socio_id)
+    except Exception:
+        raise HTTPException(status_code=400, detail="ID inválido")
+    doc = await db.socios.find_one({"_id": oid})
+    if not doc:
+        raise HTTPException(status_code=404, detail="Socio no encontrado")
+    return doc_to_dict(doc)
+
+
+@api_router.put("/socios/{socio_id}")
+async def update_socio(socio_id: str, socio: SocioUpdate):
+    try:
+        oid = ObjectId(socio_id)
+    except Exception:
+        raise HTTPException(status_code=400, detail="ID inválido")
+    update_data = {k: v for k, v in socio.model_dump().items() if v is not None}
+    if not update_data:
+        raise HTTPException(status_code=400, detail="No hay datos para actualizar")
+    result = await db.socios.update_one({"_id": oid}, {"$set": update_data})
+    if result.matched_count == 0:
+        raise HTTPException(status_code=404, detail="Socio no encontrado")
+    doc = await db.socios.find_one({"_id": oid})
+    return doc_to_dict(doc)
+
+
+@api_router.delete("/socios/{socio_id}")
+async def delete_socio(socio_id: str):
+    try:
+        oid = ObjectId(socio_id)
+    except Exception:
+        raise HTTPException(status_code=400, detail="ID inválido")
+    result = await db.socios.delete_one({"_id": oid})
+    if result.deleted_count == 0:
+        raise HTTPException(status_code=404, detail="Socio no encontrado")
+    return {"message": "Socio eliminado"}
+
+
+@api_router.post("/socios/{socio_id}/photo")
+async def upload_socio_photo(socio_id: str, file: UploadFile = File(...)):
+    try:
+        oid = ObjectId(socio_id)
+    except Exception:
+        raise HTTPException(status_code=400, detail="ID inválido")
+    content = await file.read()
+    if len(content) > 5 * 1024 * 1024:
+        raise HTTPException(status_code=400, detail="Archivo muy grande (máx 5MB)")
+    b64 = base64.b64encode(content).decode("utf-8")
+    result = await db.socios.update_one(
+        {"_id": oid},
+        {"$set": {"photo": b64, "photo_content_type": file.content_type}}
+    )
+    if result.matched_count == 0:
+        raise HTTPException(status_code=404, detail="Socio no encontrado")
+    return {"message": "Foto actualizada"}
+
+
+@api_router.delete("/socios/{socio_id}/photo")
+async def delete_socio_photo(socio_id: str):
+    try:
+        oid = ObjectId(socio_id)
+    except Exception:
+        raise HTTPException(status_code=400, detail="ID inválido")
+    await db.socios.update_one({"_id": oid}, {"$set": {"photo": None, "photo_content_type": None}})
+    return {"message": "Foto eliminada"}
+
+
+@api_router.get("/financials")
+async def get_financials():
+    cursor = db.reservations.find(
+        {"status": {"$nin": ["Cancelado"]}},
+        {"total_amount": 1, "advance_paid": 1, "assigned_partners": 1}
+    )
+    docs = await cursor.to_list(10000)
+    total_event_amount = sum((d.get("total_amount") or 0) for d in docs)
+    total_advance = sum((d.get("advance_paid") or 0) for d in docs)
+    total_partner_cost = sum(
+        sum((p.get("payment") or 0) for p in (d.get("assigned_partners") or []))
+        for d in docs
+    )
+    return {
+        "total_event_amount": round(total_event_amount, 2),
+        "total_advance": round(total_advance, 2),
+        "total_partner_cost": round(total_partner_cost, 2),
+        "real_income": round(total_event_amount - total_partner_cost, 2),
+    }
 
 
 app.include_router(api_router)

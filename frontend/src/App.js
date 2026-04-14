@@ -8,6 +8,7 @@ import Reservations from "@/pages/Reservations";
 import ReservationDetail from "@/pages/ReservationDetail";
 import CalendarView from "@/pages/CalendarView";
 import Settings from "@/pages/Settings";
+import Socios from "@/pages/Socios";
 import { Toaster } from "@/components/ui/toaster";
 
 const pageVariants = {
@@ -28,6 +29,7 @@ function AnimatedRoutes() {
           <Route path="/reservaciones/:id" element={<ReservationDetail />} />
           <Route path="/calendario" element={<CalendarView />} />
           <Route path="/ajustes" element={<Settings />} />
+          <Route path="/socios" element={<Socios />} />
         </Routes>
       </motion.div>
     </AnimatePresence>

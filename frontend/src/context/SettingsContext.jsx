@@ -20,7 +20,7 @@ export const CURRENCIES = [
 
 const T = {
   es: {
-    nav: { dashboard: "Dashboard", reservations: "Reservaciones", calendar: "Calendario", settings: "Ajustes", tagline: "Gestión de Reservas" },
+    nav: { dashboard: "Dashboard", reservations: "Reservaciones", calendar: "Calendario", settings: "Ajustes", tagline: "Gestión de Reservas", socios: "Socios" },
     common: { newReservation: "Nueva Reserva", cancel: "Cancelar", save: "Guardar cambios", create: "Crear reserva", saving: "Guardando...", edit: "Editar", viewAll: "Ver todas" },
     statuses: { Pendiente: "Pendiente", Confirmado: "Confirmado", Completado: "Completado", Cancelado: "Cancelado" },
     months: ["Enero","Febrero","Marzo","Abril","Mayo","Junio","Julio","Agosto","Septiembre","Octubre","Noviembre","Diciembre"],
@@ -61,7 +61,7 @@ const T = {
     },
   },
   en: {
-    nav: { dashboard: "Dashboard", reservations: "Reservations", calendar: "Calendar", settings: "Settings", tagline: "Reservation Manager" },
+    nav: { dashboard: "Dashboard", reservations: "Reservations", calendar: "Calendar", settings: "Settings", tagline: "Reservation Manager", socios: "Partners" },
     common: { newReservation: "New Reservation", cancel: "Cancel", save: "Save changes", create: "Create reservation", saving: "Saving...", edit: "Edit", viewAll: "View all" },
     statuses: { Pendiente: "Pending", Confirmado: "Confirmed", Completado: "Completed", Cancelado: "Cancelled" },
     months: ["January","February","March","April","May","June","July","August","September","October","November","December"],
