@@ -10,12 +10,12 @@ export const THEMES = {
 };
 
 export const CURRENCIES = [
-  { code: "MXN", symbol: "$",  name: "Peso Mexicano",   locale: "es-MX" },
-  { code: "USD", symbol: "$",  name: "US Dollar",        locale: "en-US" },
-  { code: "EUR", symbol: "€",  name: "Euro",             locale: "es-ES" },
-  { code: "COP", symbol: "$",  name: "Peso Colombiano",  locale: "es-CO" },
-  { code: "ARS", symbol: "$",  name: "Peso Argentino",   locale: "es-AR" },
-  { code: "CLP", symbol: "$",  name: "Peso Chileno",     locale: "es-CL" },
+  { code: "GTQ", symbol: "Q",  name: "Quetzal Guatemalteco", locale: "es-GT" },
+  { code: "MXN", symbol: "$",  name: "Peso Mexicano",        locale: "es-MX" },
+  { code: "USD", symbol: "$",  name: "US Dollar",            locale: "en-US" },
+  { code: "EUR", symbol: "€",  name: "Euro",                 locale: "es-ES" },
+  { code: "COP", symbol: "$",  name: "Peso Colombiano",      locale: "es-CO" },
+  { code: "HNL", symbol: "L",  name: "Lempira Hondureño",    locale: "es-HN" },
 ];
 
 const T = {
@@ -55,8 +55,7 @@ const T = {
     settings: {
       title: "Ajustes", subtitle: "Personaliza tu experiencia",
       langTitle: "Idioma", langDesc: "Selecciona el idioma de la interfaz",
-      currencyTitle: "Moneda", currencyDesc: "Moneda para mostrar importes",
-      colorsTitle: "Colores del Tema", colorsDesc: "Personaliza con un solo clic",
+      currencyTitle: "Moneda", currencyDesc: "Moneda para mostrar importes",      colorsTitle: "Colores del Tema", colorsDesc: "Personaliza con un solo clic",
       exportTitle: "Exportar Datos", exportDesc: "Descarga todas tus reservas en el formato que prefieras",
       downloadCSV: "Descargar CSV", downloadJSON: "Descargar JSON", active: "Activo",
     },
@@ -122,7 +121,7 @@ function applyThemeVars(themeKey) {
 
 export function SettingsProvider({ children }) {
   const [language, setLanguage] = useState(() => localStorage.getItem("lang") || "es");
-  const [currency, setCurrency] = useState(() => localStorage.getItem("currency") || "MXN");
+  const [currency, setCurrency] = useState(() => localStorage.getItem("currency") || "GTQ");
   const [theme, setTheme] = useState(() => localStorage.getItem("theme") || "indigo");
 
   useEffect(() => { applyThemeVars(theme); }, []);

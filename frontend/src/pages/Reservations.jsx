@@ -1,11 +1,12 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { getReservations, deleteReservation } from "@/lib/api";
-import { Plus, Trash2, Eye, Search } from "lucide-react";
+import { Plus, Trash2, Eye, Search, FileDown } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useSettings } from "@/context/SettingsContext";
 import ReservationForm from "@/components/ReservationForm";
 import { useToast } from "@/hooks/use-toast";
+import { generateReservationPDF } from "@/lib/generatePDF";
 
 const STATUS_COLORS = {
   Pendiente: "bg-amber-100/80 text-amber-700 border-amber-200/60",
@@ -26,6 +27,16 @@ export default function Reservations() {
   const { toast } = useToast();
   const { tr, formatCurrency } = useSettings();
   const l = tr.list;
+
+  const handleDownloadPDF = async (r, e) => {
+    e.stopPropagation();
+    try {
+      await generateReservationPDF(r, formatCurrency);
+      toast({ title: "PDF generado exitosamente" });
+    } catch {
+      toast({ title: "Error al generar PDF", variant: "destructive" });
+    }
+  };
 
   const EVENT_TYPES = ["Boda","Quinceañera","Fiesta Social","Evento Corporativo","Conferencia","Otro"];
   const STATUSES_KEYS = ["Pendiente","Confirmado","Completado","Cancelado"];
@@ -147,6 +158,8 @@ export default function Reservations() {
                       <div className="flex items-center gap-1" onClick={e => e.stopPropagation()}>
                         <motion.button whileHover={{ scale:1.1 }} whileTap={{ scale:0.9 }} onClick={() => navigate(`/reservaciones/${r.id}`)}
                           className="p-2 rounded-2xl hover:bg-indigo-100/80 text-slate-400 hover:text-indigo-600 transition-colors" data-testid={`view-btn-${r.id}`}><Eye size={14} /></motion.button>
+                        <motion.button whileHover={{ scale:1.1 }} whileTap={{ scale:0.9 }} onClick={e => handleDownloadPDF(r, e)}
+                          className="p-2 rounded-2xl hover:bg-emerald-100/80 text-slate-400 hover:text-emerald-600 transition-colors" data-testid={`pdf-btn-${r.id}`} title="Descargar PDF"><FileDown size={14} /></motion.button>
                         <motion.button whileHover={{ scale:1.1 }} whileTap={{ scale:0.9 }} onClick={e => handleDelete(r.id, e)}
                           className="p-2 rounded-2xl hover:bg-red-100/80 text-slate-400 hover:text-red-500 transition-colors" data-testid={`delete-btn-${r.id}`}><Trash2 size={14} /></motion.button>
                       </div>

@@ -21,16 +21,14 @@ export default function Layout({ children }) {
       <aside className="hidden md:flex flex-col w-60 min-h-screen glass-sidebar fixed left-0 top-0 z-20">
         <div className="px-6 py-6 border-b border-white/40">
           <div className="flex items-center gap-2.5">
-            <div className="w-8 h-8 rounded-2xl btn-primary flex items-center justify-center shadow-lg">
-              <Sparkles size={14} className="text-white" />
-            </div>
-            <div>
-              <h1 className="text-base font-black text-slate-900 tracking-tight" style={{ fontFamily: 'Cabinet Grotesk, sans-serif' }}>
-                Eventos
-              </h1>
-              <p className="text-[10px] text-slate-400 font-medium">{tr.nav.tagline}</p>
-            </div>
+            <img
+              src="/logo.png"
+              alt="Cinema Productions"
+              className="h-8 w-auto rounded-xl"
+              style={{ filter: "brightness(0) invert(0)", maxWidth: "110px", objectFit: "contain" }}
+            />
           </div>
+          <p className="text-[10px] text-slate-400 font-medium mt-1.5 pl-0.5">{tr.nav.tagline}</p>
         </div>
 
         <nav className="flex-1 px-3 py-5 space-y-1">
@@ -64,12 +62,7 @@ export default function Layout({ children }) {
       <div className="md:hidden fixed top-0 left-0 right-0 z-30 glass border-b border-white/50">
         <div className="flex items-center justify-between px-5 py-4">
           <div className="flex items-center gap-2.5">
-            <div className="w-7 h-7 rounded-xl btn-primary flex items-center justify-center">
-              <Sparkles size={12} className="text-white" />
-            </div>
-            <h1 className="text-base font-black text-slate-900" style={{ fontFamily: 'Cabinet Grotesk, sans-serif' }}>
-              Eventos
-            </h1>
+            <img src="/logo.png" alt="Cinema Productions" className="h-7 w-auto rounded-lg" style={{ maxWidth: "90px", objectFit: "contain" }} />
           </div>
           <button onClick={() => setMobileOpen(!mobileOpen)} data-testid="mobile-menu-toggle" className="p-2 rounded-2xl text-slate-600 hover:bg-white/50 transition-all">
             {mobileOpen ? <X size={20} /> : <Menu size={20} />}

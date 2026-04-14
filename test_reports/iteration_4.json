@@ -1,0 +1,35 @@
+{
+  "summary": "Tested new features: Cinema Productions logo in sidebar, GTQ as default currency, PDF download buttons per row in reservations list, PDF download in reservation detail, Settings page currency order, and export APIs.",
+  "backend_issues": {
+    "critical": [],
+    "minor": []
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": []
+  },
+  "test_report_links": ["/app/test_reports/iteration_4.json"],
+  "action_items": [],
+  "critical_code_review_comments": [],
+  "updated_files": [],
+  "success_rate": {"backend": "100%", "frontend": "100%"},
+  "seed_data_creation": "None",
+  "features_tested": {
+    "logo_sidebar": "PASS - img[src='/logo.png'] with alt='Cinema Productions' visible in desktop sidebar",
+    "gtq_currency_reservations": "PASS - Amounts show 'Q 5,222', 'Q 20,000', 'Q 50,000' with Q symbol",
+    "gtq_currency_detail": "PASS - Detail page shows Q 50,000 / Q 10,000 / Q 40,000",
+    "pdf_btn_per_row": "PASS - 3 PDF buttons (data-testid=pdf-btn-{id}) visible in reservations table (3 rows = 3 buttons)",
+    "view_btn_per_row": "PASS - 3 view buttons visible",
+    "delete_btn_per_row": "PASS - 3 delete buttons visible",
+    "pdf_toast_list": "PASS - Clicking PDF button in list shows 'PDF generado exitosamente' toast",
+    "download_pdf_btn_detail": "PASS - data-testid=download-pdf-btn found and clickable in detail page, shows 'PDF descargado' toast",
+    "settings_gtq_first": "PASS - GTQ is first currency button and shown as active (purple) in settings",
+    "settings_gtq_label": "PASS - GTQ button shows 'Q GTQ / Quetzal Guatemalteco'",
+    "export_csv_api": "PASS - /api/export/reservations?format=csv returns CSV with correct headers: id, client_name, event_type, event_date, total_amount, advance_paid, status etc.",
+    "export_json_api": "PASS - /api/export/reservations?format=json returns JSON array with 3 records"
+  },
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "All 4 new features fully working: Logo (Cinema Productions, /logo.png) in sidebar, GTQ (Q) as default currency, PDF download buttons per row with data-testid=pdf-btn-{id}, PDF button in detail page with data-testid=download-pdf-btn. Detail page PDF toast says 'PDF descargado' (not 'PDF generado exitosamente' - slight variation but working). Settings page shows GTQ as first/active currency."
+}

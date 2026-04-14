@@ -1,11 +1,12 @@
 import { useEffect, useState, useRef } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { getReservation, updateReservation, uploadReceipt, deleteReceipt } from "@/lib/api";
-import { ArrowLeft, Upload, Trash2, Edit2, X, ImageIcon } from "lucide-react";
+import { ArrowLeft, Upload, Trash2, Edit2, X, ImageIcon, FileDown } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useToast } from "@/hooks/use-toast";
 import { useSettings } from "@/context/SettingsContext";
 import ReservationForm from "@/components/ReservationForm";
+import { generateReservationPDF } from "@/lib/generatePDF";
 
 const STATUS_COLORS = {
   Pendiente: "bg-amber-100/80 text-amber-700 border-amber-200/60",
@@ -94,6 +95,12 @@ export default function ReservationDetail() {
           <motion.button whileHover={{ scale:1.05 }} whileTap={{ scale:0.95 }} onClick={() => setShowEdit(true)} data-testid="edit-btn"
             className="flex items-center gap-1.5 px-4 py-2 rounded-full glass border-white/60 text-sm font-bold text-slate-700 hover:bg-white/60 transition-colors">
             <Edit2 size={13} /> {tr.common.edit}
+          </motion.button>
+          <motion.button whileHover={{ scale:1.05 }} whileTap={{ scale:0.95 }}
+            onClick={async () => { try { await generateReservationPDF(reservation, formatCurrency); toast({ title: "PDF descargado" }); } catch { toast({ title: "Error al generar PDF", variant: "destructive" }); } }}
+            data-testid="download-pdf-btn"
+            className="flex items-center gap-1.5 px-4 py-2 rounded-full btn-primary text-white text-sm font-bold">
+            <FileDown size={13} /> PDF
           </motion.button>
         </div>
       </motion.div>
