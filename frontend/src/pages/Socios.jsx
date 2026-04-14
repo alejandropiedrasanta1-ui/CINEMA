@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
-import { getSocios, deleteSocio, getReservations, getFinancials, deleteSocioPhoto } from "@/lib/api";
-import { Plus, Trash2, Edit2, Camera, Video, Users, TrendingUp, DollarSign, CreditCard } from "lucide-react";
+import { getSocios, deleteSocio, getReservations, getFinancials } from "@/lib/api";
+import { Plus, Trash2, Edit2, Camera, Video, Users, TrendingUp, DollarSign, CheckCircle, Clock } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useSettings } from "@/context/SettingsContext";
 import { useToast } from "@/hooks/use-toast";
@@ -48,11 +48,16 @@ export default function Socios() {
   const getEventsForSocio = (socioId) =>
     reservations.filter(r => (r.assigned_partners || []).some(p => p.socio_id === socioId));
 
-  const getPendingPayment = (socioId) =>
-    reservations.reduce((sum, r) => {
+  const getPaymentSummary = (socioId) => {
+    let paid = 0, pending = 0;
+    reservations.forEach(r => {
       const partner = (r.assigned_partners || []).find(p => p.socio_id === socioId);
-      return sum + (partner?.payment || 0);
-    }, 0);
+      if (!partner) return;
+      if (partner.payment_status === "Pagado") paid += (partner.payment || 0);
+      else pending += (partner.payment || 0);
+    });
+    return { paid, pending, total: paid + pending };
+  };
 
   return (
     <div className="px-6 py-8 max-w-7xl mx-auto">
@@ -70,18 +75,19 @@ export default function Socios() {
 
       {/* Financial summary */}
       {financials && (
-        <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }} className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-8">
+        <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }} className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-8">
           {[
-            { label: "Total Eventos", value: formatCurrency(financials.total_event_amount), icon: DollarSign, grad: "from-emerald-400 to-emerald-600" },
-            { label: "Costo Equipo", value: formatCurrency(financials.total_partner_cost), icon: Users, grad: "from-amber-400 to-orange-500" },
-            { label: "Ingreso Real", value: formatCurrency(financials.real_income), icon: TrendingUp, grad: "from-indigo-400 to-purple-600" },
-          ].map(({ label, value, icon: Icon, grad }) => (
-            <div key={label} className="glass rounded-3xl p-5">
+            { label: "Total Eventos", value: formatCurrency(financials.total_event_amount), icon: DollarSign, grad: "from-emerald-400 to-emerald-600", testid: "stat-total-events" },
+            { label: "Costo Equipo", value: formatCurrency(financials.total_partner_cost), icon: Users, grad: "from-amber-400 to-orange-500", testid: "stat-team-cost" },
+            { label: "Pagado Equipo", value: formatCurrency(financials.total_paid_to_partners || 0), icon: CheckCircle, grad: "from-green-400 to-emerald-500", testid: "stat-paid" },
+            { label: "Ingreso Real", value: formatCurrency(financials.real_income), icon: TrendingUp, grad: "from-indigo-400 to-purple-600", testid: "stat-real-income" },
+          ].map(({ label, value, icon: Icon, grad, testid }) => (
+            <div key={label} className="glass rounded-3xl p-5" data-testid={testid}>
               <div className="flex items-center justify-between mb-3">
                 <div className={`w-9 h-9 rounded-2xl bg-gradient-to-br ${grad} flex items-center justify-center`}><Icon size={15} className="text-white" /></div>
                 <span className="text-xs font-black text-slate-400 uppercase tracking-widest">{label}</span>
               </div>
-              <p className="text-2xl font-black text-slate-900 tracking-tight" style={{ fontFamily: 'Cabinet Grotesk, sans-serif' }}>{value}</p>
+              <p className="text-xl font-black text-slate-900 tracking-tight" style={{ fontFamily: 'Cabinet Grotesk, sans-serif' }}>{value}</p>
             </div>
           ))}
         </motion.div>
@@ -103,9 +109,9 @@ export default function Socios() {
           {socios.map(socio => {
             const RoleIcon = ROLE_ICONS[socio.role] || Users;
             const events = getEventsForSocio(socio.id);
-            const pending = getPendingPayment(socio.id);
+            const { paid, pending, total } = getPaymentSummary(socio.id);
             return (
-              <motion.div key={socio.id} variants={item} className="glass rounded-3xl p-6 group" data-testid={`socio-card-${socio.id}`}>
+              <motion.div key={socio.id} variants={item} className="glass rounded-3xl p-6" data-testid={`socio-card-${socio.id}`}>
                 {/* Photo + name */}
                 <div className="flex items-start justify-between mb-4">
                   <div className="flex items-center gap-3">
@@ -129,37 +135,56 @@ export default function Socios() {
                       </span>
                     </div>
                   </div>
-                  <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                  <div className="flex gap-1">
                     <motion.button whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.9 }} onClick={() => { setEditTarget(socio); setShowForm(true); }}
-                      className="p-1.5 rounded-xl hover:bg-indigo-100/80 text-slate-400 hover:text-indigo-600 transition-colors" data-testid={`edit-socio-${socio.id}`}><Edit2 size={13} /></motion.button>
+                      className="p-1.5 rounded-xl bg-indigo-50/80 hover:bg-indigo-100/80 text-indigo-400 hover:text-indigo-600 transition-colors" data-testid={`edit-socio-${socio.id}`}><Edit2 size={13} /></motion.button>
                     <motion.button whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.9 }} onClick={() => handleDelete(socio.id)}
-                      className="p-1.5 rounded-xl hover:bg-red-100/80 text-slate-400 hover:text-red-500 transition-colors" data-testid={`delete-socio-${socio.id}`}><Trash2 size={13} /></motion.button>
+                      className="p-1.5 rounded-xl bg-red-50/80 hover:bg-red-100/80 text-red-300 hover:text-red-500 transition-colors" data-testid={`delete-socio-${socio.id}`}><Trash2 size={13} /></motion.button>
                   </div>
                 </div>
 
                 {socio.phone && <p className="text-xs text-slate-400 mb-3">{socio.phone}</p>}
 
                 {/* Stats */}
-                <div className="grid grid-cols-2 gap-3 mt-3 pt-3 border-t border-white/40">
-                  <div className="bg-white/30 rounded-2xl px-3 py-2">
+                <div className="grid grid-cols-3 gap-2 mt-3 pt-3 border-t border-white/40">
+                  <div className="bg-white/30 rounded-2xl px-2 py-2 text-center">
                     <p className="text-lg font-black text-slate-900" style={{ fontFamily: 'Cabinet Grotesk, sans-serif' }}>{events.length}</p>
                     <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wide">Eventos</p>
                   </div>
-                  <div className="bg-white/30 rounded-2xl px-3 py-2">
-                    <p className="text-sm font-black text-amber-600">{formatCurrency(pending)}</p>
-                    <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wide">Pago total</p>
+                  <div className="bg-emerald-50/60 rounded-2xl px-2 py-2 text-center" data-testid={`paid-${socio.id}`}>
+                    <p className="text-xs font-black text-emerald-600">{formatCurrency(paid)}</p>
+                    <div className="flex items-center justify-center gap-0.5 mt-0.5">
+                      <CheckCircle size={8} className="text-emerald-500" />
+                      <p className="text-[9px] text-emerald-500 font-bold uppercase">Pagado</p>
+                    </div>
+                  </div>
+                  <div className="bg-amber-50/60 rounded-2xl px-2 py-2 text-center" data-testid={`pending-${socio.id}`}>
+                    <p className="text-xs font-black text-amber-600">{formatCurrency(pending)}</p>
+                    <div className="flex items-center justify-center gap-0.5 mt-0.5">
+                      <Clock size={8} className="text-amber-500" />
+                      <p className="text-[9px] text-amber-500 font-bold uppercase">Pendiente</p>
+                    </div>
                   </div>
                 </div>
 
                 {/* Recent events */}
                 {events.length > 0 && (
                   <div className="mt-3 space-y-1">
-                    {events.slice(0, 2).map(ev => (
-                      <div key={ev.id} className="flex items-center justify-between text-xs bg-white/20 rounded-xl px-2.5 py-1.5">
-                        <span className="font-medium text-slate-700 truncate">{ev.client_name}</span>
-                        <span className="text-slate-400 ml-2 flex-shrink-0">{ev.event_date?.split("-").reverse().join("/")}</span>
-                      </div>
-                    ))}
+                    {events.slice(0, 2).map(ev => {
+                      const partnerInEv = (ev.assigned_partners || []).find(p => p.socio_id === socio.id);
+                      const evPaid = partnerInEv?.payment_status === "Pagado";
+                      return (
+                        <div key={ev.id} className="flex items-center justify-between text-xs bg-white/20 rounded-xl px-2.5 py-1.5">
+                          <span className="font-medium text-slate-700 truncate">{ev.client_name}</span>
+                          <div className="flex items-center gap-1.5 ml-2 flex-shrink-0">
+                            <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded-full ${evPaid ? "bg-emerald-100 text-emerald-600" : "bg-amber-100 text-amber-600"}`}>
+                              {evPaid ? "Pagado" : "Pendiente"}
+                            </span>
+                            <span className="text-slate-400">{ev.event_date?.split("-").reverse().join("/")}</span>
+                          </div>
+                        </div>
+                      );
+                    })}
                     {events.length > 2 && <p className="text-[10px] text-slate-400 text-center">+{events.length - 2} más</p>}
                   </div>
                 )}

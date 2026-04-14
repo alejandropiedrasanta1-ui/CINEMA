@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { getSocios, getSocio, updateReservation } from "@/lib/api";
-import { Users, Plus, X, Camera, Video } from "lucide-react";
+import { Users, Plus, X, Camera, Video, CheckCircle, Clock } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useToast } from "@/hooks/use-toast";
 import { useSettings } from "@/context/SettingsContext";
@@ -35,22 +35,30 @@ export default function TeamSection({ reservation, onUpdated }) {
 
   useEffect(() => {
     getSocios().then(data => {
-      // Only show socios not already assigned
       const assignedIds = partners.map(p => p.socio_id);
       setSocios(data.filter(s => !assignedIds.includes(s.id)));
     }).catch(console.error);
   }, [reservation]);
 
   const teamCost = partners.reduce((sum, p) => sum + (p.payment || 0), 0);
+  const paidToTeam = partners.filter(p => p.payment_status === "Pagado").reduce((sum, p) => sum + (p.payment || 0), 0);
+  const pendingToTeam = teamCost - paidToTeam;
   const realIncome = (reservation.total_amount || 0) - teamCost;
 
   const handleAdd = async () => {
     if (!selectedSocio) { toast({ title: "Selecciona un socio", variant: "destructive" }); return; }
     setAdding(true);
     try {
-      // Fetch full socio to get photo data
       const socio = await getSocio(selectedSocio);
-      const newPartner = { socio_id: socio.id, name: socio.name, role: socio.role, photo: socio.photo || null, photo_content_type: socio.photo_content_type || null, payment: parseFloat(payment) || 0 };
+      const newPartner = {
+        socio_id: socio.id,
+        name: socio.name,
+        role: socio.role,
+        photo: socio.photo || null,
+        photo_content_type: socio.photo_content_type || null,
+        payment: parseFloat(payment) || 0,
+        payment_status: "Pendiente",
+      };
       const updatedPartners = [...partners, newPartner];
       await updateReservation(reservation.id, { assigned_partners: updatedPartners });
       toast({ title: `${socio.name} asignado` });
@@ -66,6 +74,19 @@ export default function TeamSection({ reservation, onUpdated }) {
     try {
       await updateReservation(reservation.id, { assigned_partners: updatedPartners });
       toast({ title: "Socio removido" });
+      onUpdated?.();
+    } catch {
+      toast({ title: "Error", variant: "destructive" });
+    }
+  };
+
+  const handleTogglePayment = async (socioId) => {
+    const updatedPartners = partners.map(p => {
+      if (p.socio_id !== socioId) return p;
+      return { ...p, payment_status: p.payment_status === "Pagado" ? "Pendiente" : "Pagado" };
+    });
+    try {
+      await updateReservation(reservation.id, { assigned_partners: updatedPartners });
       onUpdated?.();
     } catch {
       toast({ title: "Error", variant: "destructive" });
@@ -104,6 +125,7 @@ export default function TeamSection({ reservation, onUpdated }) {
           <div className="space-y-2 mb-4">
             {partners.map((p, i) => {
               const RoleIcon = ROLE_ICONS[p.role] || Users;
+              const isPaid = p.payment_status === "Pagado";
               return (
                 <motion.div key={p.socio_id} initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: 10 }} transition={{ delay: i * 0.05 }}
                   className="flex items-center gap-3 p-3 rounded-2xl bg-white/30 border border-white/40">
@@ -114,9 +136,21 @@ export default function TeamSection({ reservation, onUpdated }) {
                       <RoleIcon size={9} /> {p.role}
                     </span>
                   </div>
-                  <span className="text-sm font-black text-amber-600">{formatCurrency(p.payment)}</span>
+                  <span className={`text-sm font-black ${isPaid ? "text-emerald-600 line-through opacity-60" : "text-amber-600"}`}>
+                    {formatCurrency(p.payment)}
+                  </span>
+                  {/* Payment status toggle */}
+                  <motion.button
+                    whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.9 }}
+                    onClick={() => handleTogglePayment(p.socio_id)}
+                    title={isPaid ? "Marcar pendiente" : "Marcar pagado"}
+                    data-testid={`toggle-payment-${p.socio_id}`}
+                    className={`p-1.5 rounded-full transition-colors ${isPaid ? "bg-emerald-100 text-emerald-600 hover:bg-emerald-200" : "bg-amber-50 text-amber-400 hover:bg-amber-100"}`}>
+                    {isPaid ? <CheckCircle size={14} /> : <Clock size={14} />}
+                  </motion.button>
                   <motion.button whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.9 }} onClick={() => handleRemove(p.socio_id)}
-                    className="p-1.5 rounded-full hover:bg-red-100 text-slate-400 hover:text-red-500 transition-colors">
+                    className="p-1.5 rounded-full hover:bg-red-100 text-slate-400 hover:text-red-500 transition-colors"
+                    data-testid={`remove-partner-${p.socio_id}`}>
                     <X size={12} />
                   </motion.button>
                 </motion.div>
@@ -129,16 +163,28 @@ export default function TeamSection({ reservation, onUpdated }) {
       {/* Financial summary */}
       <div className="border-t border-white/40 pt-4 space-y-2">
         <div className="flex justify-between items-center">
-          <span className="text-xs font-bold text-slate-500">Costo equipo</span>
-          <span className="text-sm font-black text-amber-600">{formatCurrency(teamCost)}</span>
-        </div>
-        <div className="flex justify-between items-center">
           <span className="text-xs font-bold text-slate-500">Total del evento</span>
           <span className="text-sm font-black text-slate-700">{formatCurrency(reservation.total_amount || 0)}</span>
         </div>
+        <div className="flex justify-between items-center">
+          <span className="text-xs font-bold text-slate-500">Costo equipo</span>
+          <span className="text-sm font-black text-amber-600">{formatCurrency(teamCost)}</span>
+        </div>
+        {partners.length > 0 && (
+          <>
+            <div className="flex justify-between items-center pl-3">
+              <span className="text-[10px] font-bold text-emerald-500 flex items-center gap-1"><CheckCircle size={9} /> Pagado a equipo</span>
+              <span className="text-xs font-black text-emerald-600">{formatCurrency(paidToTeam)}</span>
+            </div>
+            <div className="flex justify-between items-center pl-3">
+              <span className="text-[10px] font-bold text-amber-500 flex items-center gap-1"><Clock size={9} /> Pendiente equipo</span>
+              <span className="text-xs font-black text-amber-600">{formatCurrency(pendingToTeam)}</span>
+            </div>
+          </>
+        )}
         <div className="flex justify-between items-center pt-1 border-t border-white/30">
           <span className="text-xs font-black text-slate-700 uppercase tracking-wide">Ingreso real</span>
-          <span className={`text-base font-black ${realIncome >= 0 ? "text-emerald-600" : "text-red-500"}`}>
+          <span className={`text-base font-black ${realIncome >= 0 ? "text-emerald-600" : "text-red-500"}`} data-testid="real-income">
             {formatCurrency(realIncome)}
           </span>
         </div>

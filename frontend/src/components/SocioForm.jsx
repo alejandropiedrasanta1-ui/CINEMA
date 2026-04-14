@@ -40,7 +40,14 @@ export default function SocioForm({ socio, onClose, onSaved }) {
     if (!form.name.trim()) { toast({ title: "Nombre requerido", variant: "destructive" }); return; }
     setSaving(true);
     try {
-      const payload = { ...form, rate_per_event: form.rate_per_event ? parseFloat(form.rate_per_event) : null };
+      const payload = {
+        name: form.name.trim(),
+        role: form.role,
+        phone: form.phone || null,
+        email: form.email || null,
+        notes: form.notes || null,
+        rate_per_event: form.rate_per_event !== "" && form.rate_per_event !== null ? parseFloat(form.rate_per_event) : null,
+      };
       let saved;
       if (isEdit) saved = await updateSocio(socio.id, payload);
       else saved = await createSocio(payload);
@@ -48,7 +55,9 @@ export default function SocioForm({ socio, onClose, onSaved }) {
       toast({ title: isEdit ? "Socio actualizado" : "Socio creado" });
       onSaved();
     } catch (err) {
-      toast({ title: "Error al guardar", description: err.response?.data?.detail || "Error", variant: "destructive" });
+      console.error("Error guardando socio:", err);
+      const msg = err.response?.data?.detail || err.message || "Error inesperado";
+      toast({ title: "Error al guardar", description: msg, variant: "destructive" });
     } finally { setSaving(false); }
   };
 

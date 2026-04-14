@@ -1,0 +1,30 @@
+{
+  "summary": "Iteration 6 testing complete. All features verified: socio edit/delete buttons always visible, payment status toggle (Pendiente↔Pagado), 4 financial stats on Socios page, real income calculation, and /api/financials with paid/pending fields. Backend 15/15 passed. Frontend UI flows confirmed via Playwright.",
+  "backend_issues": {
+    "critical": [],
+    "minor": []
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": []
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_iteration6.py",
+    "/app/test_reports/pytest/pytest_results_iter6.xml"
+  ],
+  "action_items": [],
+  "critical_code_review_comments": [],
+  "updated_files": [
+    "/app/backend/tests/test_iteration6.py"
+  ],
+  "success_rate": {
+    "backend": "100% (15/15)",
+    "frontend": "100%"
+  },
+  "seed_data_creation": "Test data (TEST_Socio_Iter6, TEST_Client_Iter6, TEST_CRUD_Socio) created and cleaned up during backend tests. TEST UI Socio Iter6 created via UI (cleanup by main agent if needed).",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "All iteration 6 features verified working: (1) Socio edit/delete buttons always visible (opacity=1, not hidden); (2) Nuevo Socio button visible and form works; (3) Payment toggle in TeamSection: Clock(amber)=Pendiente, CheckCircle(emerald)=Pagado, toggle persists to backend; (4) Financial breakdown in TeamSection: Pagado/Pendiente equipo rows show when partners assigned; (5) Ingreso Real = total_amount - teamCost (NOT advance_paid); (6) /api/financials returns 6 fields including total_paid_to_partners and total_pending_to_partners; (7) Socios page shows 4 stat cards; (8) Socio cards show per-socio paid/pending breakdown. UI test confirmed: visiting /reservaciones/{id} directly shows correct TeamSection with toggle working.",
+  "rca_of_issues": "No bugs found in iteration 6 features."
+}

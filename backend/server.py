@@ -382,14 +382,23 @@ async def get_financials():
     docs = await cursor.to_list(10000)
     total_event_amount = sum((d.get("total_amount") or 0) for d in docs)
     total_advance = sum((d.get("advance_paid") or 0) for d in docs)
-    total_partner_cost = sum(
-        sum((p.get("payment") or 0) for p in (d.get("assigned_partners") or []))
-        for d in docs
-    )
+    total_partner_cost = 0
+    total_paid_to_partners = 0
+    total_pending_to_partners = 0
+    for d in docs:
+        for p in (d.get("assigned_partners") or []):
+            amt = p.get("payment") or 0
+            total_partner_cost += amt
+            if p.get("payment_status") == "Pagado":
+                total_paid_to_partners += amt
+            else:
+                total_pending_to_partners += amt
     return {
         "total_event_amount": round(total_event_amount, 2),
         "total_advance": round(total_advance, 2),
         "total_partner_cost": round(total_partner_cost, 2),
+        "total_paid_to_partners": round(total_paid_to_partners, 2),
+        "total_pending_to_partners": round(total_pending_to_partners, 2),
         "real_income": round(total_event_amount - total_partner_cost, 2),
     }
 
