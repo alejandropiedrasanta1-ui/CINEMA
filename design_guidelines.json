@@ -1,0 +1,72 @@
+{
+  "theme": "light",
+  "archetype": "4",
+  "archetype_name": "Swiss & High-Contrast",
+  "domain": "SaaS / Admin Dashboard",
+  "language": "es",
+  "colors": {
+    "background": "#FAFAFA",
+    "surface": "#FFFFFF",
+    "primary": "#0A0A0A",
+    "primary_hover": "#27272A",
+    "secondary": "#F4F4F5",
+    "secondary_text": "#71717A",
+    "border": "#E4E4E7",
+    "error": "#EF4444",
+    "success": "#22C55E",
+    "warning": "#F59E0B"
+  },
+  "typography": {
+    "font_pair": {
+      "heading": "Cabinet Grotesk",
+      "body": "Satoshi"
+    },
+    "heading_rules": "Use tracking-tight for all headings. Maximum heading size is text-5xl.",
+    "body_rules": "Use leading-relaxed for long text, clean legible sizes like text-sm for tables."
+  },
+  "layout_and_spacing": {
+    "container": "max-w-7xl mx-auto px-4 sm:px-6 lg:px-8",
+    "spacing_scale": "Use generous spacing. p-6 or p-8 inside cards, gap-6 or gap-8 in grids.",
+    "borders_and_radius": "Subtle border-zinc-200 everywhere instead of heavy shadows. rounded-md or rounded-sm for a sharp, technical SaaS feel.",
+    "shadows": "Minimal shadows. Prefer flat, 1px bordered containers. For floating elements, use shadow-sm."
+  },
+  "components": {
+    "dashboard_grid": "Gridcols-1 md:grid-cols-3 gap-6. First row for key metrics (upcoming events, pending payments), next row for a wider table/list of recent reservations.",
+    "tables": "Use Shadcn Table. Clean rows with border-b, no vertical lines. Status badges should be minimal (e.g., small dot + text or a subtly colored background badge).",
+    "forms": "Left-aligned labels. Use Shadcn Input, Select, DatePicker. Subdued borders (border-zinc-300).",
+    "buttons": "Sharp corners or slightly rounded (rounded-md). Primary buttons should be deep black (#0A0A0A) with white text. Secondary buttons white with 1px border.",
+    "calendar": "Shadcn Calendar component in a full-page view or card. Highlight booked dates clearly.",
+    "receipt_upload": "Use a subtle dashed border dropzone area. Show a thumbnail grid once uploaded.",
+    "navigation": "Top navigation or sleek minimal sidebar. White background, 1px bottom or right border."
+  },
+  "motion": {
+    "hover_states": "Subtle background color shifts on rows and buttons. No heavy translations or scales.",
+    "transitions": "transition-colors duration-200 ease-in-out."
+  },
+  "icons": {
+    "library": "lucide-react",
+    "style": "Minimalist outline icons, 1.5px stroke width."
+  },
+  "images": {
+    "event_placeholder": {
+      "url": "https://images.unsplash.com/photo-1764380746366-f4d8cc52e1e3?crop=entropy&cs=srgb&fm=jpg&ixid=M3w4NjAzMzN8MHwxfHNlYXJjaHwxfHx3ZWRkaW5nJTIwZXZlbnQlMjB0YWJsZSUyMHNldHRpbmd8ZW58MHx8fHwxNzc2MTM2NTU4fDA&ixlib=rb-4.1.0&q=85",
+      "description": "Elegant table setting placeholder for event details without an uploaded image."
+    }
+  },
+  "accessibility_and_testing": {
+    "contrast": "Ensure APCA/WCAG AA contrast for text. Avoid light gray text on white background.",
+    "test_ids": "Mandatory data-testid attributes (kebab-case, role-based) on all interactive elements: buttons, inputs, table rows, links, tabs."
+  },
+  "instructions_to_main_agent": [
+    "Design a minimalist Spanish-language dashboard for managing event reservations.",
+    "Implement 'Cabinet Grotesk' for headings and 'Satoshi' for body text. Do not use 'Inter'.",
+    "Create a clean Layout shell (Sidebar or Topnav) showing 'Dashboard', 'Reservaciones', 'Calendario'.",
+    "Dashboard page: Overview cards (Próximos eventos, Pagos pendientes, Total) and a summary table.",
+    "Reservations page: A detailed table showing Client, Date, Event Type, Total, Advance, and Status (Pendiente, Confirmado, Completado, Cancelado).",
+    "Reservation Detail view: Show all details and include an Image Upload section for 'Comprobantes de Pago' (Payment Receipts).",
+    "Forms: Implement a New/Edit Reservation form supporting all required fields (client info, event type, date/time, venue, guests, total amount, advance paid, notes).",
+    "Calendar: Display a monthly view with visual indicators for reserved dates.",
+    "Styling: Keep it strictly high-contrast, 'Swiss minimalist' style. Use sharp lines (rounded-md max), 1px borders, and flat designs instead of heavy drop shadows.",
+    "Ensure all interactive elements have valid data-testid attributes."
+  ]
+}
