@@ -100,13 +100,12 @@ Sistema de gestión de reservas para eventos (bodas, quinceañeras, fiestas soci
 
 ---
 
-### App de Escritorio Portable v2 (Iteración 10 - Abril 2026) ✅
-- MongoDB embebido con mongomock-motor: sin necesidad de instalar MongoDB
-- Datos guardados automáticamente en `cinema_data.json` (auto-save cada 60 seg + al cerrar)
-- start.bat rediseñado con 4 pasos visibles + verificación HTTP real del servidor antes de abrir el navegador
-- Si el servidor falla, muestra error claro con causas probables
-- .env del paquete usa `MONGO_URL=embedded` por defecto
-- requirements.txt incluye `mongomock-motor`
+### App de Escritorio Portable v3 (Iteración 11 - Abril 2026) ✅
+- `.env` con comentarios completos explicando las 3 opciones (embedded, local, Atlas)
+- `config.py` — ventana visual tkinter para cambiar MONGO_URL sin tocar código
+- `config.bat` — doble clic abre config.py (o Bloc de Notas como fallback)
+- `start.bat` — pregunta C+ENTER para configurar antes de arrancar + verificación HTTP del servidor
+- La BD nunca está hardcodeada: todo viene del `.env` leído automáticamente al inicio
 
 ## Endpoints Backend
 

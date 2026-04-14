@@ -688,6 +688,183 @@ async def trigger_reminders_manual():
 
 # ─── Desktop Package Download ─────────────────────────────
 
+_ENV_TEMPLATE = """# =======================================================
+#  CINEMA PRODUCTIONS - Configuracion de Base de Datos
+# =======================================================
+#
+# Opciones para MONGO_URL:
+#
+#   embedded
+#       Base de datos LOCAL sin internet.
+#       Los datos se guardan en cinema_data.json (mismo directorio).
+#       Recomendado para uso personal en un solo PC.
+#
+#   mongodb://localhost:27017
+#       MongoDB instalado en tu computadora.
+#
+#   mongodb+srv://usuario:contrasena@cluster.mongodb.net
+#       MongoDB Atlas (nube gratuita en mongodb.com/atlas)
+#       Accesible desde cualquier dispositivo.
+#
+# Para cambiar: edita este archivo con el Bloc de Notas, guarda y reinicia la app.
+# O ejecuta config.bat para una ventana visual de configuracion.
+#
+MONGO_URL=embedded
+DB_NAME=cinema_productions
+"""
+
+_CONFIG_PY = r'''"""Cinema Productions — Configurador Visual de Base de Datos
+Ejecutar: python config.py  (o doble clic en config.bat)
+"""
+import tkinter as tk
+from tkinter import messagebox
+from pathlib import Path
+
+ROOT_DIR = Path(__file__).parent
+ENV_FILE = ROOT_DIR / ".env"
+
+
+def _read_env():
+    config = {}
+    if ENV_FILE.exists():
+        for line in ENV_FILE.read_text(encoding="utf-8").splitlines():
+            line = line.strip()
+            if line and not line.startswith("#") and "=" in line:
+                k, _, v = line.partition("=")
+                config[k.strip()] = v.strip()
+    return config
+
+
+def _write_env(mongo_url: str, db_name: str):
+    content = (
+        "# Cinema Productions - Configuracion de Base de Datos\n"
+        "#\n"
+        "# Opciones:\n"
+        "#   embedded                              Base de datos local (cinema_data.json)\n"
+        "#   mongodb://localhost:27017             MongoDB en tu PC\n"
+        "#   mongodb+srv://user:pass@cluster       MongoDB Atlas (nube gratuita)\n"
+        "#\n"
+        "# Edita este archivo con el Bloc de Notas y guarda.\n"
+        f"MONGO_URL={mongo_url}\n"
+        f"DB_NAME={db_name}\n"
+    )
+    ENV_FILE.write_text(content, encoding="utf-8")
+
+
+def main():
+    cfg = _read_env()
+    current_url = cfg.get("MONGO_URL", "embedded")
+    db_name = cfg.get("DB_NAME", "cinema_productions")
+
+    root = tk.Tk()
+    root.title("Cinema Productions — Configurar Base de Datos")
+    root.resizable(False, False)
+    root.configure(bg="#0f0e17")
+
+    W, H = 560, 420
+    root.update_idletasks()
+    x = (root.winfo_screenwidth() - W) // 2
+    y = (root.winfo_screenheight() - H) // 2
+    root.geometry(f"{W}x{H}+{x}+{y}")
+
+    # ── Header ──────────────────────────────────────────
+    hdr = tk.Frame(root, bg="#4f46e5", height=72)
+    hdr.pack(fill="x")
+    hdr.pack_propagate(False)
+    tk.Label(hdr, text="CINEMA PRODUCTIONS", font=("Segoe UI", 15, "bold"),
+             bg="#4f46e5", fg="white").pack(pady=(14, 0))
+    tk.Label(hdr, text="Configuracion de Base de Datos", font=("Segoe UI", 9),
+             bg="#4f46e5", fg="#c7d2fe").pack()
+
+    # ── Body ─────────────────────────────────────────────
+    body = tk.Frame(root, bg="#0f0e17", padx=28, pady=18)
+    body.pack(fill="both", expand=True)
+
+    tk.Label(body, text="URL de conexion MongoDB:", font=("Segoe UI", 10, "bold"),
+             bg="#0f0e17", fg="white", anchor="w").pack(fill="x")
+    tk.Label(body,
+             text='embedded  |  mongodb://localhost:27017  |  mongodb+srv://user:pass@cluster',
+             font=("Courier New", 8), bg="#0f0e17", fg="#6b7280", anchor="w").pack(fill="x", pady=(3, 8))
+
+    url_var = tk.StringVar(value=current_url)
+    entry = tk.Entry(body, textvariable=url_var, font=("Courier New", 10),
+                     bg="#1e1b4b", fg="#c7d2fe", insertbackground="white",
+                     relief="flat", bd=8)
+    entry.pack(fill="x")
+    entry.focus_set()
+
+    # ── Quick buttons ────────────────────────────────────
+    qf = tk.Frame(body, bg="#0f0e17")
+    qf.pack(fill="x", pady=(10, 0))
+    tk.Label(qf, text="Opciones rapidas:", font=("Segoe UI", 9),
+             bg="#0f0e17", fg="#9ca3af").pack(side="left", padx=(0, 8))
+
+    for label, val in [
+        ("Embebida (local)", "embedded"),
+        ("MongoDB local", "mongodb://localhost:27017"),
+    ]:
+        tk.Button(qf, text=label, command=lambda v=val: url_var.set(v),
+                  bg="#1e1b4b", fg="#a5b4fc", font=("Segoe UI", 9),
+                  relief="flat", padx=10, pady=4, cursor="hand2").pack(side="left", padx=4)
+
+    # ── Info box ─────────────────────────────────────────
+    ib = tk.Frame(body, bg="#1c1917")
+    ib.pack(fill="x", pady=(16, 0))
+    tk.Label(ib,
+             text="Consejo: tambien puedes abrir el archivo  .env  directamente con el Bloc de Notas y editar MONGO_URL.",
+             font=("Segoe UI", 8), bg="#1c1917", fg="#78716c",
+             wraplength=480, justify="left", padx=10, pady=8).pack(fill="x")
+
+    # ── Buttons ──────────────────────────────────────────
+    bf = tk.Frame(root, bg="#111827", pady=14)
+    bf.pack(fill="x")
+
+    def open_notepad():
+        import subprocess
+        subprocess.Popen(["notepad.exe", str(ENV_FILE)])
+
+    def save():
+        url = url_var.get().strip()
+        if not url:
+            messagebox.showerror("Error", "Por favor ingresa una URL de MongoDB.", parent=root)
+            return
+        _write_env(url, db_name)
+        messagebox.showinfo(
+            "Guardado",
+            f"Configuracion guardada exitosamente.\n\nMONGO_URL = {url}\n\nReinicia la app para aplicar el cambio.",
+            parent=root,
+        )
+        root.destroy()
+
+    tk.Button(bf, text="  Abrir .env en Bloc de Notas  ", command=open_notepad,
+              bg="#374151", fg="#d1d5db", font=("Segoe UI", 9),
+              relief="flat", padx=12, pady=7, cursor="hand2").pack(side="left", padx=(24, 8))
+
+    tk.Button(bf, text="  Guardar Configuracion  ", command=save,
+              bg="#4f46e5", fg="white", font=("Segoe UI", 10, "bold"),
+              relief="flat", padx=16, pady=7, cursor="hand2").pack(side="right", padx=(8, 24))
+
+    root.mainloop()
+
+
+if __name__ == "__main__":
+    main()
+'''
+
+_CONFIG_BAT = r"""@echo off
+title Cinema Productions - Configuracion
+echo.
+echo  Abriendo configuracion de Cinema Productions...
+echo.
+python --version >nul 2>&1
+if not errorlevel 1 ( python config.py & goto FIN )
+py --version >nul 2>&1
+if not errorlevel 1 ( py config.py & goto FIN )
+echo  Python no encontrado. Abriendo .env en el Bloc de Notas...
+notepad .env
+:FIN
+"""
+
 _START_BAT = r"""@echo off
 title Cinema Productions - Gestor de Reservas
 color 0A
@@ -697,26 +874,40 @@ echo  ====================================================
 echo    CINEMA PRODUCTIONS  ^|  Gestor de Reservas
 echo  ====================================================
 echo.
+echo  Archivos del paquete:
+echo    app.py           Servidor principal
+echo    .env             Configuracion de base de datos
+echo    config.bat       Cambiar base de datos (abrir ventana)
+echo    cinema_data.json Datos guardados localmente
+echo  ====================================================
+echo.
+
+REM ── CONFIGURACION OPCIONAL (presiona C para configurar) ──
+echo  Presiona  C + ENTER  para configurar la base de datos.
+echo  Presiona  ENTER       para iniciar directamente.
+echo.
+set /p CHOICE="  > "
+if /i "%CHOICE%"=="C" (
+    echo.
+    echo  Abriendo configuracion...
+    python config.py >nul 2>&1 || py config.py >nul 2>&1 || notepad .env
+    echo.
+    echo  Configuracion aplicada. Continuando inicio...
+    echo.
+)
 
 REM ── PASO 1: Verificar Python ─────────────────────────
 echo  [1/4] Verificando Python...
 python --version >nul 2>&1
-if not errorlevel 1 (
-    set PYTHON=python
-    goto PYTHON_OK
-)
+if not errorlevel 1 ( set PYTHON=python & goto PYTHON_OK )
 py --version >nul 2>&1
-if not errorlevel 1 (
-    set PYTHON=py
-    goto PYTHON_OK
-)
+if not errorlevel 1 ( set PYTHON=py & goto PYTHON_OK )
 echo.
 echo  ERROR: Python no esta instalado.
 echo  Descargalo desde: https://www.python.org/downloads/
 echo  IMPORTANTE: Marca "Add Python to PATH" al instalar.
 echo.
-pause
-exit /b 1
+pause & exit /b 1
 
 :PYTHON_OK
 echo  OK: Python encontrado.
@@ -725,21 +916,15 @@ REM ── PASO 2: Instalar dependencias ─────────────
 echo.
 echo  [2/4] Instalando/verificando dependencias...
 %PYTHON% -m pip install -r requirements.txt -q --no-warn-script-location
-if errorlevel 1 (
-    echo.
-    echo  ADVERTENCIA: Algunas dependencias pueden no haberse instalado.
-    echo  Intenta manualmente: pip install -r requirements.txt
-)
 echo  OK: Dependencias listas.
 
-REM ── PASO 3: Iniciar servidor en ventana separada ────
+REM ── PASO 3: Iniciar servidor ─────────────────────────
 echo.
 echo  [3/4] Iniciando servidor...
-start "Cinema Productions [servidor - no cierres]" /min %PYTHON% app.py
+start "Cinema Productions [servidor - no cierres esta ventana]" /min %PYTHON% app.py
 
-echo  Esperando que el servidor este listo (max 25 seg)...
+echo  Verificando que el servidor este listo (max 25 seg)...
 set /a TRIES=0
-
 :WAIT_LOOP
     timeout /t 1 /nobreak >nul
     %PYTHON% -c "import urllib.request,sys; urllib.request.urlopen('http://localhost:8001/api/'); sys.exit(0)" >nul 2>&1
@@ -754,14 +939,11 @@ echo  ====================================================
 echo   ERROR: El servidor no respondio en 25 segundos.
 echo.
 echo   Posibles causas:
-echo   - El puerto 8001 esta ocupado (cierra otras copias)
-echo   - Falta algun paquete de Python
-echo.
-echo   Revisa la ventana "Cinema Productions [servidor]"
+echo   - Puerto 8001 ocupado (cierra otras copias)
+echo   - Error en .env (ejecuta config.bat para revisar)
+echo   - Revisa la ventana del servidor para mas detalles
 echo  ====================================================
-echo.
-pause
-exit /b 1
+pause & exit /b 1
 
 :SERVER_READY
 echo  OK: Servidor verificado y funcionando.
@@ -772,13 +954,12 @@ echo  [4/4] Abriendo Cinema Productions en el navegador...
 start http://localhost:8001
 echo.
 echo  ====================================================
-echo    La app esta corriendo en: http://localhost:8001
-echo    Base de datos: LOCAL (cinema_data.json)
-echo    Datos guardados automaticamente.
+echo    URL:    http://localhost:8001
+echo    Datos:  cinema_data.json (guardado automaticamente)
+echo    Config: ejecuta config.bat para cambiar la BD
 echo  ====================================================
 echo.
-echo  Para CERRAR la app:
-echo    Cierra la ventana "Cinema Productions [servidor]"
+echo  Para CERRAR: cierra la ventana "Cinema Productions [servidor]"
 echo.
 pause
 """
@@ -792,15 +973,9 @@ echo "  =================================================="
 echo ""
 
 echo "  [1/4] Verificando Python..."
-if command -v python3 &>/dev/null; then
-    PYTHON=python3
-elif command -v python &>/dev/null; then
-    PYTHON=python
-else
-    echo "  ERROR: Python3 no esta instalado."
-    echo "  Instalalo desde: https://www.python.org/downloads/"
-    exit 1
-fi
+if command -v python3 &>/dev/null; then PYTHON=python3
+elif command -v python &>/dev/null; then PYTHON=python
+else echo "  ERROR: Python3 no instalado. Ver https://www.python.org/downloads/"; exit 1; fi
 echo "  OK: Python encontrado."
 
 echo ""
@@ -813,32 +988,25 @@ echo "  [3/4] Iniciando servidor..."
 $PYTHON app.py &
 SERVER_PID=$!
 
-echo "  Esperando que el servidor arranque (max 25 seg)..."
+echo "  Verificando servidor (max 25 seg)..."
 TRIES=0
 while true; do
     sleep 1
     $PYTHON -c "import urllib.request; urllib.request.urlopen('http://localhost:8001/api/')" 2>/dev/null && break
     TRIES=$((TRIES + 1))
-    if [ $TRIES -ge 25 ]; then
-        echo "  ERROR: El servidor no respondio."
-        kill $SERVER_PID 2>/dev/null
-        exit 1
-    fi
+    [ $TRIES -ge 25 ] && echo "  ERROR: El servidor no respondio." && kill $SERVER_PID 2>/dev/null && exit 1
 done
 echo "  OK: Servidor verificado."
 
 echo ""
 echo "  [4/4] Abriendo Cinema Productions..."
-if command -v xdg-open &>/dev/null; then
-    xdg-open http://localhost:8001
-elif command -v open &>/dev/null; then
-    open http://localhost:8001
-fi
+command -v xdg-open &>/dev/null && xdg-open http://localhost:8001
+command -v open &>/dev/null && open http://localhost:8001
 
 echo ""
 echo "  =================================================="
 echo "   URL: http://localhost:8001"
-echo "   BD:  LOCAL (cinema_data.json)"
+echo "   Para cambiar BD: edita el archivo .env"
 echo "   Para cerrar: Ctrl+C"
 echo "  =================================================="
 wait $SERVER_PID
@@ -855,32 +1023,40 @@ mongomock-motor>=0.0.36
 """
 
 _README = """CINEMA PRODUCTIONS - Gestor de Reservas
-========================================
+=========================================
 
-INICIO RAPIDO:
-  Windows:    Doble clic en start.bat
-  Mac/Linux:  chmod +x start.sh && ./start.sh
+INICIO RAPIDO (Windows):
+  1. Doble clic en  start.bat
+  2. Presiona ENTER para iniciar, o  C + ENTER  para configurar primero
+  3. La app se abre automaticamente en el navegador
 
 REQUISITO: Python 3.8+
-  Descargar: https://www.python.org/downloads/
-  IMPORTANTE (Windows): marcar "Add Python to PATH"
+  https://www.python.org/downloads/
+  IMPORTANTE: marcar "Add Python to PATH"
 
-BASE DE DATOS (predeterminado: EMBEBIDA):
-  Los datos se guardan en el archivo cinema_data.json
-  No necesitas instalar MongoDB ni tener internet.
-  Cambio automatico cada 60 segundos.
+BASE DE DATOS:
+  El archivo  .env  controla donde se guardan tus datos.
 
-CAMBIAR A MONGODB EXTERNO (opcional):
-  1. Edita el archivo .env
-  2. Cambia: MONGO_URL=embedded
-     Por:    MONGO_URL=mongodb://host:27017
-     O bien: MONGO_URL=mongodb+srv://...@cluster.mongodb.net (Atlas)
-  3. Guarda y vuelve a ejecutar start.bat
+  OPCIONES:
+    MONGO_URL=embedded
+      → Base de datos local, SIN internet, datos en cinema_data.json
+        Recomendado para uso personal en un solo PC.
 
-VERIFICACION:
-  El start.bat verifica automaticamente que el servidor
-  este funcionando antes de abrir el navegador.
-  Si ves ERROR revisa la ventana del servidor.
+    MONGO_URL=mongodb://localhost:27017
+      → MongoDB instalado en tu computadora.
+
+    MONGO_URL=mongodb+srv://user:pass@cluster.mongodb.net
+      → MongoDB Atlas (nube GRATUITA en mongodb.com/atlas)
+        Accesible desde cualquier dispositivo.
+
+CAMBIAR BASE DE DATOS (3 formas):
+  A) Doble clic en  config.bat  → Ventana visual de configuracion
+  B) Abrir  .env  con el Bloc de Notas → Edita MONGO_URL → Guarda
+  C) En el start.bat → Presiona C + ENTER antes de iniciar
+
+DATOS AUTOMATICOS:
+  En modo embebido, los datos se guardan en  cinema_data.json
+  Auto-guardado cada 60 segundos y al cerrar la app.
 
 Cinema Productions - Sistema de Gestion de Reservas
 """
@@ -894,27 +1070,22 @@ async def download_package():
     if not build_dir.exists():
         raise HTTPException(
             status_code=503,
-            detail="El paquete aún no está listo. Espera 2 minutos e inténtalo de nuevo."
+            detail="El paquete aun no esta listo. Espera 2 minutos e intentalo de nuevo."
         )
 
-    # Current MongoDB URL for the package
-    custom_file = ROOT_DIR / '.db_override'
-    mongo_url_pkg = custom_file.read_text().strip() if custom_file.exists() else os.environ['MONGO_URL']
-
-    # .env: use embedded by default (no external MongoDB needed)
-    env_content = f"MONGO_URL=embedded\nDB_NAME={DB_NAME}\n"
     standalone_py = (ROOT_DIR / 'standalone_app.py').read_text()
 
     buf = io.BytesIO()
     with zipfile.ZipFile(buf, 'w', zipfile.ZIP_DEFLATED) as zf:
         zf.writestr('cinema-productions/app.py', standalone_py)
-        zf.writestr('cinema-productions/.env', env_content)
+        zf.writestr('cinema-productions/.env', _ENV_TEMPLATE)
+        zf.writestr('cinema-productions/config.py', _CONFIG_PY)
+        zf.writestr('cinema-productions/config.bat', _CONFIG_BAT)
         zf.writestr('cinema-productions/requirements.txt', _REQUIREMENTS)
         zf.writestr('cinema-productions/start.bat', _START_BAT)
         zf.writestr('cinema-productions/start.sh', _START_SH)
         zf.writestr('cinema-productions/README.txt', _README)
 
-        # Bundle React build
         for file_path in sorted(build_dir.rglob('*')):
             if file_path.is_file():
                 arc_name = 'cinema-productions/build/' + str(file_path.relative_to(build_dir))
