@@ -1,6 +1,8 @@
 from fastapi import FastAPI, APIRouter, HTTPException, UploadFile, File, Form
-from fastapi.responses import JSONResponse
+from fastapi.responses import JSONResponse, Response
 from dotenv import load_dotenv
+import csv
+import io
 from starlette.middleware.cors import CORSMiddleware
 from motor.motor_asyncio import AsyncIOMotorClient
 import os
@@ -220,6 +222,35 @@ async def delete_receipt(reservation_id: str, receipt_id: str):
     if result.matched_count == 0:
         raise HTTPException(status_code=404, detail="Reserva no encontrada")
     return {"message": "Comprobante eliminado"}
+
+
+@api_router.get("/export/reservations")
+async def export_reservations(format: str = "csv"):
+    cursor = db.reservations.find({}, {"receipt_images": 0})
+    docs = await cursor.to_list(10000)
+    data = [doc_to_dict(d) for d in docs]
+
+    if format == "json":
+        return JSONResponse(
+            content=data,
+            headers={"Content-Disposition": "attachment; filename=reservaciones.json"}
+        )
+
+    # CSV
+    if not data:
+        return Response("", media_type="text/csv", headers={"Content-Disposition": "attachment; filename=reservaciones.csv"})
+
+    output = io.StringIO()
+    fields = ["id","client_name","client_phone","client_email","event_type","event_date","event_time","venue","guests_count","total_amount","advance_paid","status","notes","created_at"]
+    writer = csv.DictWriter(output, fieldnames=fields, extrasaction="ignore")
+    writer.writeheader()
+    writer.writerows(data)
+
+    return Response(
+        output.getvalue(),
+        media_type="text/csv; charset=utf-8",
+        headers={"Content-Disposition": "attachment; filename=reservaciones.csv"}
+    )
 
 
 @api_router.get("/calendar")

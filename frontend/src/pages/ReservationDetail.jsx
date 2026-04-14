@@ -4,21 +4,23 @@ import { getReservation, updateReservation, uploadReceipt, deleteReceipt } from 
 import { ArrowLeft, Upload, Trash2, Edit2, X, ImageIcon } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useToast } from "@/hooks/use-toast";
+import { useSettings } from "@/context/SettingsContext";
 import ReservationForm from "@/components/ReservationForm";
 
 const STATUS_COLORS = {
   Pendiente: "bg-amber-100/80 text-amber-700 border-amber-200/60",
   Confirmado: "bg-blue-100/80 text-blue-700 border-blue-200/60",
   Completado: "bg-emerald-100/80 text-emerald-700 border-emerald-200/60",
-  Cancelado: "bg-red-100/80 text-red-700 border-red-200/60",
+  Cancelado:  "bg-red-100/80 text-red-700 border-red-200/60",
 };
-
-const STATUSES = ["Pendiente", "Confirmado", "Completado", "Cancelado"];
+const STATUSES = ["Pendiente","Confirmado","Completado","Cancelado"];
 
 export default function ReservationDetail() {
   const { id } = useParams();
   const navigate = useNavigate();
   const { toast } = useToast();
+  const { tr, formatCurrency } = useSettings();
+  const dt = tr.detail;
   const [reservation, setReservation] = useState(null);
   const [loading, setLoading] = useState(true);
   const [uploading, setUploading] = useState(false);
@@ -29,247 +31,123 @@ export default function ReservationDetail() {
 
   const load = async () => {
     setLoading(true);
-    try {
-      const data = await getReservation(id);
-      setReservation(data);
-    } catch {
-      toast({ title: "Error", description: "No se pudo cargar la reserva", variant: "destructive" });
-    } finally {
-      setLoading(false);
-    }
+    try { const data = await getReservation(id); setReservation(data); }
+    catch { toast({ title: dt.toasts?.loadError || "Error", variant: "destructive" }); }
+    finally { setLoading(false); }
   };
 
   useEffect(() => { load(); }, [id]);
 
-  const formatDate = (d) => {
-    if (!d) return "-";
-    const [y, m, day] = d.split("-");
-    return `${day}/${m}/${y}`;
-  };
-  const formatCurrency = (n) =>
-    new Intl.NumberFormat("es-MX", { style: "currency", currency: "MXN", maximumFractionDigits: 0 }).format(n || 0);
+  const formatDate = (d) => { if (!d) return "-"; const [y,m,day] = d.split("-"); return `${day}/${m}/${y}`; };
 
   const handleFileUpload = async (files) => {
-    const allowed = ["image/jpeg", "image/png", "image/gif", "image/webp", "application/pdf"];
+    const allowed = ["image/jpeg","image/png","image/gif","image/webp","application/pdf"];
     for (const file of files) {
-      if (!allowed.includes(file.type)) {
-        toast({ title: "Tipo no soportado", description: "Solo imágenes y PDF", variant: "destructive" });
-        continue;
-      }
+      if (!allowed.includes(file.type)) { toast({ title: "Tipo no soportado", variant: "destructive" }); continue; }
       setUploading(true);
-      try {
-        await uploadReceipt(id, file);
-        toast({ title: "Comprobante subido" });
-        load();
-      } catch (e) {
-        toast({ title: "Error al subir", description: e.response?.data?.detail || "Error", variant: "destructive" });
-      } finally {
-        setUploading(false);
-      }
+      try { await uploadReceipt(id, file); toast({ title: dt.toasts?.uploadSuccess || "Comprobante subido" }); load(); }
+      catch (e) { toast({ title: "Error al subir", description: e.response?.data?.detail || "Error", variant: "destructive" }); }
+      finally { setUploading(false); }
     }
   };
 
-  const handleDrop = (e) => {
-    e.preventDefault();
-    setDragOver(false);
-    handleFileUpload(Array.from(e.dataTransfer.files));
-  };
+  const handleDrop = (e) => { e.preventDefault(); setDragOver(false); handleFileUpload(Array.from(e.dataTransfer.files)); };
 
   const handleDeleteReceipt = async (receiptId) => {
     if (!window.confirm("¿Eliminar comprobante?")) return;
-    try {
-      await deleteReceipt(id, receiptId);
-      toast({ title: "Comprobante eliminado" });
-      load();
-    } catch {
-      toast({ title: "Error al eliminar", variant: "destructive" });
-    }
+    try { await deleteReceipt(id, receiptId); toast({ title: "Eliminado" }); load(); }
+    catch { toast({ title: "Error", variant: "destructive" }); }
   };
 
   const handleStatusChange = async (newStatus) => {
-    try {
-      const updated = await updateReservation(id, { status: newStatus });
-      setReservation(updated);
-      toast({ title: `Estado: ${newStatus}` });
-    } catch {
-      toast({ title: "Error al actualizar", variant: "destructive" });
-    }
+    try { const updated = await updateReservation(id, { status: newStatus }); setReservation(updated); toast({ title: `${tr.statuses[newStatus] || newStatus}` }); }
+    catch { toast({ title: "Error", variant: "destructive" }); }
   };
 
-  if (loading) {
-    return (
-      <div className="px-6 py-8 max-w-4xl mx-auto space-y-4">
-        <div className="h-10 w-64 glass rounded-2xl animate-pulse" />
-        <div className="h-56 glass rounded-3xl animate-pulse" />
-        <div className="h-40 glass rounded-3xl animate-pulse" />
-      </div>
-    );
-  }
+  if (loading) return (
+    <div className="px-6 py-8 max-w-4xl mx-auto space-y-4">
+      <div className="h-10 w-64 glass rounded-2xl animate-pulse" />
+      <div className="h-56 glass rounded-3xl animate-pulse" />
+    </div>
+  );
+  if (!reservation) return <div className="px-6 py-8 text-center text-slate-400 font-medium">No encontrado</div>;
 
-  if (!reservation) {
-    return <div className="px-6 py-8 text-center text-slate-400 font-medium">Reserva no encontrada</div>;
-  }
-
-  const remaining = (reservation.total_amount || 0) - (reservation.advance_paid || 0);
-  const paidPct = reservation.total_amount > 0
-    ? Math.min(100, ((reservation.advance_paid || 0) / reservation.total_amount) * 100)
-    : 0;
+  const remaining = (reservation.total_amount||0) - (reservation.advance_paid||0);
+  const paidPct = reservation.total_amount > 0 ? Math.min(100, ((reservation.advance_paid||0)/reservation.total_amount)*100) : 0;
 
   return (
     <div className="px-6 py-8 max-w-4xl mx-auto">
-      {/* Header */}
-      <motion.div
-        initial={{ opacity: 0, y: -16 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.4 }}
-        className="flex items-center gap-3 mb-7"
-      >
-        <motion.button
-          whileHover={{ scale: 1.1, x: -2 }}
-          whileTap={{ scale: 0.9 }}
-          onClick={() => navigate(-1)}
-          className="p-2.5 rounded-2xl glass hover:bg-white/60 text-slate-600 transition-colors"
-          data-testid="back-btn"
-        >
+      <motion.div initial={{ opacity:0, y:-16 }} animate={{ opacity:1, y:0 }} transition={{ duration:0.4 }} className="flex items-center gap-3 mb-7">
+        <motion.button whileHover={{ scale:1.1, x:-2 }} whileTap={{ scale:0.9 }} onClick={() => navigate(-1)} className="p-2.5 rounded-2xl glass hover:bg-white/60 text-slate-600 transition-colors" data-testid="back-btn">
           <ArrowLeft size={16} />
         </motion.button>
         <div className="flex-1">
-          <h1 className="text-4xl font-black text-slate-900 tracking-tight" style={{ fontFamily: 'Cabinet Grotesk, sans-serif' }}>
-            {reservation.client_name}
-          </h1>
+          <h1 className="text-4xl font-black text-slate-900 tracking-tight" style={{ fontFamily:'Cabinet Grotesk, sans-serif' }}>{reservation.client_name}</h1>
           <p className="text-sm text-slate-400 font-medium">{reservation.event_type}</p>
         </div>
         <div className="flex items-center gap-2">
-          <select
-            value={reservation.status}
-            onChange={(e) => handleStatusChange(e.target.value)}
-            className={`text-xs px-3 py-1.5 rounded-full border font-bold cursor-pointer focus:outline-none focus:ring-2 focus:ring-indigo-300/60 ${STATUS_COLORS[reservation.status]}`}
-            data-testid="status-select"
-          >
-            {STATUSES.map(s => <option key={s} className="bg-white">{s}</option>)}
+          <select value={reservation.status} onChange={e => handleStatusChange(e.target.value)}
+            className={`text-xs px-3 py-1.5 rounded-full border font-bold cursor-pointer focus:outline-none ${STATUS_COLORS[reservation.status]}`}
+            data-testid="status-select">
+            {STATUSES.map(s => <option key={s} value={s} className="bg-white">{tr.statuses[s]||s}</option>)}
           </select>
-          <motion.button
-            whileHover={{ scale: 1.05 }}
-            whileTap={{ scale: 0.95 }}
-            onClick={() => setShowEdit(true)}
-            data-testid="edit-btn"
-            className="flex items-center gap-1.5 px-4 py-2 rounded-full glass border-white/60 text-sm font-bold text-slate-700 hover:bg-white/60 transition-colors"
-          >
-            <Edit2 size={13} />
-            Editar
+          <motion.button whileHover={{ scale:1.05 }} whileTap={{ scale:0.95 }} onClick={() => setShowEdit(true)} data-testid="edit-btn"
+            className="flex items-center gap-1.5 px-4 py-2 rounded-full glass border-white/60 text-sm font-bold text-slate-700 hover:bg-white/60 transition-colors">
+            <Edit2 size={13} /> {tr.common.edit}
           </motion.button>
         </div>
       </motion.div>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
-        {/* Left: Details */}
         <div className="md:col-span-2 space-y-5">
-          {/* Event Info */}
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.1 }}
-            className="glass rounded-3xl p-6"
-          >
-            <h2 className="text-xs font-black text-slate-500 uppercase tracking-widest mb-5">
-              Información del Evento
-            </h2>
+          <motion.div initial={{ opacity:0, y:20 }} animate={{ opacity:1, y:0 }} transition={{ delay:0.1 }} className="glass rounded-3xl p-6">
+            <h2 className="text-xs font-black text-slate-500 uppercase tracking-widest mb-5">{dt.eventInfo}</h2>
             <dl className="grid grid-cols-2 gap-5">
-              <InfoItem label="Fecha del evento" value={formatDate(reservation.event_date)} />
-              {reservation.event_time && <InfoItem label="Hora" value={reservation.event_time} />}
-              {reservation.venue && <InfoItem label="Lugar" value={reservation.venue} />}
-              {reservation.guests_count && <InfoItem label="Invitados" value={`${reservation.guests_count} personas`} />}
-              {reservation.client_phone && <InfoItem label="Teléfono" value={reservation.client_phone} />}
-              {reservation.client_email && <InfoItem label="Email" value={reservation.client_email} />}
+              <InfoItem label={dt.eventDate} value={formatDate(reservation.event_date)} />
+              {reservation.event_time && <InfoItem label={dt.time} value={reservation.event_time} />}
+              {reservation.venue && <InfoItem label={dt.venue} value={reservation.venue} />}
+              {reservation.guests_count && <InfoItem label={dt.guests} value={`${reservation.guests_count} ${dt.persons}`} />}
+              {reservation.client_phone && <InfoItem label={dt.phone} value={reservation.client_phone} />}
+              {reservation.client_email && <InfoItem label={dt.email} value={reservation.client_email} />}
             </dl>
             {reservation.notes && (
               <div className="mt-5 pt-5 border-t border-white/40">
-                <p className="text-xs font-black text-slate-400 uppercase tracking-widest mb-2">Notas</p>
+                <p className="text-xs font-black text-slate-400 uppercase tracking-widest mb-2">{dt.notes}</p>
                 <p className="text-sm text-slate-700 leading-relaxed">{reservation.notes}</p>
               </div>
             )}
           </motion.div>
 
-          {/* Receipts */}
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.2 }}
-            className="glass rounded-3xl p-6"
-          >
-            <h2 className="text-xs font-black text-slate-500 uppercase tracking-widest mb-5">
-              Comprobantes de Pago
-            </h2>
-
-            <motion.div
-              whileHover={{ scale: 1.01 }}
-              className={`border-2 border-dashed rounded-3xl p-8 text-center cursor-pointer transition-all duration-300 ${
-                dragOver
-                  ? "border-indigo-400 bg-indigo-50/60 scale-[1.02]"
-                  : "border-indigo-200/60 bg-indigo-50/20 hover:bg-indigo-50/40 hover:border-indigo-300"
-              }`}
-              onDrop={handleDrop}
-              onDragOver={(e) => { e.preventDefault(); setDragOver(true); }}
-              onDragLeave={() => setDragOver(false)}
-              onClick={() => fileRef.current?.click()}
-              data-testid="upload-zone"
-            >
+          <motion.div initial={{ opacity:0, y:20 }} animate={{ opacity:1, y:0 }} transition={{ delay:0.2 }} className="glass rounded-3xl p-6">
+            <h2 className="text-xs font-black text-slate-500 uppercase tracking-widest mb-5">{dt.receipts}</h2>
+            <motion.div whileHover={{ scale:1.01 }}
+              className={`border-2 border-dashed rounded-3xl p-8 text-center cursor-pointer transition-all duration-300 ${dragOver ? "border-indigo-400 bg-indigo-50/60 scale-[1.02]" : "border-indigo-200/60 bg-indigo-50/20 hover:bg-indigo-50/40 hover:border-indigo-300"}`}
+              onDrop={handleDrop} onDragOver={e => { e.preventDefault(); setDragOver(true); }} onDragLeave={() => setDragOver(false)}
+              onClick={() => fileRef.current?.click()} data-testid="upload-zone">
               <div className="w-12 h-12 rounded-2xl bg-indigo-100/80 flex items-center justify-center mx-auto mb-3">
                 <Upload size={20} className="text-indigo-500" />
               </div>
-              <p className="text-sm font-bold text-slate-600">
-                {uploading ? "Subiendo..." : "Arrastra o haz clic para subir"}
-              </p>
-              <p className="text-xs text-slate-400 mt-1">JPG, PNG, PDF — máx 10MB</p>
-              <input
-                ref={fileRef}
-                type="file"
-                accept="image/*,application/pdf"
-                multiple
-                className="hidden"
-                data-testid="file-input"
-                onChange={(e) => handleFileUpload(Array.from(e.target.files))}
-              />
+              <p className="text-sm font-bold text-slate-600">{uploading ? dt.uploading : dt.uploadHint}</p>
+              <p className="text-xs text-slate-400 mt-1">{dt.uploadSub}</p>
+              <input ref={fileRef} type="file" accept="image/*,application/pdf" multiple className="hidden" data-testid="file-input" onChange={e => handleFileUpload(Array.from(e.target.files))} />
             </motion.div>
 
             <AnimatePresence>
               {reservation.receipt_images && reservation.receipt_images.length > 0 && (
-                <motion.div
-                  initial={{ opacity: 0, height: 0 }}
-                  animate={{ opacity: 1, height: "auto" }}
-                  className="grid grid-cols-2 sm:grid-cols-3 gap-3 mt-5"
-                  data-testid="receipts-grid"
-                >
+                <motion.div initial={{ opacity:0, height:0 }} animate={{ opacity:1, height:"auto" }} className="grid grid-cols-2 sm:grid-cols-3 gap-3 mt-5" data-testid="receipts-grid">
                   {reservation.receipt_images.map((img, i) => (
-                    <motion.div
-                      key={img.id}
-                      initial={{ opacity: 0, scale: 0.8 }}
-                      animate={{ opacity: 1, scale: 1 }}
-                      transition={{ delay: i * 0.06 }}
-                      className="relative group rounded-2xl overflow-hidden glass aspect-video flex items-center justify-center"
-                    >
+                    <motion.div key={img.id} initial={{ opacity:0, scale:0.8 }} animate={{ opacity:1, scale:1 }} transition={{ delay:i*0.06 }}
+                      className="relative group rounded-2xl overflow-hidden glass aspect-video flex items-center justify-center">
                       {img.content_type?.startsWith("image/") ? (
-                        <img
-                          src={`data:${img.content_type};base64,${img.data}`}
-                          alt={img.filename}
-                          className="object-cover w-full h-full cursor-pointer"
-                          onClick={() => setLightbox(img)}
-                          data-testid={`receipt-img-${img.id}`}
-                        />
+                        <img src={`data:${img.content_type};base64,${img.data}`} alt={img.filename} className="object-cover w-full h-full cursor-pointer" onClick={() => setLightbox(img)} data-testid={`receipt-img-${img.id}`} />
                       ) : (
                         <div className="flex flex-col items-center gap-1 cursor-pointer py-4" onClick={() => setLightbox(img)}>
-                          <ImageIcon size={24} className="text-slate-400" />
-                          <p className="text-xs text-slate-500 truncate max-w-full px-2">{img.filename}</p>
+                          <ImageIcon size={24} className="text-slate-400" /><p className="text-xs text-slate-500 truncate max-w-full px-2">{img.filename}</p>
                         </div>
                       )}
-                      <motion.button
-                        whileHover={{ scale: 1.1 }}
-                        onClick={() => handleDeleteReceipt(img.id)}
+                      <motion.button whileHover={{ scale:1.1 }} onClick={() => handleDeleteReceipt(img.id)}
                         className="absolute top-2 right-2 p-1.5 rounded-full bg-white/80 opacity-0 group-hover:opacity-100 hover:bg-red-100 text-slate-500 hover:text-red-500 transition-all"
-                        data-testid={`delete-receipt-${img.id}`}
-                      >
-                        <Trash2 size={11} />
-                      </motion.button>
+                        data-testid={`delete-receipt-${img.id}`}><Trash2 size={11} /></motion.button>
                     </motion.div>
                   ))}
                 </motion.div>
@@ -278,118 +156,67 @@ export default function ReservationDetail() {
           </motion.div>
         </div>
 
-        {/* Right: Payment */}
         <div className="space-y-5">
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.15 }}
-            className="glass rounded-3xl p-6"
-          >
-            <h2 className="text-xs font-black text-slate-500 uppercase tracking-widest mb-5">
-              Resumen de Pago
-            </h2>
+          <motion.div initial={{ opacity:0, y:20 }} animate={{ opacity:1, y:0 }} transition={{ delay:0.15 }} className="glass rounded-3xl p-6">
+            <h2 className="text-xs font-black text-slate-500 uppercase tracking-widest mb-5">{dt.paymentSummary}</h2>
             <div className="space-y-4">
               <div className="flex justify-between items-center">
-                <span className="text-sm text-slate-500 font-medium">Total</span>
+                <span className="text-sm text-slate-500 font-medium">{dt.totalLabel}</span>
                 <span className="text-sm font-black text-slate-900">{formatCurrency(reservation.total_amount)}</span>
               </div>
               <div className="flex justify-between items-center">
-                <span className="text-sm text-slate-500 font-medium">Anticipo pagado</span>
+                <span className="text-sm text-slate-500 font-medium">{dt.advancePaid}</span>
                 <span className="text-sm font-black text-emerald-600">{formatCurrency(reservation.advance_paid)}</span>
               </div>
               <div className="pt-3 border-t border-white/40">
                 <div className="flex justify-between items-center mb-3">
-                  <span className="text-sm font-bold text-slate-700">Saldo pendiente</span>
-                  <span className={`text-sm font-black ${remaining > 0 ? "text-amber-600" : "text-emerald-600"}`}>
-                    {formatCurrency(remaining)}
-                  </span>
+                  <span className="text-sm font-bold text-slate-700">{dt.pendingBalance}</span>
+                  <span className={`text-sm font-black ${remaining > 0 ? "text-amber-600" : "text-emerald-600"}`}>{formatCurrency(remaining)}</span>
                 </div>
                 <div className="w-full h-2.5 bg-slate-100 rounded-full overflow-hidden">
-                  <motion.div
-                    initial={{ width: 0 }}
-                    animate={{ width: `${paidPct}%` }}
-                    transition={{ duration: 0.8, ease: "easeOut", delay: 0.3 }}
-                    className="h-full rounded-full bg-gradient-to-r from-emerald-400 to-emerald-600"
-                    data-testid="payment-progress"
-                  />
+                  <motion.div initial={{ width:0 }} animate={{ width:`${paidPct}%` }} transition={{ duration:0.8, ease:"easeOut", delay:0.3 }} className="h-full rounded-full theme-progress" data-testid="payment-progress" />
                 </div>
-                <p className="text-xs text-slate-400 mt-1.5 font-medium">{Math.round(paidPct)}% pagado</p>
+                <p className="text-xs text-slate-400 mt-1.5 font-medium">{Math.round(paidPct)}% {dt.paid}</p>
               </div>
             </div>
           </motion.div>
 
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.2 }}
-            className="glass rounded-3xl p-6"
-          >
-            <h2 className="text-xs font-black text-slate-500 uppercase tracking-widest mb-4">
-              Comprobantes
-            </h2>
+          <motion.div initial={{ opacity:0, y:20 }} animate={{ opacity:1, y:0 }} transition={{ delay:0.2 }} className="glass rounded-3xl p-6">
+            <h2 className="text-xs font-black text-slate-500 uppercase tracking-widest mb-4">{dt.receiptsCount}</h2>
             <div className="flex items-center gap-3">
-              <div className="w-9 h-9 rounded-2xl bg-indigo-100/80 flex items-center justify-center">
-                <ImageIcon size={15} className="text-indigo-500" />
+              <div className="w-9 h-9 rounded-2xl flex items-center justify-center" style={{ backgroundColor:"color-mix(in srgb, var(--t-from) 12%, white)" }}>
+                <ImageIcon size={15} style={{ color:"var(--t-from)" }} />
               </div>
               <div>
-                <p className="text-sm font-bold text-slate-900">{(reservation.receipt_images || []).length}</p>
-                <p className="text-xs text-slate-400">archivo(s) subido(s)</p>
+                <p className="text-sm font-bold text-slate-900">{(reservation.receipt_images||[]).length}</p>
+                <p className="text-xs text-slate-400">{dt.filesUploaded}</p>
               </div>
             </div>
           </motion.div>
         </div>
       </div>
 
-      {/* Lightbox */}
       <AnimatePresence>
         {lightbox && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
+          <motion.div initial={{ opacity:0 }} animate={{ opacity:1 }} exit={{ opacity:0 }}
             className="fixed inset-0 z-50 flex items-center justify-center p-6"
-            style={{ backdropFilter: "blur(20px)", backgroundColor: "rgba(15,23,42,0.7)" }}
-            onClick={() => setLightbox(null)}
-            data-testid="lightbox"
-          >
-            <motion.button
-              whileHover={{ scale: 1.1 }}
-              className="absolute top-6 right-6 p-2.5 rounded-full glass text-white"
-              onClick={() => setLightbox(null)}
-            >
-              <X size={20} />
-            </motion.button>
+            style={{ backdropFilter:"blur(20px)", backgroundColor:"rgba(15,23,42,0.7)" }}
+            onClick={() => setLightbox(null)} data-testid="lightbox">
+            <motion.button whileHover={{ scale:1.1 }} className="absolute top-6 right-6 p-2.5 rounded-full glass text-white" onClick={() => setLightbox(null)}><X size={20} /></motion.button>
             {lightbox.content_type?.startsWith("image/") ? (
-              <motion.img
-                initial={{ scale: 0.8, opacity: 0 }}
-                animate={{ scale: 1, opacity: 1 }}
-                src={`data:${lightbox.content_type};base64,${lightbox.data}`}
-                alt={lightbox.filename}
-                className="max-w-full max-h-[85vh] object-contain rounded-3xl shadow-2xl"
-                onClick={(e) => e.stopPropagation()}
-              />
+              <motion.img initial={{ scale:0.8, opacity:0 }} animate={{ scale:1, opacity:1 }}
+                src={`data:${lightbox.content_type};base64,${lightbox.data}`} alt={lightbox.filename}
+                className="max-w-full max-h-[85vh] object-contain rounded-3xl shadow-2xl" onClick={e => e.stopPropagation()} />
             ) : (
-              <motion.div
-                initial={{ scale: 0.8 }}
-                animate={{ scale: 1 }}
-                className="glass-modal rounded-3xl p-10 text-center"
-              >
-                <ImageIcon size={48} className="mx-auto text-slate-400 mb-3" />
-                <p className="text-slate-700 font-bold">{lightbox.filename}</p>
+              <motion.div initial={{ scale:0.8 }} animate={{ scale:1 }} className="glass-modal rounded-3xl p-10 text-center">
+                <ImageIcon size={48} className="mx-auto text-slate-400 mb-3" /><p className="text-slate-700 font-bold">{lightbox.filename}</p>
               </motion.div>
             )}
           </motion.div>
         )}
       </AnimatePresence>
 
-      {showEdit && (
-        <ReservationForm
-          reservation={reservation}
-          onClose={() => setShowEdit(false)}
-          onSaved={() => { setShowEdit(false); load(); }}
-        />
-      )}
+      {showEdit && <ReservationForm reservation={reservation} onClose={() => setShowEdit(false)} onSaved={() => { setShowEdit(false); load(); }} />}
     </div>
   );
 }

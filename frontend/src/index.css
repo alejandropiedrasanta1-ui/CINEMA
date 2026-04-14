@@ -114,6 +114,39 @@ h1, h2, h3, h4, h5, h6 {
   background-clip: text;
 }
 
+/* CSS theme variables */
+:root {
+  --t-from: #6366f1;
+  --t-to: #9333ea;
+  --t-shadow: rgba(99,102,241,0.28);
+  --blob-1: #a5b4fc;
+  --blob-2: #fda4af;
+  --blob-3: #7dd3fc;
+  --blob-4: #d9f99d;
+}
+
+/* Theme utility classes */
+.btn-primary {
+  background: linear-gradient(135deg, var(--t-from), var(--t-to)) !important;
+  box-shadow: 0 8px 24px -4px var(--t-shadow) !important;
+}
+.btn-primary:hover {
+  box-shadow: 0 12px 32px -4px var(--t-shadow) !important;
+}
+.nav-active {
+  background: linear-gradient(135deg, var(--t-from), var(--t-to)) !important;
+  color: white !important;
+  box-shadow: 0 4px 16px -2px var(--t-shadow) !important;
+}
+.theme-gradient { background: linear-gradient(135deg, var(--t-from), var(--t-to)); }
+.theme-shadow { box-shadow: 0 8px 24px -4px var(--t-shadow); }
+.theme-progress { background: linear-gradient(90deg, var(--t-from), var(--t-to)); }
+.theme-today {
+  background: linear-gradient(135deg, var(--t-from), var(--t-to));
+  color: white;
+  box-shadow: 0 4px 12px var(--t-shadow);
+}
+
 /* Mesh blob background */
 .mesh-bg {
   position: fixed;
@@ -127,31 +160,31 @@ h1, h2, h3, h4, h5, h6 {
   position: absolute;
   border-radius: 9999px;
   filter: blur(100px);
-  opacity: 0.35;
+  opacity: 0.38;
   animation: float 8s ease-in-out infinite;
 }
 
 .blob-1 {
   width: 600px; height: 600px;
-  background: radial-gradient(circle, #a5b4fc, #818cf8);
+  background: var(--blob-1);
   top: -15%; left: -10%;
   animation-delay: 0s;
 }
 .blob-2 {
   width: 500px; height: 500px;
-  background: radial-gradient(circle, #fda4af, #fb7185);
+  background: var(--blob-2);
   top: 30%; right: -10%;
   animation-delay: -3s;
 }
 .blob-3 {
   width: 450px; height: 450px;
-  background: radial-gradient(circle, #7dd3fc, #38bdf8);
+  background: var(--blob-3);
   bottom: -10%; left: 20%;
   animation-delay: -6s;
 }
 .blob-4 {
   width: 350px; height: 350px;
-  background: radial-gradient(circle, #d9f99d, #86efac);
+  background: var(--blob-4);
   top: 60%; left: 55%;
   animation-delay: -2s;
 }

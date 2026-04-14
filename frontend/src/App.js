@@ -1,11 +1,13 @@
 import "@/App.css";
 import { BrowserRouter, Routes, Route, Navigate, useLocation } from "react-router-dom";
 import { AnimatePresence, motion } from "framer-motion";
+import { SettingsProvider } from "@/context/SettingsContext";
 import Layout from "@/components/Layout";
 import Dashboard from "@/pages/Dashboard";
 import Reservations from "@/pages/Reservations";
 import ReservationDetail from "@/pages/ReservationDetail";
 import CalendarView from "@/pages/CalendarView";
+import Settings from "@/pages/Settings";
 import { Toaster } from "@/components/ui/toaster";
 
 const pageVariants = {
@@ -25,6 +27,7 @@ function AnimatedRoutes() {
           <Route path="/reservaciones" element={<Reservations />} />
           <Route path="/reservaciones/:id" element={<ReservationDetail />} />
           <Route path="/calendario" element={<CalendarView />} />
+          <Route path="/ajustes" element={<Settings />} />
         </Routes>
       </motion.div>
     </AnimatePresence>
@@ -33,21 +36,22 @@ function AnimatedRoutes() {
 
 function App() {
   return (
-    <div className="App">
-      {/* Mesh background blobs */}
-      <div className="mesh-bg" aria-hidden="true">
-        <div className="blob blob-1" />
-        <div className="blob blob-2" />
-        <div className="blob blob-3" />
-        <div className="blob blob-4" />
+    <SettingsProvider>
+      <div className="App">
+        <div className="mesh-bg" aria-hidden="true">
+          <div className="blob blob-1" />
+          <div className="blob blob-2" />
+          <div className="blob blob-3" />
+          <div className="blob blob-4" />
+        </div>
+        <BrowserRouter>
+          <Layout>
+            <AnimatedRoutes />
+          </Layout>
+        </BrowserRouter>
+        <Toaster />
       </div>
-      <BrowserRouter>
-        <Layout>
-          <AnimatedRoutes />
-        </Layout>
-      </BrowserRouter>
-      <Toaster />
-    </div>
+    </SettingsProvider>
   );
 }
 
