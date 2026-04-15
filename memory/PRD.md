@@ -66,7 +66,12 @@ Sistema de gestión de reservas para eventos (bodas, quinceañeras, fiestas soci
 - Sub-totales en TeamSection: "Pagado al equipo" y "Pendiente equipo"
 - Panel en página Socios: 4 cards → Total Eventos, Costo Equipo, Pagado Equipo, Ingreso Real
 
-### Notificaciones Windows + PDF Export (Iteración 11 - Feb 2026) ✅
+### Fix Notificaciones + PDF Export (Iteración 12 - Feb 2026) ✅
+- **useNotifications.js** reescrito: polling cada 60s (no 30 min), chequeo por hora configurada, `notifyImmediate()` que busca el evento más próximo SIN filtro de ventana
+- **Settings Recordatorios**: botón "Probar ahora — notificar evento más próximo" real, selector de hora (time input), `handleRequestPermission` llama `startNotifications(true)` al activar
+- **PDF Export fix**: `doc.getNumberOfPages()` en lugar de `doc.internal.getNumberOfPages()` para jsPDF v4.2.1
+- **Bug fix**: `formatCurrency` no estaba en destructuring de `useSettings()` en Settings.jsx → PDF ahora genera correctamente
+
 - **Notificaciones del Sistema (Windows/macOS)** en Ajustes → Recordatorios:
   - Bloque con estado dinámico: ACTIVO / BLOQUEADO / INACTIVO
   - Botón "Activar notificaciones de Windows" → solicita permiso al navegador
