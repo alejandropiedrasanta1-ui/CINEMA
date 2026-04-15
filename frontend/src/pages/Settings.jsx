@@ -403,53 +403,6 @@ export default function Settings() {
   // ── PDF Export ────────────────────────────────────────────────
   const [pdfLoading, setPdfLoading] = useState(false);
 
-  // ── Gmail OAuth ──────────────────────────────────────────────
-  const [gmailStatus, setGmailStatus] = useState({ connected: false, email: "", connected_at: null });
-  const [gmailLoading, setGmailLoading] = useState(false);
-
-  React.useEffect(() => {
-    fetch(`${process.env.REACT_APP_BACKEND_URL}/api/oauth/gmail/status`)
-      .then((r) => r.json()).then(setGmailStatus).catch(() => {});
-    const params = new URLSearchParams(window.location.search);
-    if (params.get("gmail_ok")) {
-      toast({ title: "Gmail conectado correctamente ✓" });
-      fetch(`${process.env.REACT_APP_BACKEND_URL}/api/oauth/gmail/status`).then((r) => r.json()).then(setGmailStatus);
-      window.history.replaceState({}, "", "/ajustes");
-    } else if (params.get("gmail_error")) {
-      toast({ title: `Error al conectar Gmail: ${params.get("gmail_error")}`, variant: "destructive" });
-      window.history.replaceState({}, "", "/ajustes");
-    }
-  }, []);
-
-  const handleGmailConnect = async () => {
-    setGmailLoading(true);
-    try {
-      const res = await fetch(`${process.env.REACT_APP_BACKEND_URL}/api/oauth/gmail/start`);
-      const { url } = await res.json();
-      window.location.href = url;
-    } catch {
-      toast({ title: "Error al iniciar conexión con Google", variant: "destructive" });
-      setGmailLoading(false);
-    }
-  };
-
-  const handleGmailDisconnect = async () => {
-    await fetch(`${process.env.REACT_APP_BACKEND_URL}/api/oauth/gmail/disconnect`, { method: "DELETE" });
-    setGmailStatus({ connected: false, email: "", connected_at: null });
-    toast({ title: "Gmail desconectado" });
-  };
-
-  const handleGmailTest = async () => {
-    try {
-      const res = await fetch(`${process.env.REACT_APP_BACKEND_URL}/api/oauth/gmail/test`, { method: "POST" });
-      const data = await res.json();
-      if (data.ok) toast({ title: data.message });
-      else throw new Error(data.detail || "Error");
-    } catch (e) {
-      toast({ title: e.message || "Error al enviar correo de prueba", variant: "destructive" });
-    }
-  };
-
   // ── Event Type Editor ────────────────────────────────────────
   const [activeEventType, setActiveEventType] = useState(null);
   const [typeNameEdit, setTypeNameEdit] = useState("");
@@ -1430,66 +1383,20 @@ export default function Settings() {
               </div>
             )}
 
-            {/* Gmail OAuth */}
+            {/* Resend status badge */}
             <div className="border-t border-white/40 pt-4">
-              <p className="text-[11px] font-black text-slate-400 uppercase tracking-widest mb-3">
-                {language === "es" ? "Correos automáticos vía Gmail" : "Automatic emails via Gmail"}
-              </p>
-              {gmailStatus.connected ? (
-                <div className="space-y-2">
-                  <div className="flex items-center gap-3 p-3 rounded-2xl bg-emerald-50/80 border border-emerald-200/60">
-                    <div className="w-9 h-9 rounded-xl bg-emerald-100 flex items-center justify-center shrink-0">
-                      <CheckCircle size={16} className="text-emerald-600" />
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <p className="text-xs font-black text-emerald-800">Gmail conectado</p>
-                      <p className="text-[10px] text-emerald-600 truncate">{gmailStatus.email}</p>
-                    </div>
-                    <div className="flex gap-2">
-                      <motion.button whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}
-                        onClick={handleGmailTest}
-                        data-testid="gmail-test-btn"
-                        className="px-3 py-1.5 rounded-xl bg-emerald-100 hover:bg-emerald-200 text-emerald-700 text-[10px] font-bold transition-colors">
-                        {language === "es" ? "Probar" : "Test"}
-                      </motion.button>
-                      <motion.button whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}
-                        onClick={handleGmailDisconnect}
-                        data-testid="gmail-disconnect-btn"
-                        className="px-3 py-1.5 rounded-xl bg-red-50 hover:bg-red-100 text-red-500 text-[10px] font-bold transition-colors">
-                        {language === "es" ? "Desconectar" : "Disconnect"}
-                      </motion.button>
-                    </div>
-                  </div>
-                  <p className="text-[10px] text-emerald-600 text-center">
-                    {language === "es"
-                      ? "Los recordatorios se enviarán automáticamente desde esta cuenta a la misma dirección."
-                      : "Reminders will be sent automatically from this account to the same address."}
+              <div className={`flex items-center gap-3 p-3 rounded-2xl ${notif.resend_api_key && !notif.resend_api_key.includes("re_...") ? "bg-emerald-50/80 border border-emerald-200/60" : "bg-amber-50/80 border border-amber-200/60"}`}>
+                <Mail size={15} className={notif.resend_api_key && !notif.resend_api_key.includes("re_...") ? "text-emerald-600" : "text-amber-500"} />
+                <div className="flex-1 min-w-0">
+                  <p className={`text-xs font-black ${notif.resend_api_key && !notif.resend_api_key.includes("re_...") ? "text-emerald-800" : "text-amber-700"}`}>
+                    {notif.resend_api_key && !notif.resend_api_key.includes("re_...") ? (language === "es" ? "Resend configurado — correos activos" : "Resend configured — emails active") : (language === "es" ? "Resend no configurado" : "Resend not configured")}
+                  </p>
+                  <p className={`text-[10px] ${notif.resend_api_key && !notif.resend_api_key.includes("re_...") ? "text-emerald-600" : "text-amber-500"}`}>
+                    {notif.resend_api_key && !notif.resend_api_key.includes("re_...") ? (language === "es" ? "Los recordatorios se enviarán por email automáticamente" : "Reminders will be sent by email automatically") : (language === "es" ? "Ingresa tu clave API de Resend para activar los emails" : "Enter your Resend API key to enable emails")}
                   </p>
                 </div>
-              ) : (
-                <div className="space-y-3">
-                  <p className="text-xs text-slate-500">
-                    {language === "es"
-                      ? "Conecta tu cuenta de Gmail una sola vez. Cuando llegue la hora de un recordatorio, el backend enviará un correo automáticamente sin que tengas que hacer nada."
-                      : "Connect your Gmail account once. When a reminder is due, the backend will send an email automatically."}
-                  </p>
-                  <motion.button
-                    whileHover={{ scale: 1.02 }}
-                    whileTap={{ scale: 0.97 }}
-                    onClick={handleGmailConnect}
-                    disabled={gmailLoading}
-                    data-testid="gmail-connect-btn"
-                    className="w-full flex items-center justify-center gap-2.5 py-3 rounded-2xl text-sm font-bold text-white disabled:opacity-60 transition-all"
-                    style={{ background: "linear-gradient(135deg,#4285f4,#0f9d58)" }}
-                  >
-                    {gmailLoading
-                      ? <Loader2 size={15} className="animate-spin" />
-                      : <Mail size={15} />
-                    }
-                    {language === "es" ? "Conectar con Google / Gmail" : "Connect with Google / Gmail"}
-                  </motion.button>
-                </div>
-              )}
+                {notif.resend_api_key && !notif.resend_api_key.includes("re_...") && <CheckCircle size={15} className="text-emerald-500 shrink-0" />}
+              </div>
             </div>
 
             {/* Buttons */}

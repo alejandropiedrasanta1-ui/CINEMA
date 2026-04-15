@@ -155,6 +155,7 @@ class SocioUpdate(BaseModel):
 class NotificationSettingsModel(BaseModel):
     reminders_enabled: bool = False
     reminder_days: int = 3
+    reminder_time: Optional[str] = "09:00"
     admin_email: Optional[str] = None
     admin_whatsapp: Optional[str] = None
     notification_channel: str = "email"
