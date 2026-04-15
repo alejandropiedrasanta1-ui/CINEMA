@@ -130,3 +130,4 @@ Contiene claves de apariencia + configuración de negocio:
 - 2025: Base de datos avanzada (backup, restore, import, export)
 - 2025: 13+ opciones de apariencia en Settings.jsx
 - 2026-04-15: **Migración a AppearancePage.jsx** + 6 nuevas funciones (glassBlur, layoutDensity, pageTransition, iconSize, sidebarStyle, bgImage) + transiciones de página dinámicas
+- 2026-04-15: **50+ opciones nuevas** en Apariencia (15 secciones: paleta, tipografía, animaciones, formas, fondo, interfaz, efectos fondo avanzados, tipografía avanzada, formularios, datos/tablas, dashboard, accesibilidad, tipos evento, PDF, logo). **3 nuevas secciones en Ajustes**: Exportar/Importar configuración, Atajos de teclado, Plantillas de recordatorio.
