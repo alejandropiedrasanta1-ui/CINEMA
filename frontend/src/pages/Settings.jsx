@@ -5,12 +5,12 @@ import {
   Bell, BellRing, Database, CheckCircle, XCircle, RefreshCw,
   Wifi, WifiOff, MessageCircle, Mail, Loader2, Monitor,
   Package, AlertCircle, Sparkles, Zap, Layers, Clock, Pencil, RotateCcw,
-  Upload, ImageIcon, Trash2,
+  Upload, ImageIcon, Trash2, Save, ChevronDown,
 } from "lucide-react";
 import { useSettings, THEMES, CURRENCIES, PRESETS } from "@/context/SettingsContext";
 import { getEventConfig, getEventTypeName, AVAILABLE_ICONS, AVAILABLE_COLORS, EVENT_TYPES, ICON_MAP } from "@/lib/eventConfig";
 import { useToast } from "@/hooks/use-toast";
-import { api, getAppSettings, updateAppSettings, getDbStats, testDbConnection, switchDatabase, resetDatabase, sendTestReminder, getReservations } from "@/lib/api";
+import { api, getAppSettings, updateAppSettings, getDbStats, testDbConnection, switchDatabase, resetDatabase, sendTestReminder, getReservations, getBackupHistory, createServerBackup, deleteBackupFile, downloadBackupUrl, downloadBackupFileUrl, restoreBackup } from "@/lib/api";
 import { generateAllReservationsPDF, PDF_THEMES } from "@/lib/generatePDF";
 import { useNotifications } from "@/hooks/useNotifications";
 import { Slider } from "@/components/ui/slider";
@@ -106,6 +106,13 @@ export default function Settings() {
   const [dbTesting, setDbTesting] = useState(false);
   const [dbResetting, setDbResetting] = useState(false);
 
+  // Backup state
+  const [backupHistory, setBackupHistory] = useState([]);
+  const [backupCreating, setBackupCreating] = useState(false);
+  const [restoreLoading, setRestoreLoading] = useState(false);
+  const [restoreResult, setRestoreResult] = useState(null);
+  const restoreInputRef = React.useRef(null);
+
   useEffect(() => {
     getAppSettings().then(data => {
       if (data && Object.keys(data).length > 0) {
@@ -128,6 +135,7 @@ export default function Settings() {
       }
     }).catch(() => {});
     loadDbStats();
+    loadBackupHistory();
   }, []);
 
   // Build status polling
@@ -172,6 +180,68 @@ export default function Settings() {
       .then(setDbStats)
       .catch(() => setDbStats(null))
       .finally(() => setDbLoading(false));
+  };
+
+  // ── Backup handlers ─────────────────────────────────────────
+  const loadBackupHistory = () => {
+    getBackupHistory()
+      .then(setBackupHistory)
+      .catch(() => setBackupHistory([]));
+  };
+
+  const handleDownloadBackup = () => {
+    const url = downloadBackupUrl();
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = "";
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    toast({ title: "Descargando respaldo completo..." });
+  };
+
+  const handleCreateServerBackup = async () => {
+    setBackupCreating(true);
+    try {
+      const res = await createServerBackup();
+      toast({ title: res.message || "Respaldo guardado en servidor" });
+      loadBackupHistory();
+    } catch (e) {
+      toast({ title: e.response?.data?.detail || "Error al crear respaldo", variant: "destructive" });
+    } finally {
+      setBackupCreating(false);
+    }
+  };
+
+  const handleRestoreFile = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setRestoreLoading(true);
+    setRestoreResult(null);
+    try {
+      const res = await restoreBackup(file);
+      setRestoreResult({ ok: true, msg: res.message });
+      toast({ title: res.message });
+      loadDbStats();
+      loadBackupHistory();
+    } catch (err) {
+      const msg = err.response?.data?.detail || "Error al restaurar";
+      setRestoreResult({ ok: false, msg });
+      toast({ title: msg, variant: "destructive" });
+    } finally {
+      setRestoreLoading(false);
+      if (restoreInputRef.current) restoreInputRef.current.value = "";
+    }
+  };
+
+  const handleDeleteBackup = async (filename) => {
+    try {
+      await deleteBackupFile(filename);
+      setBackupHistory(prev => prev.filter(b => b.filename !== filename));
+      toast({ title: "Respaldo eliminado" });
+    } catch {
+      toast({ title: "Error al eliminar respaldo", variant: "destructive" });
+    }
   };
 
   const handleDownloadPackage = async () => {
@@ -1502,12 +1572,11 @@ export default function Settings() {
               </span>
             ) : null
           }>
-          <div className="space-y-4">
-            {/* Stats grid */}
+          <div className="space-y-5">
+
+            {/* ── Stats ── */}
             {dbLoading ? (
-              <div className="flex justify-center py-6">
-                <Loader2 size={22} className="animate-spin text-slate-400" />
-              </div>
+              <div className="flex justify-center py-6"><Loader2 size={22} className="animate-spin text-slate-400" /></div>
             ) : dbStats ? (
               <>
                 <div className="grid grid-cols-3 gap-2">
@@ -1515,82 +1584,167 @@ export default function Settings() {
                   <StatCard label={s.dbObjects} value={dbStats.objects?.toLocaleString()} />
                   <StatCard label={s.dbTotal} value={dbStats.total_size} />
                 </div>
-                <div className="grid grid-cols-3 gap-2">
-                  <StatCard label={s.dbDataSize} value={dbStats.data_size} />
-                  <StatCard label={s.dbStorage} value={dbStats.storage_size} />
-                  <StatCard label={s.dbIndexes} value={dbStats.index_size} />
+                <div className="bg-white/50 rounded-2xl px-4 py-3 flex items-center justify-between gap-3">
+                  <div className="flex-1 min-w-0">
+                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">{s.dbCurrentConn}</p>
+                    <p className="text-xs font-mono text-slate-600 break-all truncate">{dbStats.current_url}</p>
+                  </div>
+                  <button onClick={loadDbStats} data-testid="db-refresh-btn" className="text-slate-400 hover:text-slate-600 transition-colors shrink-0">
+                    <RefreshCw size={13} />
+                  </button>
                 </div>
-                {/* Current connection */}
-                <div className="bg-white/50 rounded-2xl px-4 py-3">
-                  <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">{s.dbCurrentConn}</p>
-                  <p className="text-xs font-mono text-slate-600 break-all">{dbStats.current_url}</p>
-                </div>
-                <motion.button whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.97 }}
-                  onClick={loadDbStats} data-testid="db-refresh-btn"
-                  className="flex items-center gap-2 text-xs text-slate-500 hover:text-slate-700 transition-colors">
-                  <RefreshCw size={12} /> {language === "es" ? "Actualizar estadísticas" : "Refresh stats"}
-                </motion.button>
               </>
             ) : (
               <p className="text-xs text-slate-400 text-center py-4">No se pudieron cargar las estadísticas</p>
             )}
 
-            {/* New DB URL input */}
-            <div>
-              <label className="text-xs font-bold text-slate-500 mb-1.5 block">{s.dbNewUrl}</label>
+            {/* ── RESPALDOS ── */}
+            <div className="space-y-3">
+              <p className="text-[11px] font-black text-slate-500 uppercase tracking-widest">Respaldos de base de datos</p>
+
+              {/* Quick actions */}
+              <div className="grid grid-cols-2 gap-2">
+                <motion.button whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.97 }}
+                  onClick={handleDownloadBackup}
+                  data-testid="backup-download-btn"
+                  className="flex items-center justify-center gap-2 py-3 rounded-2xl btn-primary text-white text-xs font-bold">
+                  <Download size={13} />
+                  Descargar a mi PC
+                </motion.button>
+                <motion.button whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.97 }}
+                  onClick={handleCreateServerBackup} disabled={backupCreating}
+                  data-testid="backup-server-btn"
+                  className="flex items-center justify-center gap-2 py-3 rounded-2xl glass border-white/60 text-slate-700 text-xs font-bold hover:bg-white/60 disabled:opacity-60">
+                  {backupCreating ? <Loader2 size={13} className="animate-spin" /> : <Save size={13} />}
+                  Guardar en servidor
+                </motion.button>
+              </div>
+
+              {/* Restore */}
+              <div className="bg-amber-50/60 rounded-2xl p-3 border border-amber-200/40">
+                <div className="flex items-center gap-2 mb-2">
+                  <Upload size={13} className="text-amber-600" />
+                  <p className="text-xs font-black text-amber-800">Restaurar desde archivo</p>
+                  <span className="text-[10px] text-amber-500 ml-auto">Auto-respaldo antes de restaurar</span>
+                </div>
+                <div className="flex gap-2">
+                  <input ref={restoreInputRef} type="file" accept=".json"
+                    onChange={handleRestoreFile} className="hidden" id="restore-file-input"
+                    data-testid="restore-file-input" />
+                  <label htmlFor="restore-file-input"
+                    className={`flex-1 flex items-center justify-center gap-2 py-2 rounded-xl text-xs font-bold cursor-pointer transition-all ${restoreLoading ? "bg-amber-100 text-amber-400" : "bg-amber-100 hover:bg-amber-200 text-amber-700"}`}>
+                    {restoreLoading ? <Loader2 size={12} className="animate-spin" /> : <Upload size={12} />}
+                    {restoreLoading ? "Restaurando..." : "Seleccionar archivo .json"}
+                  </label>
+                </div>
+                {restoreResult && (
+                  <div className={`flex items-center gap-2 text-xs font-semibold mt-2 px-2 py-1 rounded-lg ${restoreResult.ok ? "bg-emerald-50 text-emerald-700" : "bg-red-50 text-red-600"}`}>
+                    {restoreResult.ok ? <CheckCircle size={12} /> : <XCircle size={12} />}
+                    {restoreResult.msg}
+                  </div>
+                )}
+              </div>
+
+              {/* Backup history */}
+              {backupHistory.length > 0 && (
+                <div className="space-y-1.5">
+                  <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">
+                    Historial — {backupHistory.length} respaldo(s) en servidor
+                  </p>
+                  <div className="space-y-1 max-h-48 overflow-y-auto">
+                    {backupHistory.map(b => (
+                      <div key={b.filename} className="flex items-center gap-2 bg-white/50 rounded-xl px-3 py-2">
+                        <div className={`w-5 h-5 rounded-lg flex items-center justify-center shrink-0 ${b.label === "auto" ? "bg-slate-100" : "bg-indigo-100"}`}>
+                          <Database size={10} className={b.label === "auto" ? "text-slate-400" : "text-indigo-500"} />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-[10px] font-bold text-slate-700 truncate">{b.filename}</p>
+                          <p className="text-[9px] text-slate-400">{b.size} · {new Date(b.created_at).toLocaleString("es-GT")}</p>
+                        </div>
+                        <a href={downloadBackupFileUrl(b.filename)} download
+                          data-testid={`backup-dl-${b.filename}`}
+                          className="w-6 h-6 rounded-lg bg-indigo-50 hover:bg-indigo-100 flex items-center justify-center transition-colors">
+                          <Download size={10} className="text-indigo-600" />
+                        </a>
+                        <button onClick={() => handleDeleteBackup(b.filename)}
+                          data-testid={`backup-del-${b.filename}`}
+                          className="w-6 h-6 rounded-lg bg-red-50 hover:bg-red-100 flex items-center justify-center transition-colors">
+                          <Trash2 size={10} className="text-red-400" />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* MongoDB Atlas guide */}
+              <details className="bg-blue-50/60 rounded-2xl border border-blue-100/60">
+                <summary className="flex items-center gap-2 px-4 py-3 cursor-pointer text-xs font-black text-blue-800 list-none">
+                  <Database size={13} className="text-blue-500" />
+                  Conectar base de datos en la nube (gratis) — MongoDB Atlas
+                  <ChevronDown size={12} className="text-blue-400 ml-auto" />
+                </summary>
+                <div className="px-4 pb-4 text-[10px] text-blue-700 space-y-1.5">
+                  <p className="font-black text-xs">3 pasos para tener tu BD en la nube gratis (512 MB):</p>
+                  <p>1. Ve a <a href="https://www.mongodb.com/cloud/atlas/register" target="_blank" rel="noreferrer" className="underline font-bold">mongodb.com/cloud/atlas</a> → crea cuenta gratis</p>
+                  <p>2. Crea un cluster → "Free Tier (M0 Sandbox)" → elige la región más cercana</p>
+                  <p>3. Database Access → crea usuario/contraseña → Network Access → agrega 0.0.0.0/0</p>
+                  <p>4. Connect → "Connect your application" → copia la URI → pégala abajo en "Cambiar conexión"</p>
+                  <p className="bg-white/60 px-2 py-1 rounded font-mono">mongodb+srv://usuario:contraseña@cluster.mongodb.net/cinema</p>
+                  <p className="text-blue-500">Con esto tendrás una copia exacta de tus datos en la nube, accesible desde cualquier PC.</p>
+                </div>
+              </details>
+            </div>
+
+            {/* ── Cambiar conexión MongoDB ── */}
+            <div className="space-y-3 border-t border-slate-100 pt-4">
+              <p className="text-[11px] font-black text-slate-500 uppercase tracking-widest">Cambiar conexión MongoDB</p>
               <input type="text" value={newDbUrl}
                 onChange={e => { setNewDbUrl(e.target.value); setDbTestResult(null); }}
                 placeholder="mongodb://usuario:contraseña@host:27017"
                 data-testid="db-url-input"
                 className="w-full bg-white/60 border border-white/80 rounded-xl px-4 py-2.5 text-sm font-mono text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-300" />
-            </div>
-
-            {/* Test result */}
-            {dbTestResult && (
-              <div className={`flex items-center gap-2 text-xs font-semibold px-3 py-2 rounded-xl ${dbTestResult.ok ? "bg-emerald-50 text-emerald-700" : "bg-red-50 text-red-600"}`}>
-                {dbTestResult.ok ? <CheckCircle size={14} /> : <XCircle size={14} />}
-                {dbTestResult.msg}
-              </div>
-            )}
-
-            {/* DB action buttons */}
-            <div className="flex gap-2 flex-wrap">
-              <motion.button whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.97 }}
-                onClick={handleDbTest} disabled={!newDbUrl.trim() || dbTesting}
-                data-testid="db-test-btn"
-                className="flex items-center gap-1.5 px-4 py-2.5 rounded-2xl glass border-white/60 text-slate-700 text-xs font-bold hover:bg-white/50 transition-all disabled:opacity-40">
-                {dbTesting ? <Loader2 size={13} className="animate-spin" /> : <Wifi size={13} />}
-                {s.dbTest}
-              </motion.button>
-              <motion.button whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.97 }}
-                onClick={handleDbConnect} disabled={!newDbUrl.trim() || dbConnecting}
-                data-testid="db-connect-btn"
-                className="flex items-center gap-1.5 px-4 py-2.5 rounded-2xl btn-primary text-white text-xs font-bold disabled:opacity-40">
-                {dbConnecting ? <Loader2 size={13} className="animate-spin" /> : <Database size={13} />}
-                {s.dbConnect}
-              </motion.button>
-              {dbStats?.is_custom && (
-                <motion.button whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.97 }}
-                  onClick={handleDbReset} disabled={dbResetting}
-                  data-testid="db-reset-btn"
-                  className="flex items-center gap-1.5 px-4 py-2.5 rounded-2xl bg-red-50 text-red-600 text-xs font-bold hover:bg-red-100 transition-all disabled:opacity-40">
-                  {dbResetting ? <Loader2 size={13} className="animate-spin" /> : <RefreshCw size={13} />}
-                  {s.dbReset}
-                </motion.button>
+              {dbTestResult && (
+                <div className={`flex items-center gap-2 text-xs font-semibold px-3 py-2 rounded-xl ${dbTestResult.ok ? "bg-emerald-50 text-emerald-700" : "bg-red-50 text-red-600"}`}>
+                  {dbTestResult.ok ? <CheckCircle size={14} /> : <XCircle size={14} />}
+                  {dbTestResult.msg}
+                </div>
               )}
+              <div className="flex gap-2 flex-wrap">
+                <motion.button whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.97 }}
+                  onClick={handleDbTest} disabled={!newDbUrl.trim() || dbTesting}
+                  data-testid="db-test-btn"
+                  className="flex items-center gap-1.5 px-4 py-2.5 rounded-2xl glass border-white/60 text-slate-700 text-xs font-bold hover:bg-white/50 transition-all disabled:opacity-40">
+                  {dbTesting ? <Loader2 size={13} className="animate-spin" /> : <Wifi size={13} />}
+                  {s.dbTest}
+                </motion.button>
+                <motion.button whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.97 }}
+                  onClick={handleDbConnect} disabled={!newDbUrl.trim() || dbConnecting}
+                  data-testid="db-connect-btn"
+                  className="flex items-center gap-1.5 px-4 py-2.5 rounded-2xl btn-primary text-white text-xs font-bold disabled:opacity-40">
+                  {dbConnecting ? <Loader2 size={13} className="animate-spin" /> : <Database size={13} />}
+                  {s.dbConnect}
+                </motion.button>
+                {dbStats?.is_custom && (
+                  <motion.button whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.97 }}
+                    onClick={handleDbReset} disabled={dbResetting}
+                    data-testid="db-reset-btn"
+                    className="flex items-center gap-1.5 px-4 py-2.5 rounded-2xl bg-red-50 text-red-600 text-xs font-bold hover:bg-red-100 transition-all disabled:opacity-40">
+                    {dbResetting ? <Loader2 size={13} className="animate-spin" /> : <RefreshCw size={13} />}
+                    {s.dbReset}
+                  </motion.button>
+                )}
+              </div>
             </div>
 
-            {/* ── CLEAR ALL DATA ──────────────────────────────── */}
+            {/* ── BORRAR TODOS LOS DATOS ── */}
             <div className="border-t border-red-100/60 pt-4">
               {!showClearConfirm ? (
-                <motion.button
-                  whileHover={{ scale: 1.02 }}
-                  whileTap={{ scale: 0.97 }}
+                <motion.button whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.97 }}
                   onClick={() => setShowClearConfirm(true)}
                   data-testid="clear-all-data-btn"
                   className="w-full flex items-center justify-center gap-2 py-3 rounded-2xl text-sm font-bold text-red-600 transition-all"
-                  style={{ background: "#fef2f2", border: "1.5px dashed #fca5a5" }}
-                >
+                  style={{ background: "#fef2f2", border: "1.5px dashed #fca5a5" }}>
                   <Trash2 size={14} />
                   {language === "es" ? "Borrar todos los datos" : "Delete all data"}
                 </motion.button>
@@ -1604,9 +1758,7 @@ export default function Settings() {
                         {language === "es" ? "¿Borrar todos los datos?" : "Delete all data?"}
                       </p>
                       <p className="text-xs text-red-500 mt-1">
-                        {language === "es"
-                          ? "Se eliminarán TODAS las reservas y socios. Esta acción no se puede deshacer."
-                          : "ALL reservations and partners will be deleted. This cannot be undone."}
+                        Se eliminarán TODAS las reservas y socios. Un respaldo automático se creará primero.
                       </p>
                     </div>
                   </div>

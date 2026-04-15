@@ -52,3 +52,15 @@ export const sendTestReminder = () => api.post("/reminders/send").then(r => r.da
 
 // Notifications
 export const getPendingNotifications = () => api.get("/notifications/pending").then(r => r.data);
+
+// Backup
+export const getBackupHistory = () => api.get("/backup/history").then(r => r.data);
+export const createServerBackup = () => api.post("/backup/create").then(r => r.data);
+export const deleteBackupFile = (filename) => api.delete(`/backup/${filename}`).then(r => r.data);
+export const downloadBackupUrl = () => `${BASE}/backup/download`;
+export const downloadBackupFileUrl = (filename) => `${BASE}/backup/${encodeURIComponent(filename)}/download`;
+export const restoreBackup = (file) => {
+  const form = new FormData();
+  form.append("file", file);
+  return api.post("/backup/restore", form, { headers: { "Content-Type": "multipart/form-data" } }).then(r => r.data);
+};

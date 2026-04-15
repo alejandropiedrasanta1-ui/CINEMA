@@ -41,6 +41,10 @@ load_dotenv(ROOT_DIR / '.env')
 CUSTOM_DB_FILE = ROOT_DIR / '.db_override'
 DB_NAME = os.environ['DB_NAME']
 
+# ── Backup directory ──────────────────────────────────────────
+BACKUP_DIR = ROOT_DIR / "backups"
+BACKUP_DIR.mkdir(exist_ok=True)
+
 # ── Google / VAPID config ─────────────────────────────────────
 GOOGLE_CLIENT_ID     = os.environ.get('GOOGLE_CLIENT_ID', '')
 GOOGLE_CLIENT_SECRET = os.environ.get('GOOGLE_CLIENT_SECRET', '')
@@ -482,15 +486,169 @@ async def root():
 
 
 @api_router.delete("/data/clear-all")
-async def clear_all_data():
-    """Elimina todas las reservas y socios (no afecta app_settings)."""
+async def clear_all_data(auto_backup: bool = True):
+    """Elimina todas las reservas y socios. Crea respaldo automático si auto_backup=True."""
+    if auto_backup:
+        try:
+            await _create_backup(label="auto_pre_delete")
+        except Exception as e:
+            logger.warning(f"Auto-backup before clear failed: {e}")
     res_result  = await db.reservations.delete_many({})
     soc_result  = await db.socios.delete_many({})
     return {
         "ok": True,
         "deleted_reservations": res_result.deleted_count,
         "deleted_socios": soc_result.deleted_count,
+        "auto_backup_created": auto_backup,
     }
+
+
+# ─── Backup helpers ───────────────────────────────────────────
+BACKUP_COLLECTIONS = ["reservations", "socios", "app_settings"]
+
+async def _create_backup(label: str = "manual") -> dict:
+    """Create a JSON backup of all main collections, store in BACKUP_DIR."""
+    backup_data: dict = {"_meta": {"created_at": datetime.now(timezone.utc).isoformat(), "label": label}}
+    for cname in BACKUP_COLLECTIONS:
+        cursor = db[cname].find({})
+        docs = await cursor.to_list(100000)
+        backup_data[cname] = [doc_to_dict(d) for d in docs]
+
+    ts = datetime.now(timezone.utc).strftime("%Y%m%d_%H%M%S")
+    filename = f"backup_{label}_{ts}.json"
+    filepath = BACKUP_DIR / filename
+    filepath.write_text(json.dumps(backup_data, ensure_ascii=False, indent=2), encoding="utf-8")
+
+    # Keep only the last 15 backups (oldest removed first)
+    existing = sorted(BACKUP_DIR.glob("backup_*.json"), key=lambda f: f.stat().st_mtime)
+    for old in existing[:-15]:
+        old.unlink(missing_ok=True)
+
+    total_docs = sum(len(v) for k, v in backup_data.items() if k != "_meta")
+    return {"filename": filename, "docs": total_docs}
+
+
+# ─── Backup endpoints ─────────────────────────────────────────
+
+@api_router.get("/backup/download")
+async def download_full_backup():
+    """Download a complete backup of all collections as JSON (for local PC)."""
+    backup_data: dict = {"_meta": {"created_at": datetime.now(timezone.utc).isoformat(), "app": "Cinema Productions"}}
+    for cname in BACKUP_COLLECTIONS:
+        cursor = db[cname].find({})
+        docs = await cursor.to_list(100000)
+        backup_data[cname] = [doc_to_dict(d) for d in docs]
+
+    ts = datetime.now(timezone.utc).strftime("%Y%m%d_%H%M%S")
+    filename = f"cinema_backup_{ts}.json"
+    content = json.dumps(backup_data, ensure_ascii=False, indent=2)
+    return Response(
+        content=content.encode("utf-8"),
+        media_type="application/json",
+        headers={"Content-Disposition": f'attachment; filename="{filename}"'},
+    )
+
+
+@api_router.post("/backup/create")
+async def create_server_backup():
+    """Create and save a backup on the server (history list)."""
+    try:
+        result = await _create_backup(label="manual")
+        return {"success": True, **result, "message": f"Respaldo creado: {result['docs']} documentos"}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error al crear respaldo: {e}")
+
+
+@api_router.get("/backup/history")
+async def list_backups():
+    """List all server-side backups (newest first)."""
+    files = sorted(BACKUP_DIR.glob("backup_*.json"), key=lambda f: f.stat().st_mtime, reverse=True)
+    result = []
+    for f in files:
+        stat = f.stat()
+        size_kb = stat.st_size / 1024
+        size_str = f"{size_kb:.0f} KB" if size_kb < 1024 else f"{size_kb/1024:.1f} MB"
+        label = "auto" if "auto_" in f.name else "manual"
+        result.append({
+            "filename": f.name,
+            "size": size_str,
+            "label": label,
+            "created_at": datetime.fromtimestamp(stat.st_mtime, tz=timezone.utc).isoformat(),
+        })
+    return result
+
+
+@api_router.get("/backup/{filename}/download")
+async def download_backup_file(filename: str):
+    """Download a specific server-side backup by filename."""
+    # Security: only allow .json files in BACKUP_DIR
+    if not filename.endswith(".json") or "/" in filename or ".." in filename:
+        raise HTTPException(status_code=400, detail="Nombre de archivo inválido")
+    filepath = BACKUP_DIR / filename
+    if not filepath.exists():
+        raise HTTPException(status_code=404, detail="Respaldo no encontrado")
+    return Response(
+        content=filepath.read_bytes(),
+        media_type="application/json",
+        headers={"Content-Disposition": f'attachment; filename="{filename}"'},
+    )
+
+
+@api_router.delete("/backup/{filename}")
+async def delete_backup_file(filename: str):
+    """Delete a specific server-side backup."""
+    if not filename.endswith(".json") or "/" in filename or ".." in filename:
+        raise HTTPException(status_code=400, detail="Nombre de archivo inválido")
+    filepath = BACKUP_DIR / filename
+    if not filepath.exists():
+        raise HTTPException(status_code=404, detail="Respaldo no encontrado")
+    filepath.unlink()
+    return {"success": True, "message": "Respaldo eliminado"}
+
+
+@api_router.post("/backup/restore")
+async def restore_backup(file: UploadFile = File(...)):
+    """Restore all collections from an uploaded JSON backup file."""
+    if not file.filename.endswith(".json"):
+        raise HTTPException(status_code=400, detail="El archivo debe ser .json")
+    try:
+        content = await file.read()
+        backup_data = json.loads(content)
+    except Exception:
+        raise HTTPException(status_code=400, detail="Archivo JSON inválido o corrupto")
+
+    # Auto-save current state before restore
+    try:
+        await _create_backup(label="auto_pre_restore")
+    except Exception as e:
+        logger.warning(f"Pre-restore backup failed: {e}")
+
+    restored: dict = {}
+    errors: list = []
+    for cname in BACKUP_COLLECTIONS:
+        docs = backup_data.get(cname)
+        if docs is None or not isinstance(docs, list):
+            continue
+        try:
+            # Remove serialized ids so MongoDB assigns fresh _id
+            clean_docs = []
+            for d in docs:
+                d.pop("id", None)
+                d.pop("_id", None)
+                clean_docs.append(d)
+            await db[cname].delete_many({})
+            if clean_docs:
+                await db[cname].insert_many(clean_docs)
+            restored[cname] = len(clean_docs)
+        except Exception as e:
+            errors.append(f"{cname}: {e}")
+
+    if errors:
+        raise HTTPException(status_code=500, detail="Errores al restaurar: " + " | ".join(errors))
+
+    total = sum(restored.values())
+    return {"success": True, "restored": restored, "total": total,
+            "message": f"Restaurado correctamente: {total} documentos en {len(restored)} colecciones"}
 
 
 @api_router.get("/stats")
