@@ -221,7 +221,16 @@ Sistema de gestión de reservas para eventos (bodas, quinceañeras, fiestas soci
 - Fix bug: `startNotifications` → `startPolling` en Settings.jsx
 - Fix: `getEventTypeName` importado correctamente en Settings.jsx
 
-### Resend Email Integration + Fix bugs (Abril 2026) ✅
+### Sistema de Recordatorios Multi-Canal (Abril 2026) ✅
+- **Múltiples períodos**: Pills para 7d, 3d, 2d, 1d, Mismo día (se pueden combinar)
+- **Horas antes del evento**: Slider 0–12h (requiere campo hora en la reserva)
+- **Telegram Bot**: Gratis, ilimitado. UI con guía de 3 pasos, input token + chat_id, botón Probar
+- **ntfy.sh**: Gratis, sin cuenta. App para iOS/Android/PC. UI con guía de 2 pasos, botón Probar
+- **Browser Push**: Notificaciones nativas Windows/macOS (ya existente, reorganizado)
+- **Email Resend**: Ya existente, reorganizado como card
+- Scheduler reescrito: `_dispatch_reminders()` envía en cascada a todos los canales habilitados
+- Nuevos endpoints: `POST /api/telegram/test`, `POST /api/ntfy/test`
+- Masking seguro del token de Telegram en GET/PUT /api/settings
 - Configurado Resend con API key `re_T5Jb9ze3...` y email `alejandropiedrasanta1@gmail.com`
 - Eliminada sección Gmail OAuth de la UI (Settings.jsx)
 - Nuevo badge "Resend configurado — correos activos" en la UI

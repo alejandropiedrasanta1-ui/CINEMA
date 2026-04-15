@@ -73,16 +73,24 @@ export default function Settings() {
   // Notification settings state
   const [notif, setNotif] = useState({
     reminders_enabled: false,
-    reminder_days: 3,
+    reminder_periods: [3],
     reminder_time: "09:00",
+    reminder_hours_before: 0,
     admin_email: "",
     admin_whatsapp: "",
     notification_channel: "email",
     resend_api_key: "",
+    telegram_enabled: false,
+    telegram_bot_token: "",
+    telegram_chat_id: "",
+    ntfy_enabled: false,
+    ntfy_topic: "",
   });
   const [notifLoading, setNotifLoading] = useState(false);
   const [testLoading, setTestLoading] = useState(false);
   const [testResult, setTestResult] = useState(null);
+  const [telegramTestLoading, setTelegramTestLoading] = useState(false);
+  const [ntfyTestLoading, setNtfyTestLoading] = useState(false);
 
   // Desktop download state
   const [downloadLoading, setDownloadLoading] = useState(false);
@@ -104,12 +112,18 @@ export default function Settings() {
         setNotif(prev => ({
           ...prev,
           reminders_enabled: data.reminders_enabled ?? false,
-          reminder_days: data.reminder_days ?? 3,
+          reminder_periods: data.reminder_periods ?? [data.reminder_days ?? 3],
           reminder_time: data.reminder_time ?? "09:00",
+          reminder_hours_before: data.reminder_hours_before ?? 0,
           admin_email: data.admin_email ?? "",
           admin_whatsapp: data.admin_whatsapp ?? "",
           notification_channel: data.notification_channel ?? "email",
           resend_api_key: data.has_resend_key ? "re_" + "•".repeat(20) + "••••" : "",
+          telegram_enabled: data.telegram_enabled ?? false,
+          telegram_bot_token: data.has_telegram_token ? "•".repeat(8) + "•".repeat(20) + "••••" : "",
+          telegram_chat_id: data.telegram_chat_id ?? "",
+          ntfy_enabled: data.ntfy_enabled ?? false,
+          ntfy_topic: data.ntfy_topic ?? "",
         }));
       }
     }).catch(() => {});
@@ -242,6 +256,34 @@ export default function Settings() {
       toast({ title: msg, variant: "destructive" });
     } finally {
       setTestLoading(false);
+    }
+  };
+
+  const handleTelegramTest = async () => {
+    setTelegramTestLoading(true);
+    try {
+      const res = await fetch(`${process.env.REACT_APP_BACKEND_URL}/api/telegram/test`, { method: "POST" });
+      const data = await res.json();
+      if (res.ok) toast({ title: data.message || "Mensaje enviado a Telegram ✓" });
+      else throw new Error(data.detail || "Error");
+    } catch (e) {
+      toast({ title: e.message || "Error al enviar a Telegram", variant: "destructive" });
+    } finally {
+      setTelegramTestLoading(false);
+    }
+  };
+
+  const handleNtfyTest = async () => {
+    setNtfyTestLoading(true);
+    try {
+      const res = await fetch(`${process.env.REACT_APP_BACKEND_URL}/api/ntfy/test`, { method: "POST" });
+      const data = await res.json();
+      if (res.ok) toast({ title: data.message || "Notificación enviada vía ntfy ✓" });
+      else throw new Error(data.detail || "Error");
+    } catch (e) {
+      toast({ title: e.message || "Error al enviar ntfy", variant: "destructive" });
+    } finally {
+      setNtfyTestLoading(false);
     }
   };
 
@@ -1133,11 +1175,12 @@ export default function Settings() {
         <Section icon={Bell} title={s.notifTitle} desc={s.notifDesc}
           badge={
             <span className={`text-[10px] font-black px-2.5 py-1 rounded-full ${notif.reminders_enabled ? "bg-emerald-100 text-emerald-700" : "bg-slate-100 text-slate-400"}`}>
-              {notif.reminders_enabled ? (language === "es" ? "ACTIVO" : "ACTIVE") : (language === "es" ? "INACTIVO" : "INACTIVE")}
+              {notif.reminders_enabled ? "ACTIVO" : "INACTIVO"}
             </span>
           }>
-          <div className="space-y-4">
-            {/* Toggle */}
+          <div className="space-y-5">
+
+            {/* ── Toggle ── */}
             <div className="flex items-center justify-between bg-white/50 rounded-2xl px-4 py-3">
               <span className="text-sm font-semibold text-slate-700">{s.notifEnabled}</span>
               <button onClick={() => setNotif(p => ({ ...p, reminders_enabled: !p.reminders_enabled }))}
@@ -1147,211 +1190,259 @@ export default function Settings() {
               </button>
             </div>
 
-            {/* ── Windows / System Notifications ──────────────── */}
-            <div
-              className="rounded-2xl overflow-hidden"
-              style={{
-                border: notifPermission === "granted"
-                  ? "1px solid rgba(16,185,129,0.3)"
-                  : notifPermission === "denied"
-                  ? "1px solid rgba(239,68,68,0.25)"
-                  : "1px solid rgba(226,232,240,0.8)",
-                background: notifPermission === "granted"
-                  ? "rgba(16,185,129,0.04)"
-                  : "rgba(255,255,255,0.5)",
-              }}
-            >
-              {/* Header row */}
-              <div className="flex items-center gap-3 px-4 py-3.5">
-                <div
-                  className="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0"
-                  style={{
-                    background: notifPermission === "granted"
-                      ? "rgba(16,185,129,0.12)"
-                      : notifPermission === "denied" ? "rgba(239,68,68,0.08)" : "#f1f5f9",
-                  }}
-                >
-                  <BellRing
-                    size={16}
-                    style={{
-                      color: notifPermission === "granted" ? "#10b981"
-                        : notifPermission === "denied" ? "#ef4444" : "#94a3b8",
-                    }}
-                  />
+            {/* ── Cuándo recordar ── */}
+            <div className="space-y-3 bg-white/30 rounded-2xl p-4">
+              <p className="text-[11px] font-black text-slate-500 uppercase tracking-widest">
+                {language === "es" ? "¿Cuándo recordar?" : "When to remind?"}
+              </p>
+
+              {/* Múltiples períodos */}
+              <div>
+                <label className="text-xs font-bold text-slate-600 mb-2 block">
+                  {language === "es" ? "Días de anticipación (puedes elegir varios)" : "Days before event (multiple allowed)"}
+                </label>
+                <div className="flex flex-wrap gap-2">
+                  {[
+                    { d: 7, label: "7 días" }, { d: 3, label: "3 días" },
+                    { d: 2, label: "2 días" }, { d: 1, label: "1 día" },
+                    { d: 0, label: "Mismo día" },
+                  ].map(({ d, label }) => {
+                    const active = (notif.reminder_periods || [3]).includes(d);
+                    return (
+                      <button
+                        key={d}
+                        data-testid={`period-btn-${d}`}
+                        onClick={() => {
+                          const cur = notif.reminder_periods || [3];
+                          const next = active ? cur.filter(x => x !== d) : [...cur, d];
+                          setNotif(p => ({ ...p, reminder_periods: next.length ? next : [d] }));
+                        }}
+                        className={`px-3 py-1.5 rounded-full text-xs font-bold transition-all ${active ? "btn-primary text-white shadow-sm" : "bg-white/70 text-slate-500 border border-slate-200 hover:border-indigo-300"}`}
+                      >
+                        {label}
+                      </button>
+                    );
+                  })}
                 </div>
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm font-bold text-slate-800">
-                    {language === "es" ? "Notificaciones del Sistema" : "System Notifications"}
-                  </p>
-                  <p className="text-xs text-slate-400">
-                    {language === "es" ? "Alertas emergentes en Windows / macOS" : "Pop-up alerts on Windows / macOS"}
-                  </p>
-                </div>
-                <span
-                  className={`text-[10px] font-black px-2.5 py-1 rounded-full flex-shrink-0 ${
-                    notifPermission === "granted" ? "bg-emerald-100 text-emerald-700"
-                    : notifPermission === "denied" ? "bg-red-100 text-red-600"
-                    : "bg-slate-100 text-slate-400"
-                  }`}
-                  data-testid="system-notif-status"
-                >
-                  {notifPermission === "granted" ? "ACTIVO"
-                    : notifPermission === "denied" ? "BLOQUEADO"
-                    : notifPermission === "unsupported" ? "NO SOPORTADO"
-                    : "INACTIVO"}
-                </span>
               </div>
 
-              {/* Body */}
-              <div className="px-4 pb-4">
-                {notifPermission === "unsupported" ? (
-                  <p className="text-xs text-slate-400 text-center py-1">
-                    {language === "es" ? "Tu navegador no soporta notificaciones nativas." : "Your browser does not support native notifications."}
-                  </p>
-                ) : notifPermission === "denied" ? (
-                  <div className="flex items-start gap-2 bg-red-50/80 border border-red-200/60 rounded-xl px-3 py-2.5">
-                    <XCircle size={13} className="text-red-500 mt-0.5 flex-shrink-0" />
-                    <p className="text-xs text-red-600 font-medium">
-                      {language === "es"
-                        ? "Permiso denegado. Ve a Configuración del navegador → Privacidad → Notificaciones y permite este sitio."
-                        : "Permission denied. Go to Browser Settings → Privacy → Notifications and allow this site."}
-                    </p>
+              {/* Horas antes (para eventos con horario definido) */}
+              <div className="grid grid-cols-2 gap-3 pt-1">
+                <div>
+                  <label className="text-xs font-bold text-slate-600 mb-1.5 flex items-center gap-1.5 block">
+                    <Clock size={11} />
+                    {language === "es" ? "Horas antes del evento" : "Hours before event"}
+                  </label>
+                  <div className="flex items-center gap-2">
+                    <input type="range" min={0} max={12} step={1} value={notif.reminder_hours_before || 0}
+                      onChange={e => setNotif(p => ({ ...p, reminder_hours_before: parseInt(e.target.value) }))}
+                      data-testid="notif-hours-slider"
+                      className="flex-1 accent-indigo-500" />
+                    <span className="text-sm font-black text-slate-800 w-14 text-center bg-white/60 rounded-xl py-1">
+                      {notif.reminder_hours_before > 0 ? `${notif.reminder_hours_before}h` : "Off"}
+                    </span>
                   </div>
-                ) : notifPermission === "granted" ? (
+                  <p className="text-[10px] text-slate-400 mt-1">
+                    {notif.reminder_hours_before > 0
+                      ? `Aviso ${notif.reminder_hours_before}h antes del evento (requiere hora en la reserva)`
+                      : "Desactivado — actívalo para avisar horas antes"}
+                  </p>
+                </div>
+                <div>
+                  <label className="text-xs font-bold text-slate-600 mb-1.5 flex items-center gap-1.5 block">
+                    <Clock size={11} />
+                    {language === "es" ? "Hora de aviso diario" : "Daily reminder time"}
+                  </label>
+                  <input type="time" value={notif.reminder_time || "09:00"}
+                    onChange={e => setNotif(p => ({ ...p, reminder_time: e.target.value }))}
+                    data-testid="notif-time-input"
+                    className="w-full bg-white/70 border border-white/80 rounded-xl px-3 py-2 text-sm font-bold text-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-300" />
+                  <p className="text-[10px] text-slate-400 mt-1">Notificación diaria a esta hora</p>
+                </div>
+              </div>
+            </div>
+
+            {/* ── Canales de notificación ── */}
+            <div className="space-y-3">
+              <p className="text-[11px] font-black text-slate-500 uppercase tracking-widest">
+                {language === "es" ? "Canales de notificación" : "Notification channels"}
+              </p>
+
+              {/* Email Resend */}
+              <div className="bg-white/40 rounded-2xl p-4 space-y-3 border border-blue-100/60">
+                <div className="flex items-center gap-2">
+                  <div className="w-8 h-8 rounded-xl bg-blue-100 flex items-center justify-center">
+                    <Mail size={14} className="text-blue-600" />
+                  </div>
+                  <div className="flex-1">
+                    <p className="text-xs font-black text-slate-800">Email — Resend</p>
+                    <p className="text-[10px] text-slate-400">Gratis hasta 3,000 emails/mes</p>
+                  </div>
+                  {notif.resend_api_key && notif.resend_api_key.includes("•") && (
+                    <span className="text-[10px] font-black px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-700">ACTIVO</span>
+                  )}
+                </div>
+                <input type="email" value={notif.admin_email}
+                  onChange={e => setNotif(p => ({ ...p, admin_email: e.target.value }))}
+                  placeholder="tu@email.com"
+                  data-testid="notif-email-input"
+                  className="w-full bg-white/70 border border-white/80 rounded-xl px-4 py-2.5 text-sm text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-300" />
+                <div>
+                  <input type="password" value={notif.resend_api_key}
+                    onChange={e => setNotif(p => ({ ...p, resend_api_key: e.target.value }))}
+                    placeholder="re_xxxxx (clave API de resend.com)"
+                    data-testid="notif-resend-key-input"
+                    className="w-full bg-white/70 border border-white/80 rounded-xl px-4 py-2.5 text-sm text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-300" />
+                  <p className="text-[10px] text-slate-400 mt-1">
+                    Gratis en <a href="https://resend.com" target="_blank" rel="noreferrer" className="text-indigo-500 underline">resend.com</a>
+                  </p>
+                </div>
+              </div>
+
+              {/* Telegram */}
+              <div className="bg-white/40 rounded-2xl p-4 space-y-3 border border-sky-100/60">
+                <div className="flex items-center gap-2">
+                  <div className="w-8 h-8 rounded-xl bg-sky-100 flex items-center justify-center">
+                    <MessageCircle size={14} className="text-sky-600" />
+                  </div>
+                  <div className="flex-1">
+                    <p className="text-xs font-black text-slate-800">Telegram Bot</p>
+                    <p className="text-[10px] text-slate-400">100% gratis, ilimitado — mensajes instantáneos</p>
+                  </div>
+                  <button
+                    data-testid="telegram-toggle"
+                    onClick={() => setNotif(p => ({ ...p, telegram_enabled: !p.telegram_enabled }))}
+                    className={`w-9 h-5 rounded-full transition-all relative ${notif.telegram_enabled ? "bg-sky-500" : "bg-slate-200"}`}>
+                    <span className={`absolute top-0.5 w-4 h-4 bg-white rounded-full shadow transition-all ${notif.telegram_enabled ? "left-[18px]" : "left-0.5"}`} />
+                  </button>
+                </div>
+
+                {notif.telegram_enabled && (
                   <div className="space-y-2">
-                    <div className="flex items-center gap-2 bg-emerald-50/80 border border-emerald-200/50 rounded-xl px-3 py-2.5">
-                      <CheckCircle size={13} className="text-emerald-500 flex-shrink-0" />
-                      <p className="text-xs text-emerald-700 font-semibold">
-                        {language === "es" ? "Notificaciones de sistema activas — recordatorios en tiempo real" : "System notifications active — real-time reminders"}
+                    {/* Setup guide */}
+                    <div className="bg-sky-50/80 rounded-xl p-3 text-[10px] text-sky-700 space-y-1">
+                      <p className="font-black uppercase tracking-wide">Cómo configurarlo (3 pasos):</p>
+                      <p>1. En Telegram busca <b>@BotFather</b> → escribe <b>/newbot</b> → obtén el <b>token</b></p>
+                      <p>2. Abre tu bot nuevo → escribe cualquier mensaje para activarlo</p>
+                      <p>3. Abre este link para obtener tu Chat ID:
+                        <br /><code className="bg-white/60 px-1 rounded">https://api.telegram.org/bot{"<TOKEN>"}/getUpdates</code>
+                        <br />Busca el número en "id" dentro de "chat"
                       </p>
                     </div>
-                    {/* Immediate test button */}
-                    <motion.button
-                      whileHover={{ scale: 1.02 }}
-                      whileTap={{ scale: 0.97 }}
-                      onClick={handleNotifyImmediate}
-                      disabled={immediateLoading}
-                      data-testid="system-notif-immediate-btn"
-                      className="w-full flex items-center justify-center gap-2 py-3 rounded-xl btn-primary text-white text-sm font-bold disabled:opacity-60"
-                    >
-                      {immediateLoading
-                        ? <><Loader2 size={13} className="animate-spin" /> {language === "es" ? "Buscando eventos..." : "Fetching events..."}</>
-                        : <><BellRing size={14} /> {language === "es" ? "Probar ahora — notificar evento más próximo" : "Test now — notify next upcoming event"}</>
-                      }
-                    </motion.button>
-                    <motion.button
-                      whileHover={{ scale: 1.02 }}
-                      whileTap={{ scale: 0.97 }}
-                      onClick={handleTestSystemNotif}
-                      data-testid="system-notif-test-btn"
-                      className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl glass text-slate-700 text-xs font-bold hover:bg-white/50 transition-all border border-white/60"
-                    >
-                      <Bell size={13} />
-                      {language === "es" ? "Enviar notificación simple de prueba" : "Send simple test notification"}
-                    </motion.button>
-                  </div>
-                ) : (
-                  <div className="space-y-2">
-                    <p className="text-xs text-slate-500 mb-3">
-                      {language === "es"
-                        ? "Recibe alertas emergentes directamente en Windows o macOS cuando hay eventos próximos, sin necesidad de tener la app abierta."
-                        : "Receive pop-up alerts directly on Windows or macOS for upcoming events."}
-                    </p>
-                    <motion.button
-                      whileHover={{ scale: 1.02 }}
-                      whileTap={{ scale: 0.97 }}
-                      onClick={handleRequestPermission}
-                      data-testid="system-notif-enable-btn"
-                      className="w-full flex items-center justify-center gap-2 py-3 rounded-xl btn-primary text-white text-sm font-bold"
-                    >
-                      <BellRing size={15} />
-                      {language === "es" ? "Activar notificaciones de Windows" : "Enable Windows notifications"}
-                    </motion.button>
-                    <p className="text-[10px] text-slate-400 text-center mt-1">
-                      {language === "es"
-                        ? "El navegador pedirá permiso. Haz clic en \"Permitir\" para activar."
-                        : "The browser will ask for permission. Click \"Allow\" to enable."}
-                    </p>
+                    <input type="password" value={notif.telegram_bot_token}
+                      onChange={e => setNotif(p => ({ ...p, telegram_bot_token: e.target.value }))}
+                      placeholder="1234567890:AAFxxxxxxxxxxxxxxxx (token del bot)"
+                      data-testid="telegram-token-input"
+                      className="w-full bg-white/70 border border-white/80 rounded-xl px-3 py-2 text-sm text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-sky-300" />
+                    <div className="flex gap-2">
+                      <input type="text" value={notif.telegram_chat_id}
+                        onChange={e => setNotif(p => ({ ...p, telegram_chat_id: e.target.value }))}
+                        placeholder="Chat ID (ej: 123456789)"
+                        data-testid="telegram-chatid-input"
+                        className="flex-1 bg-white/70 border border-white/80 rounded-xl px-3 py-2 text-sm text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-sky-300" />
+                      <motion.button whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}
+                        onClick={handleTelegramTest} disabled={telegramTestLoading}
+                        data-testid="telegram-test-btn"
+                        className="px-3 py-2 rounded-xl bg-sky-500 text-white text-xs font-bold disabled:opacity-60 whitespace-nowrap">
+                        {telegramTestLoading ? <Loader2 size={12} className="animate-spin" /> : "Probar"}
+                      </motion.button>
+                    </div>
                   </div>
                 )}
               </div>
-            </div>
 
-            {/* Days + Time row */}
-            <div className="grid grid-cols-2 gap-3">
-              <div>
-                <label className="text-xs font-bold text-slate-500 mb-1.5 block">{s.notifDays}</label>
+              {/* ntfy.sh */}
+              <div className="bg-white/40 rounded-2xl p-4 space-y-3 border border-orange-100/60">
                 <div className="flex items-center gap-2">
-                  <input type="range" min={1} max={30} value={notif.reminder_days}
-                    onChange={e => setNotif(p => ({ ...p, reminder_days: parseInt(e.target.value) }))}
-                    data-testid="notif-days-slider"
-                    className="flex-1 accent-indigo-500" />
-                  <span className="text-sm font-black text-slate-800 w-12 text-center bg-white/60 rounded-xl py-1">
-                    {notif.reminder_days}d
+                  <div className="w-8 h-8 rounded-xl bg-orange-100 flex items-center justify-center">
+                    <Bell size={14} className="text-orange-600" />
+                  </div>
+                  <div className="flex-1">
+                    <p className="text-xs font-black text-slate-800">ntfy.sh — Push al celular/PC</p>
+                    <p className="text-[10px] text-slate-400">Gratis, sin cuenta — app para iOS, Android, Windows</p>
+                  </div>
+                  <button
+                    data-testid="ntfy-toggle"
+                    onClick={() => setNotif(p => ({ ...p, ntfy_enabled: !p.ntfy_enabled }))}
+                    className={`w-9 h-5 rounded-full transition-all relative ${notif.ntfy_enabled ? "bg-orange-500" : "bg-slate-200"}`}>
+                    <span className={`absolute top-0.5 w-4 h-4 bg-white rounded-full shadow transition-all ${notif.ntfy_enabled ? "left-[18px]" : "left-0.5"}`} />
+                  </button>
+                </div>
+
+                {notif.ntfy_enabled && (
+                  <div className="space-y-2">
+                    <div className="bg-orange-50/80 rounded-xl p-3 text-[10px] text-orange-700 space-y-1">
+                      <p className="font-black uppercase tracking-wide">Cómo configurarlo (2 pasos):</p>
+                      <p>1. Instala la app <b>ntfy</b> en tu celular (iOS / Android) o PC — es gratis</p>
+                      <p>2. Escribe un nombre único para tu tema (ej: <b>cinema-alex-2024</b>) y suscríbete desde la app</p>
+                      <p>Luego ingresa ese mismo nombre aquí. <a href="https://ntfy.sh" target="_blank" rel="noreferrer" className="underline font-bold">ntfy.sh</a></p>
+                    </div>
+                    <div className="flex gap-2">
+                      <input type="text" value={notif.ntfy_topic}
+                        onChange={e => setNotif(p => ({ ...p, ntfy_topic: e.target.value }))}
+                        placeholder="cinema-alex-2024 (tu tema único)"
+                        data-testid="ntfy-topic-input"
+                        className="flex-1 bg-white/70 border border-white/80 rounded-xl px-3 py-2 text-sm text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-orange-300" />
+                      <motion.button whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}
+                        onClick={handleNtfyTest} disabled={ntfyTestLoading}
+                        data-testid="ntfy-test-btn"
+                        className="px-3 py-2 rounded-xl bg-orange-500 text-white text-xs font-bold disabled:opacity-60 whitespace-nowrap">
+                        {ntfyTestLoading ? <Loader2 size={12} className="animate-spin" /> : "Probar"}
+                      </motion.button>
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* Browser Push */}
+              <div className="rounded-2xl overflow-hidden border border-slate-200/60 bg-white/40">
+                <div className="flex items-center gap-3 px-4 py-3">
+                  <div className={`w-8 h-8 rounded-xl flex items-center justify-center ${notifPermission === "granted" ? "bg-emerald-100" : notifPermission === "denied" ? "bg-red-50" : "bg-slate-100"}`}>
+                    <Monitor size={14} className={notifPermission === "granted" ? "text-emerald-600" : notifPermission === "denied" ? "text-red-500" : "text-slate-400"} />
+                  </div>
+                  <div className="flex-1">
+                    <p className="text-xs font-black text-slate-800">Notificaciones del navegador</p>
+                    <p className="text-[10px] text-slate-400">Pop-up en Windows / macOS — gratis</p>
+                  </div>
+                  <span data-testid="system-notif-status"
+                    className={`text-[10px] font-black px-2.5 py-1 rounded-full ${notifPermission === "granted" ? "bg-emerald-100 text-emerald-700" : notifPermission === "denied" ? "bg-red-100 text-red-600" : "bg-slate-100 text-slate-400"}`}>
+                    {notifPermission === "granted" ? "ACTIVO" : notifPermission === "denied" ? "BLOQUEADO" : "INACTIVO"}
                   </span>
                 </div>
-              </div>
-              <div>
-                <label className="text-xs font-bold text-slate-500 mb-1.5 flex items-center gap-1.5 block">
-                  <Clock size={11} />
-                  {language === "es" ? "Hora de aviso diario" : "Daily reminder time"}
-                </label>
-                <input
-                  type="time"
-                  value={notif.reminder_time || "09:00"}
-                  onChange={e => setNotif(p => ({ ...p, reminder_time: e.target.value }))}
-                  data-testid="notif-time-input"
-                  className="w-full bg-white/70 border border-white/80 rounded-xl px-3 py-2 text-sm font-bold text-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-300"
-                />
-                <p className="text-[10px] text-slate-400 mt-1">
-                  {language === "es" ? "Recibirás una notificación cada día a esta hora" : "You'll get a daily notification at this time"}
-                </p>
+                <div className="px-4 pb-3">
+                  {notifPermission === "denied" ? (
+                    <p className="text-[10px] text-red-500 font-medium">
+                      Permiso denegado. Ve a Configuración del navegador → Privacidad → Notificaciones y permite este sitio.
+                    </p>
+                  ) : notifPermission === "granted" ? (
+                    <div className="flex gap-2">
+                      <motion.button whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.97 }}
+                        onClick={handleNotifyImmediate} disabled={immediateLoading}
+                        data-testid="system-notif-immediate-btn"
+                        className="flex-1 flex items-center justify-center gap-1.5 py-2 rounded-xl btn-primary text-white text-xs font-bold disabled:opacity-60">
+                        {immediateLoading ? <Loader2 size={12} className="animate-spin" /> : <BellRing size={12} />}
+                        Notificar evento próximo
+                      </motion.button>
+                      <motion.button whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.97 }}
+                        onClick={handleTestSystemNotif}
+                        data-testid="system-notif-test-btn"
+                        className="px-3 py-2 rounded-xl glass text-slate-700 text-xs font-bold hover:bg-white/50 border border-white/60">
+                        Probar
+                      </motion.button>
+                    </div>
+                  ) : (
+                    <motion.button whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.97 }}
+                      onClick={handleRequestPermission}
+                      data-testid="system-notif-enable-btn"
+                      className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl btn-primary text-white text-xs font-bold">
+                      <BellRing size={13} /> Activar notificaciones del navegador
+                    </motion.button>
+                  )}
+                </div>
               </div>
             </div>
 
-            {/* Channel */}
-            <div>
-              <label className="text-xs font-bold text-slate-500 mb-1.5 block">{s.notifChannel}</label>
-              <div className="grid grid-cols-3 gap-2">
-                {channels.map(ch => (
-                  <button key={ch.value} onClick={() => setNotif(p => ({ ...p, notification_channel: ch.value }))}
-                    data-testid={`notif-channel-${ch.value}`}
-                    className={`flex items-center justify-center gap-1.5 py-2.5 rounded-xl text-xs font-bold transition-all ${notif.notification_channel === ch.value ? "btn-primary text-white" : "glass text-slate-600 hover:bg-white/50"}`}>
-                    <ch.icon size={13} /> {ch.label}
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            {/* Email input */}
-            {(notif.notification_channel === "email" || notif.notification_channel === "both") && (
-              <div>
-                <label className="text-xs font-bold text-slate-500 mb-1.5 block">{s.notifEmail}</label>
-                <input type="email" value={notif.admin_email}
-                  onChange={e => setNotif(p => ({ ...p, admin_email: e.target.value }))}
-                  placeholder="admin@cinemaproductions.com"
-                  data-testid="notif-email-input"
-                  className="w-full bg-white/60 border border-white/80 rounded-xl px-4 py-2.5 text-sm text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-300" />
-              </div>
-            )}
-
-            {/* Resend API key */}
-            {(notif.notification_channel === "email" || notif.notification_channel === "both") && (
-              <div>
-                <label className="text-xs font-bold text-slate-500 mb-1.5 block">{s.notifResendKey}</label>
-                <input type="password" value={notif.resend_api_key}
-                  onChange={e => setNotif(p => ({ ...p, resend_api_key: e.target.value }))}
-                  placeholder={s.notifResendPlaceholder}
-                  data-testid="notif-resend-key-input"
-                  className="w-full bg-white/60 border border-white/80 rounded-xl px-4 py-2.5 text-sm text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-300" />
-                <p className="text-[10px] text-slate-400 mt-1">
-                  Obtén tu clave gratis en{" "}
-                  <a href="https://resend.com" target="_blank" rel="noreferrer" className="text-indigo-500 underline">resend.com</a>
-                </p>
-              </div>
-            )}
-
-            {/* WhatsApp input */}
+            {/* ── WhatsApp manual ── */}
             {(notif.notification_channel === "whatsapp" || notif.notification_channel === "both") && (
               <div>
                 <label className="text-xs font-bold text-slate-500 mb-1.5 block">{s.notifWhatsapp}</label>
@@ -1369,9 +1460,6 @@ export default function Settings() {
                     </a>
                   )}
                 </div>
-                <p className="text-[10px] text-slate-400 mt-1">
-                  {language === "es" ? "El botón abre WhatsApp con un mensaje listo para enviar" : "Button opens WhatsApp with a ready-to-send message"}
-                </p>
               </div>
             )}
 
@@ -1383,23 +1471,7 @@ export default function Settings() {
               </div>
             )}
 
-            {/* Resend status badge */}
-            <div className="border-t border-white/40 pt-4">
-              <div className={`flex items-center gap-3 p-3 rounded-2xl ${notif.resend_api_key && !notif.resend_api_key.includes("re_...") ? "bg-emerald-50/80 border border-emerald-200/60" : "bg-amber-50/80 border border-amber-200/60"}`}>
-                <Mail size={15} className={notif.resend_api_key && !notif.resend_api_key.includes("re_...") ? "text-emerald-600" : "text-amber-500"} />
-                <div className="flex-1 min-w-0">
-                  <p className={`text-xs font-black ${notif.resend_api_key && !notif.resend_api_key.includes("re_...") ? "text-emerald-800" : "text-amber-700"}`}>
-                    {notif.resend_api_key && !notif.resend_api_key.includes("re_...") ? (language === "es" ? "Resend configurado — correos activos" : "Resend configured — emails active") : (language === "es" ? "Resend no configurado" : "Resend not configured")}
-                  </p>
-                  <p className={`text-[10px] ${notif.resend_api_key && !notif.resend_api_key.includes("re_...") ? "text-emerald-600" : "text-amber-500"}`}>
-                    {notif.resend_api_key && !notif.resend_api_key.includes("re_...") ? (language === "es" ? "Los recordatorios se enviarán por email automáticamente" : "Reminders will be sent by email automatically") : (language === "es" ? "Ingresa tu clave API de Resend para activar los emails" : "Enter your Resend API key to enable emails")}
-                  </p>
-                </div>
-                {notif.resend_api_key && !notif.resend_api_key.includes("re_...") && <CheckCircle size={15} className="text-emerald-500 shrink-0" />}
-              </div>
-            </div>
-
-            {/* Buttons */}
+            {/* ── Buttons ── */}
             <div className="flex gap-3 pt-1">
               <motion.button whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.97 }}
                 onClick={handleSaveNotif} disabled={notifLoading}
@@ -1412,10 +1484,11 @@ export default function Settings() {
                 onClick={handleTestReminder} disabled={testLoading}
                 data-testid="notif-test-btn"
                 className="flex items-center gap-2 px-5 py-2.5 rounded-2xl glass border-white/60 text-slate-700 text-sm font-bold hover:bg-white/50 transition-all disabled:opacity-60">
-                {testLoading ? <Loader2 size={14} className="animate-spin" /> : <Bell size={14} />}
-                {s.notifTest}
+                {testLoading ? <Loader2 size={14} className="animate-spin" /> : <Zap size={14} />}
+                Enviar a todos los canales
               </motion.button>
             </div>
+
           </div>
         </Section>
 

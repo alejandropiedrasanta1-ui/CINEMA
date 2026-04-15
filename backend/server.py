@@ -5,6 +5,7 @@ from dotenv import load_dotenv
 import csv
 import io
 import asyncio
+import httpx
 from starlette.middleware.cors import CORSMiddleware
 from motor.motor_asyncio import AsyncIOMotorClient
 import os
@@ -154,12 +155,18 @@ class SocioUpdate(BaseModel):
 
 class NotificationSettingsModel(BaseModel):
     reminders_enabled: bool = False
-    reminder_days: int = 3
-    reminder_time: Optional[str] = "09:00"
+    reminder_periods: List[int] = [3]        # days before: [7, 3, 1, 0]
+    reminder_time: Optional[str] = "09:00"   # daily send time HH:MM
+    reminder_hours_before: int = 0           # 0 = disabled; N = send N hrs before event
     admin_email: Optional[str] = None
     admin_whatsapp: Optional[str] = None
     notification_channel: str = "email"
     resend_api_key: Optional[str] = None
+    telegram_enabled: bool = False
+    telegram_bot_token: Optional[str] = None
+    telegram_chat_id: Optional[str] = None
+    ntfy_enabled: bool = False
+    ntfy_topic: Optional[str] = None
 
 
 class DBConnectRequest(BaseModel):
@@ -310,64 +317,161 @@ async def _send_push_to_all(title: str, body: str, url: str = "/dashboard"):
     logger.info(f"Push sent to {len(subscriptions) - len(expired)} subscribers")
 
 
-# ─── Per-minute push + Gmail reminder check ───────────────────
+# ─── Telegram Helper ──────────────────────────────────────────
+async def _send_telegram(bot_token: str, chat_id: str, text: str):
+    async with httpx.AsyncClient(timeout=10) as c:
+        r = await c.post(
+            f"https://api.telegram.org/bot{bot_token}/sendMessage",
+            json={"chat_id": chat_id, "text": text, "parse_mode": "HTML"},
+        )
+        r.raise_for_status()
+
+
+def _build_telegram_text(events: list, days: int) -> str:
+    lines = [f"<b>Cinema Productions</b> — Recordatorio\n"]
+    lines.append(f"Tienes <b>{len(events)} evento(s)</b> en <b>{days} día(s)</b>:\n")
+    for ev in events:
+        date = ev.get("event_date", "")
+        time_str = ev.get("event_time", "")
+        when = f"{date} {time_str}".strip()
+        lines.append(
+            f"• <b>{ev.get('client_name','?')}</b> — {ev.get('event_type','?')}\n"
+            f"  {when} — {ev.get('venue') or 'Sin lugar'}"
+        )
+    return "\n".join(lines)
+
+
+# ─── ntfy.sh Helper ───────────────────────────────────────────
+async def _send_ntfy(topic: str, title: str, message: str, priority: str = "default"):
+    async with httpx.AsyncClient(timeout=10) as c:
+        r = await c.post(
+            f"https://ntfy.sh/{topic}",
+            content=message.encode("utf-8"),
+            headers={
+                "Title": title,
+                "Priority": priority,
+                "Tags": "calendar,bell",
+                "Content-Type": "text/plain; charset=utf-8",
+            },
+        )
+        r.raise_for_status()
+
+
+# ─── Per-minute reminder check (all channels) ────────────────
+async def _dispatch_reminders(events: list, days_label: str, settings: dict):
+    """Send a reminder for `events` via every enabled channel."""
+    if not events:
+        return
+
+    title = f"Recordatorio: {len(events)} evento(s) en {days_label}"
+    body  = ", ".join(r.get("client_name", "?") for r in events[:3])
+    if len(events) > 3:
+        body += f" y {len(events) - 3} más"
+
+    # ── Email (Resend) ──────────────────────────
+    channel = settings.get("notification_channel", "email")
+    if channel in ("email", "both"):
+        api_key     = settings.get("resend_api_key")
+        admin_email = settings.get("admin_email")
+        if api_key and admin_email:
+            try:
+                resend_lib.api_key = api_key
+                html = _build_reminder_html(events, int(days_label.split()[0]) if days_label[0].isdigit() else 0)
+                params = {
+                    "from": "Cinema Productions <onboarding@resend.dev>",
+                    "to": [admin_email],
+                    "subject": title,
+                    "html": html,
+                }
+                await asyncio.to_thread(resend_lib.Emails.send, params)
+                logger.info(f"[Reminders] Email sent to {admin_email}")
+            except Exception as e:
+                logger.warning(f"[Reminders] Email failed: {e}")
+
+    # ── Telegram ────────────────────────────────
+    if settings.get("telegram_enabled") and settings.get("telegram_bot_token") and settings.get("telegram_chat_id"):
+        try:
+            text = _build_telegram_text(events, int(days_label.split()[0]) if days_label[0].isdigit() else 0)
+            await _send_telegram(settings["telegram_bot_token"], settings["telegram_chat_id"], text)
+            logger.info("[Reminders] Telegram sent")
+        except Exception as e:
+            logger.warning(f"[Reminders] Telegram failed: {e}")
+
+    # ── ntfy.sh ─────────────────────────────────
+    if settings.get("ntfy_enabled") and settings.get("ntfy_topic"):
+        try:
+            await _send_ntfy(settings["ntfy_topic"], title, body, priority="high")
+            logger.info("[Reminders] ntfy sent")
+        except Exception as e:
+            logger.warning(f"[Reminders] ntfy failed: {e}")
+
+    # ── Browser Push ────────────────────────────
+    await _send_push_to_all(title, body, "/dashboard")
+
+
 async def check_and_push_reminders():
+    """Per-minute job: fires reminders for each configured period and hours-before."""
     global _sent_push_today
     try:
         settings_doc = await db.app_settings.find_one({}, {"_id": 0})
         if not settings_doc or not settings_doc.get("reminders_enabled"):
             return
 
-        reminder_time = settings_doc.get("reminder_time", "09:00")  # HH:MM
-        days          = int(settings_doc.get("reminder_days", 3))
-        now           = datetime.now(timezone.utc)
-        current_hhmm  = now.strftime("%H:%M")
-        today_str     = now.strftime("%Y-%m-%d")
+        reminder_time   = settings_doc.get("reminder_time", "09:00")
+        reminder_periods = settings_doc.get("reminder_periods") or [settings_doc.get("reminder_days", 3)]
+        hours_before    = int(settings_doc.get("reminder_hours_before", 0))
+        now             = datetime.now(timezone.utc)
+        current_hhmm    = now.strftime("%H:%M")
+        today_str       = now.strftime("%Y-%m-%d")
 
-        if current_hhmm != reminder_time:
-            return
+        # ── Days-based reminders ───────────────────────────────
+        if current_hhmm == reminder_time:
+            for days in reminder_periods:
+                target_date = (now.date() + timedelta(days=days)).isoformat()
+                dedup_key   = f"days_{today_str}_{days}"
+                if dedup_key in _sent_push_today:
+                    continue
+                _sent_push_today.add(dedup_key)
 
-        target_date = (now.date() + timedelta(days=days)).isoformat()
-        dedup_key   = f"{today_str}_{reminder_time}_{target_date}"
-        if dedup_key in _sent_push_today:
-            return
-        _sent_push_today.add(dedup_key)
-        # Clear old keys daily
-        if len(_sent_push_today) > 500:
+                cursor = db.reservations.find(
+                    {"event_date": target_date, "status": {"$nin": ["Cancelado", "Completado"]}},
+                    {"client_name": 1, "event_date": 1, "event_time": 1, "event_type": 1, "venue": 1, "_id": 0}
+                )
+                upcoming = await cursor.to_list(100)
+                label = f"{days} día(s)" if days > 0 else "hoy"
+                await _dispatch_reminders(upcoming, label, settings_doc)
+
+        # ── Hours-before reminders (same day events) ───────────
+        if hours_before > 0:
+            cursor = db.reservations.find(
+                {"event_date": today_str, "status": {"$nin": ["Cancelado", "Completado"]}},
+                {"client_name": 1, "event_date": 1, "event_time": 1, "event_type": 1, "venue": 1, "_id": 0}
+            )
+            today_events = await cursor.to_list(100)
+            for ev in today_events:
+                et = ev.get("event_time")
+                if not et:
+                    continue
+                try:
+                    event_dt = datetime.strptime(f"{today_str} {et}", "%Y-%m-%d %H:%M").replace(tzinfo=timezone.utc)
+                    reminder_dt = event_dt - timedelta(hours=hours_before)
+                    reminder_hhmm = reminder_dt.strftime("%H:%M")
+                    if current_hhmm != reminder_hhmm:
+                        continue
+                    dedup_key = f"hours_{today_str}_{ev.get('client_name','')}_{et}"
+                    if dedup_key in _sent_push_today:
+                        continue
+                    _sent_push_today.add(dedup_key)
+                    await _dispatch_reminders([ev], f"{hours_before}h antes", settings_doc)
+                except Exception:
+                    continue
+
+        # Clear dedup set daily
+        if len(_sent_push_today) > 1000:
             _sent_push_today.clear()
 
-        cursor = db.reservations.find(
-            {"event_date": target_date, "status": {"$nin": ["Cancelado", "Completado"]}},
-            {"client_name": 1, "event_date": 1, "event_type": 1, "venue": 1, "_id": 0}
-        )
-        upcoming = await cursor.to_list(100)
-        if not upcoming:
-            return
-
-        title = f"Recordatorio: {len(upcoming)} evento(s) en {days} día(s)"
-        body  = ", ".join(r.get("client_name", "?") for r in upcoming[:3])
-        if len(upcoming) > 3:
-            body += f" y {len(upcoming)-3} más"
-
-        # Web Push
-        await _send_push_to_all(title, body, "/dashboard")
-
-        # Gmail (if connected)
-        try:
-            token_doc = await db.oauth_tokens.find_one({"provider": "gmail"}, {"_id": 0})
-            if token_doc and token_doc.get("refresh_token"):
-                html = _build_reminder_html(upcoming, days)
-                await _send_gmail(
-                    to=token_doc["email"],
-                    subject=title,
-                    html=html,
-                )
-        except Exception as gmail_err:
-            logger.warning(f"Gmail reminder skipped: {gmail_err}")
-
-        logger.info(f"Push+Gmail reminders sent for {target_date}")
     except Exception as e:
-        logger.error(f"Error in push reminder job: {e}")
+        logger.error(f"Error in reminder job: {e}")
 
 
 # ─── Routes ──────────────────────────────────────────────
@@ -678,13 +782,23 @@ async def get_app_settings():
     doc = await db.app_settings.find_one({}, {"_id": 0})
     if not doc:
         return {}
-    # Mask API key in response
+    # Mask Resend key
     if doc.get("resend_api_key"):
         key = doc["resend_api_key"]
-        doc["resend_api_key"] = "re_" + "*" * 20 + key[-4:] if len(key) > 4 else "****"
+        doc["resend_api_key"] = "re_" + "•" * 20 + key[-4:] if len(key) > 4 else "****"
         doc["has_resend_key"] = True
     else:
         doc["has_resend_key"] = False
+    # Mask Telegram token
+    if doc.get("telegram_bot_token"):
+        tok = doc["telegram_bot_token"]
+        doc["telegram_bot_token"] = tok[:8] + "•" * 20 + tok[-4:] if len(tok) > 12 else "****"
+        doc["has_telegram_token"] = True
+    else:
+        doc["has_telegram_token"] = False
+    # Ensure reminder_periods is always a list
+    if "reminder_periods" not in doc:
+        doc["reminder_periods"] = [doc.get("reminder_days", 3)]
     return doc
 
 
@@ -692,10 +806,15 @@ async def get_app_settings():
 async def update_app_settings(settings: NotificationSettingsModel):
     update_doc = settings.model_dump()
 
-    # If API key is masked (unchanged), don't overwrite the real key
+    # If Resend key is masked (unchanged), don't overwrite
     key = update_doc.get("resend_api_key") or ""
-    if "****" in key or key.startswith("re_" + "*"):
+    if "****" in key or "•" in key:
         update_doc.pop("resend_api_key", None)
+
+    # If Telegram token is masked (unchanged), don't overwrite
+    tok = update_doc.get("telegram_bot_token") or ""
+    if "****" in tok or "•" in tok:
+        update_doc.pop("telegram_bot_token", None)
 
     existing = await db.app_settings.find_one({}, {"_id": 0})
     if existing:
@@ -704,13 +823,19 @@ async def update_app_settings(settings: NotificationSettingsModel):
         await db.app_settings.insert_one(update_doc)
 
     saved = await db.app_settings.find_one({}, {"_id": 0})
-    if saved and saved.get("resend_api_key"):
-        key = saved["resend_api_key"]
-        saved["resend_api_key"] = "re_" + "*" * 20 + key[-4:] if len(key) > 4 else "****"
-        saved["has_resend_key"] = True
-    else:
-        if saved:
+    if saved:
+        if saved.get("resend_api_key"):
+            k = saved["resend_api_key"]
+            saved["resend_api_key"] = "re_" + "•" * 20 + k[-4:] if len(k) > 4 else "****"
+            saved["has_resend_key"] = True
+        else:
             saved["has_resend_key"] = False
+        if saved.get("telegram_bot_token"):
+            t = saved["telegram_bot_token"]
+            saved["telegram_bot_token"] = t[:8] + "•" * 20 + t[-4:] if len(t) > 12 else "****"
+            saved["has_telegram_token"] = True
+        else:
+            saved["has_telegram_token"] = False
     return saved or {}
 
 
@@ -827,100 +952,47 @@ async def get_pending_notifications():
 
 @api_router.post("/reminders/send")
 async def trigger_reminders_manual():
-    """Manual trigger — send reminder email/push for upcoming events."""
+    """Manual trigger — send reminder email/push/telegram/ntfy for upcoming events."""
     try:
         settings_doc = await db.app_settings.find_one({}, {"_id": 0})
         if not settings_doc:
             raise HTTPException(status_code=400, detail="Primero configura los ajustes de notificaciones")
 
-        days  = int(settings_doc.get("reminder_days", 3))
+        reminder_periods = settings_doc.get("reminder_periods") or [settings_doc.get("reminder_days", 3)]
         today = datetime.now(timezone.utc).date()
-        # Look for events in the next `days` window (not just one exact date)
-        end_date    = (today + timedelta(days=days)).isoformat()
-        today_str   = today.isoformat()
 
-        cursor = db.reservations.find(
-            {
-                "event_date": {"$gte": today_str, "$lte": end_date},
-                "status": {"$nin": ["Cancelado", "Completado"]},
-            },
-            {"client_name": 1, "event_date": 1, "event_type": 1, "venue": 1, "_id": 0}
-        )
-        upcoming = await cursor.to_list(100)
+        all_events = []
+        for days in reminder_periods:
+            target = (today + timedelta(days=days)).isoformat()
+            cursor = db.reservations.find(
+                {
+                    "event_date": target,
+                    "status": {"$nin": ["Cancelado", "Completado"]},
+                },
+                {"client_name": 1, "event_date": 1, "event_time": 1, "event_type": 1, "venue": 1, "total_amount": 1, "advance_paid": 1, "_id": 0}
+            )
+            evs = await cursor.to_list(100)
+            for e in evs:
+                e["_days_label"] = f"{days} día(s)" if days > 0 else "hoy"
+                all_events.append(e)
 
-        channel    = settings_doc.get("notification_channel", "email")
-        email_sent = False
-        push_sent  = 0
-        errors     = []
+        await _dispatch_reminders(all_events, f"{len(reminder_periods)} período(s)", settings_doc)
 
-        # ── Resend email ──────────────────────────────────────
-        if channel in ("email", "both"):
-            api_key     = settings_doc.get("resend_api_key")
-            admin_email = settings_doc.get("admin_email")
-            if api_key and admin_email:
-                try:
-                    resend_lib.api_key = api_key
-                    html = _build_reminder_html(upcoming, days)
-                    params = {
-                        "from": "Cinema Productions <onboarding@resend.dev>",
-                        "to": [admin_email],
-                        "subject": f"Recordatorio: {len(upcoming)} evento(s) en los próximos {days} día(s)",
-                        "html": html,
-                    }
-                    await asyncio.to_thread(resend_lib.Emails.send, params)
-                    email_sent = True
-                except Exception as e:
-                    errors.append(f"Resend: {e}")
-            else:
-                errors.append("Email: configura admin_email y clave Resend en Ajustes")
+        channels_used = []
+        if settings_doc.get("resend_api_key") and settings_doc.get("admin_email"):
+            channels_used.append("email")
+        if settings_doc.get("telegram_enabled") and settings_doc.get("telegram_bot_token"):
+            channels_used.append("telegram")
+        if settings_doc.get("ntfy_enabled") and settings_doc.get("ntfy_topic"):
+            channels_used.append("ntfy")
+        channels_used.append("push")
 
-        # ── Gmail OAuth email ─────────────────────────────────
-        if not email_sent and channel in ("email", "both"):
-            try:
-                token_doc = await db.oauth_tokens.find_one({"provider": "gmail"}, {"_id": 0})
-                if token_doc and token_doc.get("refresh_token"):
-                    html = _build_reminder_html(upcoming, days)
-                    await _send_gmail(
-                        to=token_doc["email"],
-                        subject=f"Recordatorio: {len(upcoming)} evento(s) en los próximos {days} día(s)",
-                        html=html,
-                    )
-                    email_sent = True
-            except Exception as e:
-                errors.append(f"Gmail: {e}")
-
-        # ── Web Push ──────────────────────────────────────────
-        if channel in ("both", "whatsapp") or not email_sent:
-            try:
-                title = f"Recordatorio: {len(upcoming)} evento(s) próximos"
-                body  = ", ".join(r.get("client_name", "?") for r in upcoming[:3])
-                await _send_push_to_all(title, body, "/dashboard")
-                count = await db.push_subscriptions.count_documents({})
-                push_sent = count
-            except Exception as e:
-                errors.append(f"Push: {e}")
-
-        # Build response message
-        parts = []
-        if email_sent:
-            parts.append("correo enviado")
-        if push_sent:
-            parts.append(f"push a {push_sent} dispositivo(s)")
-        if not parts:
-            if errors:
-                raise HTTPException(
-                    status_code=400,
-                    detail="No se pudo enviar. " + " | ".join(errors)
-                )
-            parts.append("no hay método de envío configurado")
-
+        msg = f"{len(all_events)} evento(s) encontrado(s) — enviado vía {', '.join(channels_used)}"
         return {
             "success": True,
-            "events_found": len(upcoming),
-            "end_date": end_date,
-            "email_sent": email_sent,
-            "push_sent": push_sent,
-            "message": f"{len(upcoming)} evento(s) encontrados — {', '.join(parts)}",
+            "events_found": len(all_events),
+            "channels": channels_used,
+            "message": msg,
         }
     except HTTPException:
         raise
@@ -1449,6 +1521,41 @@ async def push_test():
         return {"ok": True, "sent_to": count}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
+
+@api_router.post("/telegram/test")
+async def telegram_test():
+    """Send a test Telegram message."""
+    doc = await db.app_settings.find_one({}, {"_id": 0})
+    if not doc or not doc.get("telegram_bot_token") or not doc.get("telegram_chat_id"):
+        raise HTTPException(status_code=400, detail="Configura el token y chat_id de Telegram primero")
+    try:
+        await _send_telegram(
+            doc["telegram_bot_token"],
+            doc["telegram_chat_id"],
+            "<b>Cinema Productions</b> — Prueba ✓\n\nTelegram conectado correctamente. Recibirás los recordatorios de eventos aquí.",
+        )
+        return {"ok": True, "message": "Mensaje enviado a Telegram"}
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=f"Error de Telegram: {e}")
+
+
+@api_router.post("/ntfy/test")
+async def ntfy_test():
+    """Send a test ntfy.sh notification."""
+    doc = await db.app_settings.find_one({}, {"_id": 0})
+    if not doc or not doc.get("ntfy_topic"):
+        raise HTTPException(status_code=400, detail="Configura el tema de ntfy primero")
+    try:
+        await _send_ntfy(
+            doc["ntfy_topic"],
+            "Cinema Productions — Prueba ✓",
+            "ntfy conectado correctamente. Recibirás los recordatorios de eventos aquí.",
+            priority="high",
+        )
+        return {"ok": True, "message": f"Notificación enviada al tema: {doc['ntfy_topic']}"}
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=f"Error de ntfy: {e}")
 
 
 
