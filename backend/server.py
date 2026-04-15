@@ -1525,10 +1525,10 @@ async def push_test():
 
 @api_router.post("/telegram/test")
 async def telegram_test():
-    """Send a test Telegram message."""
+    """Send a test Telegram message. Returns 200 always (K8s ingress strips 4xx bodies)."""
     doc = await db.app_settings.find_one({}, {"_id": 0})
     if not doc or not doc.get("telegram_bot_token") or not doc.get("telegram_chat_id"):
-        raise HTTPException(status_code=400, detail="Configura el token y chat_id de Telegram primero")
+        return {"ok": False, "error": "Configura el token y chat_id de Telegram primero"}
     try:
         await _send_telegram(
             doc["telegram_bot_token"],
@@ -1537,15 +1537,15 @@ async def telegram_test():
         )
         return {"ok": True, "message": "Mensaje enviado a Telegram"}
     except Exception as e:
-        raise HTTPException(status_code=400, detail=f"Error de Telegram: {e}")
+        return {"ok": False, "error": f"Error de Telegram: {e}"}
 
 
 @api_router.post("/ntfy/test")
 async def ntfy_test():
-    """Send a test ntfy.sh notification."""
+    """Send a test ntfy.sh notification. Returns 200 always (K8s ingress strips 4xx bodies)."""
     doc = await db.app_settings.find_one({}, {"_id": 0})
     if not doc or not doc.get("ntfy_topic"):
-        raise HTTPException(status_code=400, detail="Configura el tema de ntfy primero")
+        return {"ok": False, "error": "Configura el tema de ntfy primero"}
     try:
         await _send_ntfy(
             doc["ntfy_topic"],
@@ -1555,7 +1555,7 @@ async def ntfy_test():
         )
         return {"ok": True, "message": f"Notificación enviada al tema: {doc['ntfy_topic']}"}
     except Exception as e:
-        raise HTTPException(status_code=400, detail=f"Error de ntfy: {e}")
+        return {"ok": False, "error": f"Error de ntfy: {e}"}
 
 
 

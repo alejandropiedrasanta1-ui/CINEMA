@@ -264,8 +264,8 @@ export default function Settings() {
     try {
       const res = await fetch(`${process.env.REACT_APP_BACKEND_URL}/api/telegram/test`, { method: "POST" });
       const data = await res.json();
-      if (res.ok) toast({ title: data.message || "Mensaje enviado a Telegram ✓" });
-      else throw new Error(data.detail || "Error");
+      if (data.ok) toast({ title: data.message || "Mensaje enviado a Telegram ✓" });
+      else toast({ title: data.error || "Error al enviar a Telegram", variant: "destructive" });
     } catch (e) {
       toast({ title: e.message || "Error al enviar a Telegram", variant: "destructive" });
     } finally {
@@ -278,8 +278,8 @@ export default function Settings() {
     try {
       const res = await fetch(`${process.env.REACT_APP_BACKEND_URL}/api/ntfy/test`, { method: "POST" });
       const data = await res.json();
-      if (res.ok) toast({ title: data.message || "Notificación enviada vía ntfy ✓" });
-      else throw new Error(data.detail || "Error");
+      if (data.ok) toast({ title: data.message || "Notificación enviada vía ntfy ✓" });
+      else toast({ title: data.error || "Error al enviar ntfy", variant: "destructive" });
     } catch (e) {
       toast({ title: e.message || "Error al enviar ntfy", variant: "destructive" });
     } finally {
