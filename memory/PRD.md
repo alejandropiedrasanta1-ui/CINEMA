@@ -213,6 +213,17 @@ Sistema de gestión de reservas para eventos (bodas, quinceañeras, fiestas soci
 
 ---
 
+### Gmail OAuth2 + Web Push Notifications (Abril 2026) ✅
+- Flujo completo Google OAuth2 para Gmail API: `/api/oauth/gmail/start`, `/api/oauth/gmail/callback`, `/api/oauth/gmail/status`, `/api/oauth/gmail/disconnect`, `/api/oauth/gmail/test`
+- Botón "Conectar con Google / Gmail" en Ajustes → Recordatorios
+- Token de refresh almacenado en MongoDB (colección `oauth_tokens`)
+- Web Push API con VAPID keys: `/api/push/vapid-key`, `/api/push/subscribe`, `/api/push/test`
+- Service Worker (`/sw.js`) para notificaciones nativas en Windows/macOS
+- APScheduler que revisa cada minuto si es la hora configurada y envía Push + Gmail simultáneamente
+- Fix bug: `startNotifications` → `startPolling` en Settings.jsx
+- Fix: `getEventTypeName` importado correctamente en Settings.jsx
+- Nombres de tipos de evento persisten correctamente en localStorage tras recarga
+
 ## Backlog / Próximas mejoras
 
 ### P1 (Próximo sprint)
