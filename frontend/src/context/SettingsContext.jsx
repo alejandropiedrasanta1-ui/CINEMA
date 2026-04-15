@@ -1,4 +1,5 @@
 import { createContext, useContext, useState, useEffect, useCallback } from "react";
+import { setEventConfigOverrides } from "@/lib/eventConfig";
 
 export const THEMES = {
   indigo:   { id: "indigo",   name: "Índigo",    from: "#6366f1", to: "#9333ea", shadow: "rgba(99,102,241,0.28)",  blobs: ["#a5b4fc","#fda4af","#7dd3fc","#d9f99d"] },
@@ -224,6 +225,8 @@ export function SettingsProvider({ children }) {
     document.documentElement.dataset.preset = preset;
     document.documentElement.dataset.animations = String(animations);
     document.documentElement.dataset.radius = radius;
+    // Aplica overrides guardados en localStorage al inicio
+    setEventConfigOverrides(eventConfigs);
   }, []);
 
   const changeLanguage = (lang) => { setLanguage(lang); localStorage.setItem("lang", lang); };
@@ -246,6 +249,34 @@ export function SettingsProvider({ children }) {
     setRadius(r);
     localStorage.setItem("radius", r);
     document.documentElement.dataset.radius = r;
+  };
+
+  // ── Event type custom configs ──────────────────────────────
+  const [eventConfigs, setEventConfigs] = useState(() => {
+    try { return JSON.parse(localStorage.getItem("cp_event_configs") || "{}"); } catch { return {}; }
+  });
+
+  useEffect(() => {
+    setEventConfigOverrides(eventConfigs);
+  }, [eventConfigs]);
+
+  const updateEventTypeConfig = (typeName, updates) => {
+    setEventConfigs(prev => {
+      const next = { ...prev, [typeName]: { ...(prev[typeName] || {}), ...updates } };
+      localStorage.setItem("cp_event_configs", JSON.stringify(next));
+      setEventConfigOverrides(next);
+      return next;
+    });
+  };
+
+  const resetEventTypeConfig = (typeName) => {
+    setEventConfigs(prev => {
+      const next = { ...prev };
+      delete next[typeName];
+      localStorage.setItem("cp_event_configs", JSON.stringify(next));
+      setEventConfigOverrides(next);
+      return next;
+    });
   };
 
   // ── Logo settings ─────────────────────────────────────────────
@@ -276,6 +307,7 @@ export function SettingsProvider({ children }) {
       changeLanguage, changeCurrency, changeTheme,
       preset, animations, radius,
       changePreset, changeAnimations, changeRadius,
+      eventConfigs, updateEventTypeConfig, resetEventTypeConfig,
     }}>
       {children}
     </SettingsContext.Provider>

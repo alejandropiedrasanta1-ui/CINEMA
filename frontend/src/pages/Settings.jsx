@@ -4,9 +4,10 @@ import {
   Download, Globe, DollarSign, Palette, FileText,
   Bell, BellRing, Database, CheckCircle, XCircle, RefreshCw,
   Wifi, WifiOff, MessageCircle, Mail, Loader2, Monitor,
-  Package, AlertCircle, Sparkles, Zap, Layers, Clock
+  Package, AlertCircle, Sparkles, Zap, Layers, Clock, Pencil, RotateCcw,
 } from "lucide-react";
 import { useSettings, THEMES, CURRENCIES, PRESETS } from "@/context/SettingsContext";
+import { getEventConfig, AVAILABLE_ICONS, AVAILABLE_COLORS, EVENT_TYPES, ICON_MAP } from "@/lib/eventConfig";
 import { useToast } from "@/hooks/use-toast";
 import { api, getAppSettings, updateAppSettings, getDbStats, testDbConnection, switchDatabase, resetDatabase, sendTestReminder, getReservations } from "@/lib/api";
 import { generateAllReservationsPDF } from "@/lib/generatePDF";
@@ -59,7 +60,8 @@ function buildWhatsappLink(phone, events) {
 
 export default function Settings() {
   const { language, currency, theme, tr, changeLanguage, changeCurrency, changeTheme,
-          preset, animations, radius, changePreset, changeAnimations, changeRadius, formatCurrency } = useSettings();
+          preset, animations, radius, changePreset, changeAnimations, changeRadius, formatCurrency,
+          eventConfigs, updateEventTypeConfig, resetEventTypeConfig } = useSettings();
   const { start: startNotifications, notifyImmediate } = useNotifications();
   const { toast } = useToast();
   const s = tr.settings;
@@ -317,6 +319,9 @@ export default function Settings() {
 
   // ── PDF Export ────────────────────────────────────────────────
   const [pdfLoading, setPdfLoading] = useState(false);
+
+  // ── Event Type Editor ────────────────────────────────────────
+  const [activeEventType, setActiveEventType] = useState(null);
 
   const handleExportPDF = async () => {
     setPdfLoading(true);
@@ -611,6 +616,177 @@ export default function Settings() {
                   </motion.button>
                 ))}
               </div>
+            </div>
+
+            <div className="border-t border-white/40" />
+
+            {/* 5 ── EVENT TYPE ICONS & COLORS ──────────────────── */}
+            <div>
+              <p className="text-[11px] font-black text-slate-400 uppercase tracking-widest mb-3">
+                {language === "es" ? "Iconos y Colores por Tipo de Evento" : "Event Type Icons & Colors"}
+              </p>
+              <p className="text-xs text-slate-400 mb-4">
+                {language === "es"
+                  ? "Toca un tipo de evento para cambiar su icono y color. Se aplica en Dashboard, Calendario y Reservaciones."
+                  : "Tap an event type to change its icon and color. Applied in Dashboard, Calendar and Reservations."}
+              </p>
+
+              {/* Event type cards grid */}
+              <div className="grid grid-cols-3 gap-2.5">
+                {EVENT_TYPES.map((typeName) => {
+                  const cfg = getEventConfig(typeName);
+                  const isActive = activeEventType === typeName;
+                  return (
+                    <motion.button
+                      key={typeName}
+                      whileHover={{ y: -2, scale: 1.02 }}
+                      whileTap={{ scale: 0.97 }}
+                      onClick={() => setActiveEventType(isActive ? null : typeName)}
+                      data-testid={`event-type-edit-${typeName.replace(/\s+/g, "-").toLowerCase()}`}
+                      className="relative flex flex-col items-center gap-2 py-4 px-3 rounded-2xl transition-all text-center"
+                      style={{
+                        background: isActive ? cfg.fg + "18" : cfg.bg || cfg.fg + "10",
+                        border: isActive ? `2px solid ${cfg.fg}` : `2px solid ${cfg.border || cfg.fg + "30"}`,
+                      }}
+                    >
+                      {isActive && (
+                        <div className="absolute top-1.5 right-1.5 w-4 h-4 rounded-full flex items-center justify-center"
+                          style={{ background: cfg.fg }}>
+                          <CheckCircle size={9} className="text-white" />
+                        </div>
+                      )}
+                      {eventConfigs[typeName] && !isActive && (
+                        <div className="absolute top-1.5 right-1.5 w-3 h-3 rounded-full"
+                          style={{ background: cfg.fg }} />
+                      )}
+                      <div className="w-11 h-11 rounded-2xl flex items-center justify-center"
+                        style={{ background: cfg.fg + "1c" }}>
+                        <cfg.icon size={20} style={{ color: cfg.fg }} strokeWidth={1.8} />
+                      </div>
+                      <p className="text-[10px] font-bold leading-tight" style={{ color: cfg.fg }}>
+                        {typeName}
+                      </p>
+                      <div className="flex items-center gap-1">
+                        <Pencil size={9} style={{ color: cfg.fg, opacity: 0.6 }} />
+                        <span className="text-[9px] font-medium" style={{ color: cfg.fg, opacity: 0.6 }}>
+                          {language === "es" ? "editar" : "edit"}
+                        </span>
+                      </div>
+                    </motion.button>
+                  );
+                })}
+              </div>
+
+              {/* Expanded editor */}
+              {activeEventType && (() => {
+                const cfg = getEventConfig(activeEventType);
+                const customCfg = eventConfigs[activeEventType] || {};
+                return (
+                  <motion.div
+                    key={activeEventType}
+                    initial={{ opacity: 0, y: -8 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 0.22, ease: [0.22, 1, 0.36, 1] }}
+                    className="mt-3 rounded-2xl overflow-hidden"
+                    style={{ background: cfg.fg + "08", border: `1.5px solid ${cfg.fg}30` }}
+                  >
+                    {/* Editor header */}
+                    <div className="flex items-center justify-between px-4 py-3 border-b"
+                      style={{ borderColor: cfg.fg + "20" }}>
+                      <div className="flex items-center gap-2.5">
+                        <div className="w-8 h-8 rounded-xl flex items-center justify-center"
+                          style={{ background: cfg.fg + "1c" }}>
+                          <cfg.icon size={15} style={{ color: cfg.fg }} />
+                        </div>
+                        <p className="text-sm font-black text-slate-800">{activeEventType}</p>
+                      </div>
+                      {eventConfigs[activeEventType] && (
+                        <motion.button
+                          whileHover={{ scale: 1.05 }}
+                          whileTap={{ scale: 0.95 }}
+                          onClick={() => resetEventTypeConfig(activeEventType)}
+                          data-testid={`event-type-reset-${activeEventType.replace(/\s+/g, "-").toLowerCase()}`}
+                          className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-[10px] font-bold text-slate-500 hover:text-slate-700 transition-colors"
+                          style={{ background: "rgba(255,255,255,0.6)" }}
+                        >
+                          <RotateCcw size={10} />
+                          {language === "es" ? "Restaurar" : "Reset"}
+                        </motion.button>
+                      )}
+                    </div>
+
+                    <div className="p-4 space-y-4">
+                      {/* Color palette */}
+                      <div>
+                        <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2.5">
+                          {language === "es" ? "Color" : "Color"}
+                        </p>
+                        <div className="grid grid-cols-10 gap-1.5">
+                          {AVAILABLE_COLORS.map(color => {
+                            const isSel = (customCfg.fg || cfg.fg) === color;
+                            return (
+                              <motion.button
+                                key={color}
+                                whileHover={{ scale: 1.2, y: -1 }}
+                                whileTap={{ scale: 0.9 }}
+                                onClick={() => updateEventTypeConfig(activeEventType, { fg: color })}
+                                data-testid={`color-swatch-${color.replace("#", "")}`}
+                                title={color}
+                                className="w-full aspect-square rounded-lg transition-all relative"
+                                style={{
+                                  background: color,
+                                  boxShadow: isSel ? `0 0 0 2px white, 0 0 0 4px ${color}` : `0 2px 4px ${color}55`,
+                                  transform: isSel ? "scale(1.15)" : undefined,
+                                }}
+                              >
+                                {isSel && (
+                                  <div className="absolute inset-0 flex items-center justify-center">
+                                    <CheckCircle size={10} className="text-white drop-shadow" />
+                                  </div>
+                                )}
+                              </motion.button>
+                            );
+                          })}
+                        </div>
+                      </div>
+
+                      {/* Icon picker */}
+                      <div>
+                        <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2.5">
+                          {language === "es" ? "Icono" : "Icon"}
+                        </p>
+                        <div className="grid grid-cols-9 gap-1.5">
+                          {AVAILABLE_ICONS.map(({ name, component: IconComp }) => {
+                            const isSel = (customCfg.iconName || cfg.iconName) === name;
+                            return (
+                              <motion.button
+                                key={name}
+                                whileHover={{ scale: 1.15, y: -1 }}
+                                whileTap={{ scale: 0.9 }}
+                                onClick={() => updateEventTypeConfig(activeEventType, { iconName: name })}
+                                data-testid={`icon-pick-${name.toLowerCase()}`}
+                                title={name}
+                                className="w-full aspect-square rounded-xl flex items-center justify-center transition-all"
+                                style={{
+                                  background: isSel ? cfg.fg : "rgba(255,255,255,0.6)",
+                                  border: isSel ? `2px solid ${cfg.fg}` : "2px solid rgba(226,232,240,0.7)",
+                                  boxShadow: isSel ? `0 4px 12px ${cfg.fg}44` : undefined,
+                                }}
+                              >
+                                <IconComp
+                                  size={15}
+                                  style={{ color: isSel ? "white" : "#64748b" }}
+                                  strokeWidth={1.8}
+                                />
+                              </motion.button>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    </div>
+                  </motion.div>
+                );
+              })()}
             </div>
 
           </div>
