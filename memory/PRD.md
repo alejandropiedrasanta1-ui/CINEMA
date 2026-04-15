@@ -66,7 +66,21 @@ Sistema de gestión de reservas para eventos (bodas, quinceañeras, fiestas soci
 - Sub-totales en TeamSection: "Pagado al equipo" y "Pendiente equipo"
 - Panel en página Socios: 4 cards → Total Eventos, Costo Equipo, Pagado Equipo, Ingreso Real
 
-### Apariencia y Personalización (Iteración 10 - Feb 2026) ✅
+### Notificaciones Windows + PDF Export (Iteración 11 - Feb 2026) ✅
+- **Notificaciones del Sistema (Windows/macOS)** en Ajustes → Recordatorios:
+  - Bloque con estado dinámico: ACTIVO / BLOQUEADO / INACTIVO
+  - Botón "Activar notificaciones de Windows" → solicita permiso al navegador
+  - Cuando activo: muestra estado verde + botón "Enviar notificación de prueba"
+  - Cuando bloqueado: instrucciones para reactivar desde config del navegador
+  - Usa `Notification.requestPermission()` nativo del navegador
+- **Reporte PDF Visual** en Ajustes → Exportar Datos:
+  - Botón rojo "Exportar reporte PDF — todas las reservas"
+  - `generateAllReservationsPDF()` en `/lib/generatePDF.js`
+  - Encabezado oscuro con branding + barra de estadísticas (activas, confirmadas, saldo)
+  - Reservas agrupadas por estado (Confirmado/Pendiente/Completado/Cancelado) con colores
+  - Columnas: Cliente, Tipo de Evento, Fecha, Total, Anticipo
+  - Filas alternas, divisores, footer con paginación
+
 - **3 Presets de Diseño**: Glass Aurora (glassmorphismo + blobs), Crystal (cristal opaco), Minimal (blanco sólido sin blobs)
 - Cada preset tiene mini-preview visual interactiva en la tarjeta de selección
 - CSS overrides via `data-preset` attribute en `<html>` para cambiar `.glass`, `.glass-*`, `body bg`, y `.mesh-bg`
