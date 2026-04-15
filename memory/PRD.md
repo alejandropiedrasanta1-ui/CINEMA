@@ -251,7 +251,26 @@ Sistema de gestión de reservas para eventos (bodas, quinceañeras, fiestas soci
 - Endpoint mejorado: busca eventos en ventana N días, intenta Resend → Push en cascada
 - **Email verificado: llegó a alejandropiedrasanta1@gmail.com correctamente ✓**
 
-### Apariencia avanzada + Config del negocio (Abril 2026) ✅
+### Personalización completa + Publicar en Línea (Abril 2026) ✅
+**13 nuevas opciones de apariencia** — todas con persistencia en localStorage + data-* attributes en HTML:
+- Color de acento personalizado (color picker + hex input)
+- Familia de fuente (8 opciones: Satoshi, Cabinet, Outfit, Space Grotesk, Poppins, Sora, DM Sans, Mono)
+- Estilo de tarjetas (glass/sólido/mínimal/neon/escarcha)
+- Velocidad de animaciones (lenta/normal/rápida/instante)
+- Profundidad de sombras (plano/normal/profundo/glow)
+- Ancho del contenido (estrecho/normal/ancho/completo)
+- Estilo de botones (redondeado/pill/angular)
+- Barra de desplazamiento (normal/fina/oculta)
+- Efecto hover (normal/glow/elevar/scale)
+- Saturación de color (apagado/normal/vívido)
+- Fondo gradiente personalizado (2 color pickers)
+
+**Publicar en Línea** (nueva sección en Ajustes → App de Escritorio):
+- Guías paso a paso para: Hostinger VPS, Railway.app, Render.com, DigitalOcean
+- Descargar .env.template (/api/deployment/env-template)
+- Descargar docker-compose.yml (/api/deployment/docker-compose)
+- Health check: ping a URL personalizada (/api/deployment/health-check)
+- Guía MongoDB Atlas gratuito (6 pasos)
 - **Modo Oscuro**: toggle en Ajustes → Apariencia → Avanzado. CSS [data-dark="true"] overrides en glassmorphism, sidebar, inputs, textos. Persiste en localStorage.
 - **Tamaño de texto**: chips Compacto (88%) / Normal / Grande (110%) vía CSS zoom data-attribute
 - **Intensidad de fondo**: chips Apagado / Suave / Normal / Vivido - controla opacidad blobs
