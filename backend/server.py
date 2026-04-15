@@ -4,6 +4,7 @@ from contextlib import asynccontextmanager
 from dotenv import load_dotenv
 import csv
 import io
+import re
 import asyncio
 import httpx
 from starlette.middleware.cors import CORSMiddleware
@@ -501,6 +502,213 @@ async def clear_all_data(auto_backup: bool = True):
         "deleted_socios": soc_result.deleted_count,
         "auto_backup_created": auto_backup,
     }
+
+
+@api_router.post("/data/cleanup")
+async def cleanup_data(action: str = "cancelled", months_old: int = 6):
+    """
+    Limpieza selectiva de datos.
+    action: 'cancelled' | 'old_completed' | 'preview'
+    """
+    await _create_backup(label="auto_pre_cleanup")
+
+    if action == "cancelled":
+        result = await db.reservations.delete_many({"status": "Cancelado"})
+        return {"ok": True, "deleted": result.deleted_count, "message": f"{result.deleted_count} reservas canceladas eliminadas"}
+
+    elif action == "old_completed":
+        cutoff = datetime.now(timezone.utc) - timedelta(days=months_old * 30)
+        cutoff_str = cutoff.strftime("%Y-%m-%d")
+        # Find completed reservations older than cutoff
+        cursor = db.reservations.find({"status": "Completado"})
+        docs = await cursor.to_list(100000)
+        ids_to_delete = []
+        for d in docs:
+            date_str = d.get("event_date", "")
+            if date_str and date_str < cutoff_str:
+                ids_to_delete.append(d["_id"])
+        if ids_to_delete:
+            result = await db.reservations.delete_many({"_id": {"$in": ids_to_delete}})
+            return {"ok": True, "deleted": result.deleted_count, "message": f"{result.deleted_count} reservas completadas antiguas eliminadas"}
+        return {"ok": True, "deleted": 0, "message": "No hay reservas completadas antiguas para eliminar"}
+
+    elif action == "preview":
+        # Return counts without deleting
+        cancelled_count = await db.reservations.count_documents({"status": "Cancelado"})
+        cutoff = datetime.now(timezone.utc) - timedelta(days=months_old * 30)
+        cutoff_str = cutoff.strftime("%Y-%m-%d")
+        cursor = db.reservations.find({"status": "Completado"})
+        docs = await cursor.to_list(100000)
+        old_completed = sum(1 for d in docs if d.get("event_date", "") < cutoff_str)
+        return {
+            "ok": True,
+            "cancelled_count": cancelled_count,
+            "old_completed_count": old_completed,
+            "months_threshold": months_old,
+        }
+
+    return {"ok": False, "message": "Acción no reconocida"}
+
+
+@api_router.post("/import/reservations")
+async def import_reservations_csv(file: UploadFile = File(...)):
+    """Import reservations from a CSV file. Returns count of imported records."""
+    content = await file.read()
+    try:
+        text = content.decode("utf-8-sig")  # handle BOM
+    except UnicodeDecodeError:
+        text = content.decode("latin-1")
+
+    reader = csv.DictReader(io.StringIO(text))
+
+    # Column mapping: accept various header names
+    FIELD_MAP = {
+        "client_name":  ["client_name", "nombre", "cliente", "name"],
+        "client_phone": ["client_phone", "telefono", "teléfono", "phone"],
+        "client_email": ["client_email", "email", "correo"],
+        "event_type":   ["event_type", "tipo_evento", "tipo", "type"],
+        "event_date":   ["event_date", "fecha", "date", "fecha_evento"],
+        "event_time":   ["event_time", "hora", "time"],
+        "venue":        ["venue", "lugar", "location", "ubicacion"],
+        "guests_count": ["guests_count", "invitados", "guests"],
+        "total_amount": ["total_amount", "total", "monto_total"],
+        "advance_paid": ["advance_paid", "anticipo", "advance", "pago_anticipado"],
+        "status":       ["status", "estado"],
+        "notes":        ["notes", "notas", "note"],
+    }
+
+    def find_col(headers, candidates):
+        headers_lower = {h.lower().strip(): h for h in headers}
+        for c in candidates:
+            if c.lower() in headers_lower:
+                return headers_lower[c.lower()]
+        return None
+
+    imported = 0
+    errors   = []
+    now_str  = datetime.now(timezone.utc).isoformat()
+
+    for i, row in enumerate(reader, start=2):
+        try:
+            headers = list(row.keys())
+            def get(field):
+                col = find_col(headers, FIELD_MAP.get(field, [field]))
+                return row.get(col, "").strip() if col else ""
+
+            client_name = get("client_name")
+            if not client_name:
+                errors.append(f"Fila {i}: nombre vacío — omitida")
+                continue
+
+            event_date = get("event_date") or ""
+            total_raw  = get("total_amount") or "0"
+            advance_raw = get("advance_paid") or "0"
+
+            # Sanitize numbers
+            def to_float(s):
+                s = re.sub(r"[^\d.]", "", s)
+                return float(s) if s else 0.0
+
+            doc = {
+                "client_name":   client_name,
+                "client_phone":  get("client_phone") or None,
+                "client_email":  get("client_email") or None,
+                "event_type":    get("event_type") or "Otro",
+                "event_date":    event_date,
+                "event_time":    get("event_time") or None,
+                "venue":         get("venue") or None,
+                "guests_count":  int(get("guests_count")) if get("guests_count").isdigit() else None,
+                "total_amount":  to_float(total_raw),
+                "advance_paid":  to_float(advance_raw),
+                "status":        get("status") or "Pendiente",
+                "notes":         get("notes") or None,
+                "receipts":      [],
+                "locations":     [],
+                "assigned_partners": [],
+                "created_at":    now_str,
+                "imported_from_csv": True,
+            }
+            await db.reservations.insert_one(doc)
+            imported += 1
+        except Exception as e:
+            errors.append(f"Fila {i}: {str(e)}")
+
+    return {
+        "ok": True,
+        "imported": imported,
+        "errors": errors[:10],  # limit error list
+        "message": f"{imported} reservas importadas correctamente" + (f" ({len(errors)} errores)" if errors else ""),
+    }
+
+
+@api_router.get("/export/reservations/xlsx")
+async def export_reservations_xlsx():
+    """Export reservations as Excel (.xlsx) file."""
+    try:
+        import openpyxl
+        from openpyxl.styles import Font, PatternFill, Alignment
+        from openpyxl.utils import get_column_letter
+        import io as _io
+
+        cursor = db.reservations.find({}, {"_id": 0, "receipts": 0, "assigned_partners": 0, "locations": 0})
+        docs   = await cursor.to_list(100000)
+
+        wb = openpyxl.Workbook()
+        ws = wb.active
+        ws.title = "Reservas"
+
+        headers = ["Nombre", "Teléfono", "Email", "Tipo Evento", "Fecha", "Hora",
+                   "Lugar", "Invitados", "Total", "Anticipo", "Saldo", "Estado", "Notas", "Creado"]
+        keys    = ["client_name", "client_phone", "client_email", "event_type", "event_date",
+                   "event_time", "venue", "guests_count", "total_amount", "advance_paid",
+                   None, "status", "notes", "created_at"]
+
+        # Header row
+        header_fill = PatternFill("solid", fgColor="4F46E5")
+        header_font = Font(color="FFFFFF", bold=True, size=11)
+        for col, header in enumerate(headers, start=1):
+            cell = ws.cell(row=1, column=col, value=header)
+            cell.fill = header_fill
+            cell.font = header_font
+            cell.alignment = Alignment(horizontal="center")
+
+        # Data rows
+        alt_fill = PatternFill("solid", fgColor="F8F7FF")
+        for row_idx, doc in enumerate(docs, start=2):
+            fill = alt_fill if row_idx % 2 == 0 else None
+            for col_idx, key in enumerate(keys, start=1):
+                if key is None:
+                    # Saldo = total - anticipo
+                    total   = doc.get("total_amount") or 0
+                    advance = doc.get("advance_paid") or 0
+                    value   = total - advance
+                else:
+                    value = doc.get(key, "")
+                    if isinstance(value, float) and value == int(value):
+                        value = int(value)
+                cell = ws.cell(row=row_idx + 1 - 1, column=col_idx, value=value)
+                if fill:
+                    cell.fill = fill
+
+        # Auto-width
+        for col in ws.columns:
+            max_len = max((len(str(c.value or "")) for c in col), default=8)
+            ws.column_dimensions[get_column_letter(col[0].column)].width = min(max_len + 4, 40)
+
+        buf = _io.BytesIO()
+        wb.save(buf)
+        buf.seek(0)
+
+        ts = datetime.now(timezone.utc).strftime("%Y%m%d_%H%M")
+        return Response(
+            content=buf.getvalue(),
+            media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            headers={"Content-Disposition": f'attachment; filename="reservaciones_{ts}.xlsx"'},
+        )
+    except ImportError:
+        return JSONResponse({"error": "openpyxl no instalado"}, status_code=500)
+    except Exception as e:
+        return JSONResponse({"error": str(e)}, status_code=500)
 
 
 # ─── Backup helpers ───────────────────────────────────────────

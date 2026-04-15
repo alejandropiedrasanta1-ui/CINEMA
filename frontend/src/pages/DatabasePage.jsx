@@ -1,10 +1,12 @@
 import React, { useEffect, useState, useRef } from "react";
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 import {
   Database, Download, Upload, Save, Trash2, RefreshCw,
   Wifi, WifiOff, CheckCircle, XCircle, Loader2, FileText,
   AlertCircle, ChevronRight, Clock, HardDrive, BarChart3,
-  ShieldCheck, Link2, ArrowRight,
+  ShieldCheck, Link2, ArrowRight, FolderOpen, Zap, Timer,
+  Play, Square, RotateCcw, Folder, FileSpreadsheet, Plus,
+  Star, Bookmark, ChevronDown, Sparkles, Scissors,
 } from "lucide-react";
 import { useSettings } from "@/context/SettingsContext";
 import { useToast } from "@/hooks/use-toast";
@@ -14,8 +16,43 @@ import {
   deleteBackupFile, downloadBackupUrl, downloadBackupFileUrl, restoreBackup,
 } from "@/lib/api";
 import { generateAllReservationsPDF } from "@/lib/generatePDF";
+import { useAutoBackup } from "@/hooks/useAutoBackup";
 
 const BASE = process.env.REACT_APP_BACKEND_URL;
+
+// ─── Countdown helper ────────────────────────────────────────────────────────
+function useCountdown(targetDate) {
+  const [display, setDisplay] = useState("");
+  useEffect(() => {
+    if (!targetDate) { setDisplay(""); return; }
+    const update = () => {
+      const diff = targetDate - Date.now();
+      if (diff <= 0) { setDisplay("ahora"); return; }
+      const h = Math.floor(diff / 3_600_000);
+      const m = Math.floor((diff % 3_600_000) / 60_000);
+      const s = Math.floor((diff % 60_000) / 1_000);
+      if (h > 0) setDisplay(`${h}h ${m}m`);
+      else if (m > 0) setDisplay(`${m}m ${s}s`);
+      else setDisplay(`${s}s`);
+    };
+    update();
+    const id = setInterval(update, 1000);
+    return () => clearInterval(id);
+  }, [targetDate]);
+  return display;
+}
+
+// ─── Time-ago helper ─────────────────────────────────────────────────────────
+function timeAgo(date) {
+  if (!date) return null;
+  const diff = Date.now() - date;
+  const m = Math.floor(diff / 60_000);
+  if (m < 1) return "hace un momento";
+  if (m < 60) return `hace ${m} min`;
+  const h = Math.floor(m / 60);
+  if (h < 24) return `hace ${h}h`;
+  return `hace ${Math.floor(h / 24)}d`;
+}
 
 function fmtSize(bytes) {
   if (bytes < 1024) return `${bytes} B`;
@@ -40,6 +77,26 @@ export default function DatabasePage() {
   const { toast } = useToast();
   const s = tr;
 
+  // ── Auto-backup ────────────────────────────────────────────────────────────
+  const autoBackup = useAutoBackup(`${BASE}/api/backup/download`);
+  const countdown  = useCountdown(autoBackup.nextBackup);
+  const [lastAgoDisplay, setLastAgoDisplay] = useState("");
+
+  useEffect(() => {
+    setLastAgoDisplay(timeAgo(autoBackup.lastBackup));
+    const id = setInterval(() => setLastAgoDisplay(timeAgo(autoBackup.lastBackup)), 15_000);
+    return () => clearInterval(id);
+  }, [autoBackup.lastBackup]);
+
+  // Notify on each auto-backup
+  const prevCountRef = useRef(autoBackup.backupCount);
+  useEffect(() => {
+    if (autoBackup.backupCount > prevCountRef.current) {
+      prevCountRef.current = autoBackup.backupCount;
+      toast({ title: `Respaldo automático guardado ✓  (${autoBackup.backupCount} total)` });
+    }
+  }, [autoBackup.backupCount]);
+
   const [dbStats, setDbStats]           = useState(null);
   const [dbLoading, setDbLoading]       = useState(true);
   const [newDbUrl, setNewDbUrl]         = useState("");
@@ -58,9 +115,39 @@ export default function DatabasePage() {
 
   const [pdfLoading, setPdfLoading] = useState(false);
 
+  // ── CSV Import state ──────────────────────────────────────────────────────
+  const csvImportRef                          = useRef(null);
+  const [csvImportLoading, setCsvImportLoading] = useState(false);
+  const [csvImportResult, setCsvImportResult]   = useState(null);
+
+  // ── Cleanup state ─────────────────────────────────────────────────────────
+  const [cleanupPreview, setCleanupPreview] = useState(null);
+  const [cleanupLoading, setCleanupLoading] = useState(false);
+  const [cleanupAction, setCleanupAction]   = useState(null); // 'cancelled'|'old_completed'
+
+  // ── Connection presets (localStorage) ─────────────────────────────────────
+  const [presets, setPresets] = useState(() => {
+    try { return JSON.parse(localStorage.getItem("cp_db_presets")) || []; } catch { return []; }
+  });
+  const [presetName, setPresetName] = useState("");
+  const [showAddPreset, setShowAddPreset] = useState(false);
+
+  const savePresets = (list) => {
+    setPresets(list);
+    localStorage.setItem("cp_db_presets", JSON.stringify(list));
+  };
+
   useEffect(() => { loadAll(); }, []);
 
-  const loadAll = () => { loadDbStats(); loadBackupHistory(); };
+  const loadAll = () => { loadDbStats(); loadBackupHistory(); loadCleanupPreview(); };
+
+  const loadCleanupPreview = async () => {
+    try {
+      const res = await fetch(`${BASE}/api/data/cleanup?action=preview&months_old=6`, { method: "POST" });
+      const data = await res.json();
+      if (data.ok) setCleanupPreview(data);
+    } catch {}
+  };
 
   const loadDbStats = () => {
     setDbLoading(true);
@@ -176,6 +263,50 @@ export default function DatabasePage() {
     } catch { toast({ title: "Error al exportar", variant: "destructive" }); }
   };
 
+  const handleExportXLSX = async () => {
+    try {
+      const res = await fetch(`${BASE}/api/export/reservations/xlsx`);
+      if (!res.ok) throw new Error("Error al generar Excel");
+      const blob = await res.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement("a"); a.href = url;
+      a.download = `reservaciones_${new Date().toISOString().slice(0,10)}.xlsx`;
+      document.body.appendChild(a); a.click();
+      document.body.removeChild(a); window.URL.revokeObjectURL(url);
+      toast({ title: "Excel descargado ✓" });
+    } catch (e) { toast({ title: e.message || "Error al exportar Excel", variant: "destructive" }); }
+  };
+
+  const handleCsvImport = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setCsvImportLoading(true); setCsvImportResult(null);
+    try {
+      const form = new FormData();
+      form.append("file", file);
+      const res = await fetch(`${BASE}/api/import/reservations`, { method: "POST", body: form });
+      const data = await res.json();
+      setCsvImportResult(data);
+      toast({ title: data.message });
+      if (data.imported > 0) { loadDbStats(); loadCleanupPreview(); }
+    } catch { toast({ title: "Error al importar CSV", variant: "destructive" }); }
+    finally {
+      setCsvImportLoading(false);
+      if (csvImportRef.current) csvImportRef.current.value = "";
+    }
+  };
+
+  const handleCleanup = async (action) => {
+    setCleanupLoading(true); setCleanupAction(action);
+    try {
+      const res = await fetch(`${BASE}/api/data/cleanup?action=${action}&months_old=6`, { method: "POST" });
+      const data = await res.json();
+      toast({ title: data.message });
+      loadDbStats(); loadCleanupPreview();
+    } catch { toast({ title: "Error en limpieza", variant: "destructive" }); }
+    finally { setCleanupLoading(false); setCleanupAction(null); }
+  };
+
   const handleExportPDF = async () => {
     setPdfLoading(true);
     try {
@@ -200,6 +331,220 @@ export default function DatabasePage() {
       </motion.div>
 
       <motion.div variants={stagger} initial="hidden" animate="show" className="space-y-4">
+
+        {/* ── RESPALDO AUTOMÁTICO EN PC ── */}
+        <motion.div variants={fadeUp}>
+          <div
+            style={{ background: autoBackup.config.enabled ? "linear-gradient(135deg,rgba(236,253,245,0.95),rgba(209,250,229,0.7))" : undefined }}
+            className={`glass rounded-3xl overflow-hidden transition-all duration-300 ${autoBackup.config.enabled ? "ring-2 ring-emerald-400/50" : ""}`}>
+
+            {/* Header */}
+            <div className="flex items-center justify-between px-5 py-4 border-b border-white/40">
+              <div className="flex items-center gap-3">
+                <div className={`w-9 h-9 rounded-xl flex items-center justify-center transition-colors ${autoBackup.config.enabled ? "bg-emerald-200" : "bg-slate-100"}`}>
+                  <Zap size={16} className={autoBackup.config.enabled ? "text-emerald-700" : "text-slate-400"} />
+                </div>
+                <div>
+                  <p className="text-sm font-black text-slate-900" style={{ fontFamily: "Cabinet Grotesk, sans-serif" }}>
+                    Respaldo Automático al PC
+                  </p>
+                  <p className="text-[11px] text-slate-400">Guarda copias automáticas en tu computadora</p>
+                </div>
+              </div>
+              {/* Status badge */}
+              <div className="flex items-center gap-2">
+                {autoBackup.config.enabled && (
+                  <span className="flex items-center gap-1.5 text-[10px] font-black px-3 py-1 rounded-full bg-emerald-100 text-emerald-700">
+                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                    ACTIVO
+                  </span>
+                )}
+                {/* Toggle */}
+                <button
+                  data-testid="auto-backup-toggle"
+                  onClick={() => {
+                    const next = !autoBackup.config.enabled;
+                    autoBackup.updateConfig({ enabled: next });
+                    if (next) toast({ title: "Respaldo automático activado ✓" });
+                    else toast({ title: "Respaldo automático desactivado" });
+                  }}
+                  className={`w-11 h-6 rounded-full transition-all duration-300 relative ${autoBackup.config.enabled ? "bg-emerald-500" : "bg-slate-200"}`}>
+                  <span className={`absolute top-0.5 w-5 h-5 bg-white rounded-full shadow transition-all duration-300 ${autoBackup.config.enabled ? "left-[22px]" : "left-0.5"}`} />
+                </button>
+              </div>
+            </div>
+
+            <div className="p-5 space-y-4">
+
+              {/* ── Status display when active ── */}
+              <AnimatePresence>
+                {autoBackup.config.enabled && (
+                  <motion.div key="status" initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }} exit={{ opacity: 0, height: 0 }}
+                    className="grid grid-cols-3 gap-3">
+                    <div className="bg-emerald-50 rounded-2xl p-3 text-center">
+                      <div className="text-lg font-black text-emerald-700" style={{ fontFamily: "Cabinet Grotesk, sans-serif" }}>{autoBackup.backupCount}</div>
+                      <div className="text-[10px] font-bold text-emerald-500 mt-0.5">Respaldos esta sesión</div>
+                    </div>
+                    <div className="bg-white/70 rounded-2xl p-3 text-center border border-emerald-100">
+                      <div className="text-xs font-black text-slate-700 truncate">{lastAgoDisplay || "—"}</div>
+                      <div className="text-[10px] font-bold text-slate-400 mt-0.5">Último respaldo</div>
+                    </div>
+                    <div className="bg-white/70 rounded-2xl p-3 text-center border border-emerald-100">
+                      <div className="text-xs font-black text-slate-700">{countdown || "—"}</div>
+                      <div className="text-[10px] font-bold text-slate-400 mt-0.5">Próximo en</div>
+                    </div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+
+              {/* ── Interval selector ── */}
+              <div>
+                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2.5">Frecuencia de respaldo</p>
+                <div className="flex flex-wrap gap-2">
+                  {[
+                    { label: "30 min", value: 30 },
+                    { label: "1 hora", value: 60 },
+                    { label: "2 horas", value: 120 },
+                    { label: "6 horas", value: 360 },
+                    { label: "12 horas", value: 720 },
+                    { label: "24 horas", value: 1440 },
+                  ].map(({ label, value }) => {
+                    const active = autoBackup.config.intervalMinutes === value;
+                    return (
+                      <motion.button key={value} whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}
+                        data-testid={`interval-${value}`}
+                        onClick={() => autoBackup.updateConfig({ intervalMinutes: value })}
+                        className={`px-3.5 py-1.5 rounded-full text-xs font-bold transition-all ${active ? "bg-emerald-500 text-white shadow-sm" : "bg-white/60 text-slate-600 border border-slate-200/80 hover:bg-white"}`}>
+                        {label}
+                      </motion.button>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* ── Mode selector ── */}
+              <div>
+                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2.5">Destino del respaldo</p>
+                <div className="grid grid-cols-2 gap-2.5">
+
+                  {/* Downloads folder */}
+                  <motion.button whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}
+                    data-testid="mode-downloads"
+                    onClick={() => autoBackup.updateConfig({ mode: "downloads" })}
+                    className={`flex flex-col items-start gap-2 p-4 rounded-2xl border-2 transition-all text-left ${autoBackup.config.mode === "downloads" ? "border-emerald-400 bg-emerald-50/60" : "border-slate-200/70 bg-white/50 hover:border-slate-300"}`}>
+                    <div className={`w-8 h-8 rounded-xl flex items-center justify-center ${autoBackup.config.mode === "downloads" ? "bg-emerald-200" : "bg-slate-100"}`}>
+                      <Download size={14} className={autoBackup.config.mode === "downloads" ? "text-emerald-700" : "text-slate-400"} />
+                    </div>
+                    <div>
+                      <p className={`text-xs font-black ${autoBackup.config.mode === "downloads" ? "text-emerald-800" : "text-slate-700"}`}>Carpeta Descargas</p>
+                      <p className="text-[10px] text-slate-400 mt-0.5">Descarga automática a tu carpeta Descargas del sistema</p>
+                    </div>
+                    {autoBackup.config.mode === "downloads" && (
+                      <span className="text-[10px] font-black text-emerald-600 flex items-center gap-1">
+                        <CheckCircle size={10} /> Seleccionado
+                      </span>
+                    )}
+                  </motion.button>
+
+                  {/* Fixed custom folder */}
+                  <motion.button whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}
+                    data-testid="mode-folder"
+                    onClick={async () => {
+                      if (!autoBackup.fsSupportado) {
+                        toast({ title: "Tu navegador no soporta carpeta fija (usa Chrome o Edge)", variant: "destructive" });
+                        return;
+                      }
+                      if (autoBackup.config.folderName && autoBackup.config.mode === "folder") {
+                        autoBackup.updateConfig({ mode: "folder" });
+                        return;
+                      }
+                      const ok = await autoBackup.pickFolder();
+                      if (ok) toast({ title: `Carpeta seleccionada: ${autoBackup.config.folderName} ✓` });
+                    }}
+                    className={`flex flex-col items-start gap-2 p-4 rounded-2xl border-2 transition-all text-left ${autoBackup.config.mode === "folder" ? "border-indigo-400 bg-indigo-50/60" : "border-slate-200/70 bg-white/50 hover:border-slate-300"}`}>
+                    <div className={`w-8 h-8 rounded-xl flex items-center justify-center ${autoBackup.config.mode === "folder" ? "bg-indigo-200" : "bg-slate-100"}`}>
+                      <FolderOpen size={14} className={autoBackup.config.mode === "folder" ? "text-indigo-700" : "text-slate-400"} />
+                    </div>
+                    <div>
+                      <p className={`text-xs font-black ${autoBackup.config.mode === "folder" ? "text-indigo-800" : "text-slate-700"}`}>Carpeta fija</p>
+                      <p className="text-[10px] text-slate-400 mt-0.5">
+                        {autoBackup.config.folderName ? `📁 ${autoBackup.config.folderName}` : "Elige una carpeta y la app siempre guardará ahí"}
+                      </p>
+                    </div>
+                    {autoBackup.config.mode === "folder" && autoBackup.config.folderName && (
+                      <span className="text-[10px] font-black text-indigo-600 flex items-center gap-1">
+                        <CheckCircle size={10} /> {autoBackup.folderPerm === "granted" ? "Acceso activo" : "Clic para reactivar"}
+                      </span>
+                    )}
+                    {!autoBackup.fsSupportado && (
+                      <span className="text-[10px] text-amber-500 font-bold">Solo Chrome/Edge</span>
+                    )}
+                  </motion.button>
+                </div>
+
+                {/* Folder details / change */}
+                <AnimatePresence>
+                  {autoBackup.config.mode === "folder" && autoBackup.config.folderName && (
+                    <motion.div key="folder-info" initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }} exit={{ opacity: 0, height: 0 }}
+                      className="mt-2.5 flex items-center gap-3 bg-indigo-50/70 rounded-2xl px-4 py-3 border border-indigo-200/50">
+                      <Folder size={14} className="text-indigo-500 shrink-0" />
+                      <div className="flex-1 min-w-0">
+                        <p className="text-xs font-bold text-indigo-800 truncate">📁 {autoBackup.config.folderName}</p>
+                        <p className="text-[10px] text-indigo-400">
+                          {autoBackup.folderPerm === "granted" ? "Acceso concedido — guardando automáticamente" : "Clic en 'Cambiar carpeta' para reactivar el acceso"}
+                        </p>
+                      </div>
+                      <div className="flex gap-1.5">
+                        <button onClick={autoBackup.pickFolder} data-testid="change-folder-btn"
+                          className="px-3 py-1.5 rounded-xl text-[10px] font-bold bg-indigo-100 text-indigo-700 hover:bg-indigo-200 transition-colors">
+                          Cambiar
+                        </button>
+                        <button onClick={() => { autoBackup.clearFolder(); toast({ title: "Carpeta eliminada" }); }}
+                          data-testid="clear-folder-btn"
+                          className="px-2 py-1.5 rounded-xl text-[10px] font-bold bg-red-50 text-red-500 hover:bg-red-100 transition-colors">
+                          <Trash2 size={10} />
+                        </button>
+                      </div>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+              </div>
+
+              {/* ── Error message ── */}
+              {autoBackup.lastError && (
+                <div className="flex items-center gap-2 bg-red-50 border border-red-200/60 rounded-xl px-4 py-2.5 text-xs text-red-600 font-semibold">
+                  <AlertCircle size={13} />
+                  {autoBackup.lastError}
+                </div>
+              )}
+
+              {/* ── Manual trigger button ── */}
+              <motion.button whileHover={{ scale: 1.01 }} whileTap={{ scale: 0.98 }}
+                onClick={() => {
+                  autoBackup.triggerBackup();
+                  toast({ title: "Creando respaldo ahora..." });
+                }}
+                disabled={autoBackup.isBacking}
+                data-testid="manual-auto-backup-btn"
+                className="w-full flex items-center justify-center gap-2 py-3 rounded-2xl text-sm font-bold text-white transition-all disabled:opacity-60"
+                style={{ background: "linear-gradient(135deg,#10b981,#059669)" }}>
+                {autoBackup.isBacking
+                  ? <><Loader2 size={14} className="animate-spin" /> Guardando respaldo...</>
+                  : <><Download size={14} /> Guardar respaldo ahora</>}
+              </motion.button>
+
+              {/* ── Info note ── */}
+              <div className="flex items-start gap-2.5 bg-amber-50/60 rounded-2xl px-4 py-3 border border-amber-200/50">
+                <AlertCircle size={13} className="text-amber-500 shrink-0 mt-0.5" />
+                <p className="text-[10px] text-amber-700 leading-relaxed">
+                  El respaldo automático funciona mientras esta página esté abierta en el navegador.
+                  Para máxima seguridad, usa también "Guardar en servidor" que funciona en segundo plano.
+                </p>
+              </div>
+
+            </div>
+          </div>
+        </motion.div>
 
         {/* ── ESTADÍSTICAS ── */}
         <motion.div variants={fadeUp}>
@@ -415,15 +760,17 @@ export default function DatabasePage() {
               </div>
             </div>
             <div className="p-5 space-y-3">
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-3 gap-3">
                 {[
-                  { fmt: "csv", label: s.downloadCSV || "Descargar CSV", color: "bg-emerald-50 border-emerald-200/60 text-emerald-700 hover:bg-emerald-100", icon: Download },
-                  { fmt: "json", label: s.downloadJSON || "Descargar JSON", color: "bg-indigo-50 border-indigo-200/60 text-indigo-700 hover:bg-indigo-100", icon: Download },
-                ].map(({ fmt, label, color, icon: Icon }) => (
+                  { fmt: "csv",  label: "CSV",   color: "bg-emerald-50 border-emerald-200/60 text-emerald-700 hover:bg-emerald-100",   icon: Download,        onClick: () => handleExport("csv")  },
+                  { fmt: "json", label: "JSON",  color: "bg-indigo-50 border-indigo-200/60 text-indigo-700 hover:bg-indigo-100",       icon: Download,        onClick: () => handleExport("json") },
+                  { fmt: "xlsx", label: "Excel", color: "bg-teal-50 border-teal-200/60 text-teal-700 hover:bg-teal-100",               icon: FileSpreadsheet, onClick: handleExportXLSX           },
+                ].map(({ fmt, label, color, icon: Icon, onClick }) => (
                   <motion.button key={fmt} whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}
-                    onClick={() => handleExport(fmt)} data-testid={`export-${fmt}-btn`}
-                    className={`flex items-center justify-center gap-2 py-3 rounded-2xl border text-sm font-bold transition-all ${color}`}>
-                    <Icon size={14} /> {label}
+                    onClick={onClick} data-testid={`export-${fmt}-btn`}
+                    className={`flex flex-col items-center gap-2 py-4 rounded-2xl border text-xs font-bold transition-all ${color}`}>
+                    <Icon size={16} />
+                    <span>{label}</span>
                   </motion.button>
                 ))}
               </div>
@@ -435,6 +782,34 @@ export default function DatabasePage() {
                   ? <><Loader2 size={15} className="animate-spin" /> Generando PDF...</>
                   : <><FileText size={15} /> Exportar reporte PDF completo</>}
               </motion.button>
+
+              {/* ── CSV Import ── */}
+              <div className="border-t border-white/40 pt-3">
+                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2.5">Importar desde CSV</p>
+                <input ref={csvImportRef} type="file" accept=".csv,.txt" onChange={handleCsvImport} className="hidden" id="csv-import-input" data-testid="csv-import-input" />
+                <label htmlFor="csv-import-input"
+                  className={`flex items-center justify-center gap-2 w-full py-3 rounded-2xl text-xs font-bold cursor-pointer border-2 border-dashed transition-all ${csvImportLoading ? "border-violet-200 bg-violet-50 text-violet-300" : "border-violet-300/60 bg-violet-50/40 hover:bg-violet-50 text-violet-700"}`}>
+                  {csvImportLoading ? <Loader2 size={13} className="animate-spin" /> : <Upload size={13} />}
+                  {csvImportLoading ? "Importando reservas..." : "Importar reservas desde CSV / Excel (.csv)"}
+                </label>
+                <p className="text-[9px] text-slate-400 mt-1.5 text-center">
+                  Columnas: nombre, tipo_evento, fecha, total, anticipo, estado — exporta desde Excel como CSV
+                </p>
+                {csvImportResult && (
+                  <motion.div initial={{ opacity: 0, y: -4 }} animate={{ opacity: 1, y: 0 }}
+                    className={`mt-2 flex flex-col gap-1 px-3 py-2.5 rounded-xl text-xs font-semibold ${csvImportResult.ok && csvImportResult.imported > 0 ? "bg-emerald-50 text-emerald-700 border border-emerald-200/60" : "bg-amber-50 text-amber-700 border border-amber-200/60"}`}>
+                    <div className="flex items-center gap-2">
+                      {csvImportResult.imported > 0 ? <CheckCircle size={12} /> : <AlertCircle size={12} />}
+                      {csvImportResult.message}
+                    </div>
+                    {csvImportResult.errors?.length > 0 && (
+                      <div className="text-[10px] opacity-70">
+                        {csvImportResult.errors.map((e, i) => <div key={i}>{e}</div>)}
+                      </div>
+                    )}
+                  </motion.div>
+                )}
+              </div>
             </div>
           </div>
         </motion.div>
@@ -485,6 +860,174 @@ export default function DatabasePage() {
                   </motion.button>
                 )}
               </div>
+            </div>
+          </div>
+        </motion.div>
+
+        {/* ── CONEXIONES GUARDADAS (PRESETS) ── */}
+        <motion.div variants={fadeUp}>
+          <div className="glass rounded-3xl overflow-hidden">
+            <div className="flex items-center justify-between px-5 py-4 border-b border-white/40">
+              <div className="flex items-center gap-3">
+                <div className="w-9 h-9 rounded-xl bg-amber-100 flex items-center justify-center">
+                  <Bookmark size={16} className="text-amber-600" />
+                </div>
+                <div>
+                  <p className="text-sm font-black text-slate-900" style={{ fontFamily: "Cabinet Grotesk, sans-serif" }}>Conexiones guardadas</p>
+                  <p className="text-[11px] text-slate-400">Cambia rápido entre bases de datos con un clic</p>
+                </div>
+              </div>
+              <motion.button whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}
+                onClick={() => setShowAddPreset(p => !p)} data-testid="add-preset-btn"
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold bg-amber-100 text-amber-700 hover:bg-amber-200 transition-colors">
+                <Plus size={12} /> Agregar
+              </motion.button>
+            </div>
+            <div className="p-5 space-y-3">
+
+              {/* Add preset form */}
+              <AnimatePresence>
+                {showAddPreset && (
+                  <motion.div key="add-form" initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }} exit={{ opacity: 0, height: 0 }}
+                    className="space-y-2 pb-3 border-b border-white/40">
+                    <input type="text" value={presetName}
+                      onChange={e => setPresetName(e.target.value)}
+                      placeholder="Nombre del preset (ej: Atlas Producción)"
+                      data-testid="preset-name-input"
+                      className="w-full bg-white/60 border border-slate-200/80 rounded-xl px-4 py-2.5 text-sm text-slate-800 placeholder-slate-300 focus:outline-none focus:ring-2 focus:ring-amber-300" />
+                    <div className="flex gap-2">
+                      <input type="text" value={newDbUrl}
+                        onChange={e => { setNewDbUrl(e.target.value); setDbTestResult(null); }}
+                        placeholder="mongodb://... o mongodb+srv://..."
+                        className="flex-1 bg-white/60 border border-slate-200/80 rounded-xl px-3 py-2.5 text-xs font-mono text-slate-800 placeholder-slate-300 focus:outline-none focus:ring-2 focus:ring-amber-300" />
+                      <motion.button whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.97 }}
+                        data-testid="save-preset-btn"
+                        disabled={!presetName.trim() || !newDbUrl.trim()}
+                        onClick={() => {
+                          const newPreset = { name: presetName.trim(), url: newDbUrl.trim(), color: ["indigo","emerald","sky","amber","rose","violet"][presets.length % 6] };
+                          savePresets([...presets, newPreset]);
+                          setPresetName(""); setNewDbUrl(""); setShowAddPreset(false);
+                          toast({ title: `Preset "${newPreset.name}" guardado ✓` });
+                        }}
+                        className="px-4 py-2.5 rounded-xl bg-amber-500 text-white text-xs font-bold disabled:opacity-40 hover:bg-amber-600 transition-colors">
+                        <Save size={12} />
+                      </motion.button>
+                    </div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+
+              {/* Preset list */}
+              {presets.length === 0 ? (
+                <div className="flex items-center justify-center py-6 text-slate-300 gap-2">
+                  <Bookmark size={16} />
+                  <span className="text-xs">No hay conexiones guardadas</span>
+                </div>
+              ) : (
+                <div className="space-y-2">
+                  {presets.map((p, i) => {
+                    const colors = {
+                      indigo: "bg-indigo-50 border-indigo-200/60 text-indigo-700",
+                      emerald: "bg-emerald-50 border-emerald-200/60 text-emerald-700",
+                      sky: "bg-sky-50 border-sky-200/60 text-sky-700",
+                      amber: "bg-amber-50 border-amber-200/60 text-amber-700",
+                      rose: "bg-rose-50 border-rose-200/60 text-rose-700",
+                      violet: "bg-violet-50 border-violet-200/60 text-violet-700",
+                    };
+                    return (
+                      <div key={i} className={`flex items-center gap-3 rounded-2xl px-4 py-3 border ${colors[p.color] || colors.indigo}`}>
+                        <Database size={13} className="shrink-0" />
+                        <div className="flex-1 min-w-0">
+                          <p className="text-xs font-black truncate">{p.name}</p>
+                          <p className="text-[10px] font-mono opacity-60 truncate">{p.url.replace(/:([^@]+)@/, ":***@")}</p>
+                        </div>
+                        <div className="flex gap-1.5">
+                          <motion.button whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}
+                            data-testid={`preset-connect-${i}`}
+                            onClick={async () => {
+                              setNewDbUrl(p.url);
+                              try {
+                                await switchDatabase(p.url);
+                                toast({ title: `Conectado a "${p.name}" ✓` });
+                                setTimeout(loadDbStats, 500);
+                              } catch (e) { toast({ title: e.response?.data?.detail || "Error al conectar", variant: "destructive" }); }
+                            }}
+                            className="px-3 py-1.5 rounded-xl text-[10px] font-bold bg-white/80 hover:bg-white transition-colors border border-white/60">
+                            Conectar
+                          </motion.button>
+                          <button onClick={() => { savePresets(presets.filter((_, j) => j !== i)); }}
+                            data-testid={`preset-delete-${i}`}
+                            className="w-7 h-7 rounded-lg bg-white/60 hover:bg-red-50 flex items-center justify-center transition-colors">
+                            <Trash2 size={10} className="text-red-400" />
+                          </button>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+          </div>
+        </motion.div>
+
+        {/* ── LIMPIEZA DE BASE DE DATOS ── */}
+        <motion.div variants={fadeUp}>
+          <div className="glass rounded-3xl overflow-hidden">
+            <div className="flex items-center gap-3 px-5 py-4 border-b border-white/40">
+              <div className="w-9 h-9 rounded-xl bg-orange-100 flex items-center justify-center">
+                <Scissors size={16} className="text-orange-600" />
+              </div>
+              <div>
+                <p className="text-sm font-black text-slate-900" style={{ fontFamily: "Cabinet Grotesk, sans-serif" }}>Limpieza de base de datos</p>
+                <p className="text-[11px] text-slate-400">Elimina registros innecesarios y libera espacio</p>
+              </div>
+            </div>
+            <div className="p-5 space-y-3">
+
+              {/* Preview counts */}
+              {cleanupPreview && (
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="bg-red-50/60 rounded-2xl p-3 text-center border border-red-200/40">
+                    <div className="text-2xl font-black text-red-600" style={{ fontFamily: "Cabinet Grotesk, sans-serif" }}>{cleanupPreview.cancelled_count}</div>
+                    <div className="text-[10px] font-bold text-red-400 mt-1">Reservas canceladas</div>
+                  </div>
+                  <div className="bg-slate-50/60 rounded-2xl p-3 text-center border border-slate-200/40">
+                    <div className="text-2xl font-black text-slate-600" style={{ fontFamily: "Cabinet Grotesk, sans-serif" }}>{cleanupPreview.old_completed_count}</div>
+                    <div className="text-[10px] font-bold text-slate-400 mt-1">Completadas {">"} 6 meses</div>
+                  </div>
+                </div>
+              )}
+
+              <div className="space-y-2">
+                <motion.button whileHover={{ scale: 1.01 }} whileTap={{ scale: 0.98 }}
+                  onClick={() => handleCleanup("cancelled")}
+                  disabled={cleanupLoading || (cleanupPreview?.cancelled_count === 0)}
+                  data-testid="cleanup-cancelled-btn"
+                  className="w-full flex items-center justify-between py-3 px-4 rounded-2xl text-xs font-bold transition-all border bg-red-50/40 border-red-200/50 text-red-700 hover:bg-red-50 disabled:opacity-40">
+                  <div className="flex items-center gap-2">
+                    {cleanupLoading && cleanupAction === "cancelled" ? <Loader2 size={12} className="animate-spin" /> : <Trash2 size={12} />}
+                    Eliminar reservas canceladas
+                  </div>
+                  <span className="text-[10px] font-black bg-red-100 px-2 py-0.5 rounded-full">
+                    {cleanupPreview?.cancelled_count ?? "—"} registros
+                  </span>
+                </motion.button>
+
+                <motion.button whileHover={{ scale: 1.01 }} whileTap={{ scale: 0.98 }}
+                  onClick={() => handleCleanup("old_completed")}
+                  disabled={cleanupLoading || (cleanupPreview?.old_completed_count === 0)}
+                  data-testid="cleanup-old-btn"
+                  className="w-full flex items-center justify-between py-3 px-4 rounded-2xl text-xs font-bold transition-all border bg-slate-50/40 border-slate-200/50 text-slate-700 hover:bg-slate-50 disabled:opacity-40">
+                  <div className="flex items-center gap-2">
+                    {cleanupLoading && cleanupAction === "old_completed" ? <Loader2 size={12} className="animate-spin" /> : <Clock size={12} />}
+                    Eliminar reservas completadas {">"} 6 meses
+                  </div>
+                  <span className="text-[10px] font-black bg-slate-100 px-2 py-0.5 rounded-full">
+                    {cleanupPreview?.old_completed_count ?? "—"} registros
+                  </span>
+                </motion.button>
+              </div>
+              <p className="text-[10px] text-slate-400 text-center">Se crea un respaldo automático antes de cada limpieza</p>
             </div>
           </div>
         </motion.div>
