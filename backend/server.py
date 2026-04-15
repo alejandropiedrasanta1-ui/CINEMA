@@ -230,21 +230,26 @@ async def get_stats():
         "event_date": {"$gte": datetime.now(timezone.utc).strftime("%Y-%m-%d")},
         "status": {"$nin": ["Cancelado", "Completado"]}
     })
-    pending_payment_cursor = db.reservations.find(
+    active_cursor = db.reservations.find(
         {"status": {"$nin": ["Cancelado"]}},
-        {"total_amount": 1, "advance_paid": 1, "_id": 0}
+        {"total_amount": 1, "advance_paid": 1, "assigned_partners": 1, "_id": 0}
     )
-    pending_docs = await pending_payment_cursor.to_list(1000)
+    active_docs = await active_cursor.to_list(1000)
     total_pending = sum(
         max(0, (d.get("total_amount", 0) or 0) - (d.get("advance_paid", 0) or 0))
-        for d in pending_docs
+        for d in active_docs
     )
-    confirmed = await db.reservations.count_documents({"status": "Confirmado"})
+    total_event_amount = sum((d.get("total_amount", 0) or 0) for d in active_docs)
+    total_partner_cost = sum(
+        p.get("payment", 0) or 0
+        for d in active_docs
+        for p in (d.get("assigned_partners") or [])
+    )
     return {
         "total_reservations": total,
         "upcoming_events": upcoming,
         "pending_payment": round(total_pending, 2),
-        "confirmed": confirmed
+        "real_income": round(total_event_amount - total_partner_cost, 2),
     }
 
 

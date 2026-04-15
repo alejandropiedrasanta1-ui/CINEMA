@@ -1,7 +1,7 @@
 import { useEffect, useState, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { getStats, getReservations } from "@/lib/api";
-import { CalendarDays, Clock, CreditCard, CheckCircle, Plus, ArrowRight, TrendingUp, BarChart2 } from "lucide-react";
+import { CalendarDays, Clock, CreditCard, TrendingUp, Plus, ArrowRight, BarChart2, DollarSign } from "lucide-react";
 import { motion } from "framer-motion";
 import { useSettings } from "@/context/SettingsContext";
 import ReservationForm from "@/components/ReservationForm";
@@ -205,9 +205,9 @@ export default function Dashboard() {
           data-testid="stats-grid"
         >
           <StatCard icon={CalendarDays} label={d.upcoming} value={stats?.upcoming_events ?? 0} sub={d.upcomingSub} gradient={STAT_GRADIENTS[0]} />
-          <StatCard icon={CheckCircle} label={d.confirmed} value={stats?.confirmed ?? 0} sub={d.confirmedSub} gradient={STAT_GRADIENTS[1]} />
-          <StatCard icon={CreditCard} label={d.pending} value={formatCurrency(stats?.pending_payment)} sub={d.pendingSub} gradient={STAT_GRADIENTS[2]} />
           <StatCard icon={Clock} label={d.total} value={stats?.total_reservations ?? 0} sub={d.totalSub} gradient={STAT_GRADIENTS[3]} />
+          <StatCard icon={CreditCard} label={d.pending} value={formatCurrency(stats?.pending_payment)} sub={d.pendingSub} gradient={STAT_GRADIENTS[2]} />
+          <StatCard icon={DollarSign} label={d.realIncome} value={formatCurrency(stats?.real_income)} sub={d.realIncomeSub} gradient={STAT_GRADIENTS[1]} />
         </motion.div>
       )}
 

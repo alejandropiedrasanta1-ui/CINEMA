@@ -137,7 +137,13 @@ Sistema de gestión de reservas para eventos (bodas, quinceañeras, fiestas soci
 
 ---
 
-### App de Escritorio Portable v3 (Iteración 11 - Abril 2026) ✅
+### Dashboard actualizado (Abril 2026) ✅
+- Eliminada card "Confirmados"
+- Agregada card "Ingreso Real" (total eventos - costo equipo)
+- Orden: Próximos Eventos → Total Reservas → Pago Pendiente → Ingreso Real
+- Backend `/api/stats` ahora retorna `real_income` calculado en tiempo real
+
+
 - `.env` con comentarios completos explicando las 3 opciones (embedded, local, Atlas)
 - `config.py` — ventana visual tkinter para cambiar MONGO_URL sin tocar código
 - `config.bat` — doble clic abre config.py (o Bloc de Notas como fallback)
