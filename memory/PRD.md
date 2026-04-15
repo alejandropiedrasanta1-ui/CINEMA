@@ -143,6 +143,20 @@ Sistema de gestión de reservas para eventos (bodas, quinceañeras, fiestas soci
 - Orden: Próximos Eventos → Total Reservas → Pago Pendiente → Ingreso Real
 - Backend `/api/stats` ahora retorna `real_income` calculado en tiempo real
 
+### Personalización de Tipos de Evento (Abril 2026) ✅
+- Nueva sección en Ajustes → Apariencia: "Iconos y Colores por Tipo de Evento"
+- 6 tarjetas editables (Boda, Quinceañera, Fiesta Social, Evento Corporativo, Conferencia, Otro)
+- Paleta de 30 colores + 36 iconos Lucide disponibles
+- Los cambios se persisten en localStorage y se aplican en Dashboard, Calendario y Reservaciones
+- Botón "Restaurar" por tipo para regresar a defaults
+
+### Actualizar App Desktop (Abril 2026) ✅
+- Nuevo flujo 2 pasos en Ajustes → App de Escritorio
+- Paso 1: "Actualizar App" → llama `/api/download/package/rebuild` → build yarn en background
+- Polling cada 3s con barra de progreso animada
+- Paso 2: "Descargar" se activa solo cuando el build está listo
+- Evita descargar versiones desactualizadas
+
 
 - `.env` con comentarios completos explicando las 3 opciones (embedded, local, Atlas)
 - `config.py` — ventana visual tkinter para cambiar MONGO_URL sin tocar código

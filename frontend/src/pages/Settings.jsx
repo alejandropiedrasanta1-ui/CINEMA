@@ -82,6 +82,8 @@ export default function Settings() {
 
   // Desktop download state
   const [downloadLoading, setDownloadLoading] = useState(false);
+  const [buildStatus, setBuildStatus] = useState({ status: "idle", message: "" });
+  const [buildPolling, setBuildPolling] = useState(false);
 
   // DB state
   const [dbStats, setDbStats] = useState(null);
@@ -109,6 +111,42 @@ export default function Settings() {
     }).catch(() => {});
     loadDbStats();
   }, []);
+
+  // Build status polling
+  useEffect(() => {
+    if (!buildPolling) return;
+    const interval = setInterval(async () => {
+      try {
+        const res = await fetch(`${process.env.REACT_APP_BACKEND_URL}/api/download/package/build-status`);
+        const data = await res.json();
+        setBuildStatus(data);
+        if (data.status === "ready" || data.status === "error") {
+          setBuildPolling(false);
+          clearInterval(interval);
+          if (data.status === "ready") toast({ title: "App actualizada ✓ — Ya puedes descargarla" });
+          else toast({ title: data.message || "Error al compilar", variant: "destructive" });
+        }
+      } catch { /* ignore network errors during polling */ }
+    }, 3000);
+    return () => clearInterval(interval);
+  }, [buildPolling]);
+
+  const handleRebuild = async () => {
+    setBuildStatus({ status: "building", message: "Iniciando compilación…" });
+    setBuildPolling(false);
+    try {
+      const res = await fetch(`${process.env.REACT_APP_BACKEND_URL}/api/download/package/rebuild`, { method: "POST" });
+      const data = await res.json();
+      setBuildStatus(data);
+      if (data.status === "building") {
+        setBuildPolling(true);
+        toast({ title: "Compilando app… espera 1-3 minutos" });
+      }
+    } catch {
+      setBuildStatus({ status: "error", message: "Error al iniciar compilación" });
+      toast({ title: "Error al iniciar compilación", variant: "destructive" });
+    }
+  };
 
   const loadDbStats = () => {
     setDbLoading(true);
@@ -1187,16 +1225,100 @@ export default function Settings() {
               </p>
             </div>
 
-            {/* Download buttons */}
-            <div className="flex gap-3">
-              <motion.button whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.97 }}
-                onClick={handleDownloadPackage} disabled={downloadLoading}
-                data-testid="desktop-download-btn"
-                className="flex items-center gap-2 px-5 py-3 rounded-2xl btn-primary text-white text-sm font-bold flex-1 justify-center disabled:opacity-60">
-                {downloadLoading
-                  ? <><Loader2 size={15} className="animate-spin" /> {s.desktopDownloading}</>
-                  : <><Package size={15} /> {s.desktopDownload}</>}
-              </motion.button>
+            {/* ── UPDATE + DOWNLOAD BLOCK ─────────────────────── */}
+            <div className="rounded-2xl overflow-hidden border border-indigo-100/80 bg-gradient-to-br from-indigo-50/60 to-white/60">
+              {/* Step 1 — Update */}
+              <div className="px-4 pt-4 pb-3 border-b border-indigo-100/60">
+                <div className="flex items-center gap-2 mb-2.5">
+                  <div className="w-5 h-5 rounded-full btn-primary flex items-center justify-center text-white text-[10px] font-black flex-shrink-0">1</div>
+                  <p className="text-xs font-bold text-slate-700">
+                    {language === "es" ? "Actualizar app con los últimos cambios" : "Update app with latest changes"}
+                  </p>
+                </div>
+
+                {/* Build status bar */}
+                {buildStatus.status !== "idle" && (
+                  <div className={`flex items-start gap-2 rounded-xl px-3 py-2.5 mb-3 text-xs font-medium ${
+                    buildStatus.status === "building" ? "bg-indigo-50 text-indigo-700 border border-indigo-200/60"
+                    : buildStatus.status === "ready"   ? "bg-emerald-50 text-emerald-700 border border-emerald-200/60"
+                    : "bg-red-50 text-red-600 border border-red-200/60"
+                  }`}>
+                    {buildStatus.status === "building"
+                      ? <Loader2 size={13} className="animate-spin flex-shrink-0 mt-0.5" />
+                      : buildStatus.status === "ready"
+                      ? <CheckCircle size={13} className="flex-shrink-0 mt-0.5" />
+                      : <XCircle size={13} className="flex-shrink-0 mt-0.5" />
+                    }
+                    <span>{buildStatus.message}</span>
+                  </div>
+                )}
+
+                {/* Animated progress dots while building */}
+                {buildStatus.status === "building" && (
+                  <div className="flex items-center gap-1.5 mb-3">
+                    {[0, 1, 2, 3, 4].map(i => (
+                      <div
+                        key={i}
+                        className="w-1.5 h-1.5 rounded-full bg-indigo-400"
+                        style={{ animation: `pulse 1.4s ease-in-out ${i * 0.2}s infinite` }}
+                      />
+                    ))}
+                    <span className="text-[10px] text-indigo-500 font-medium ml-1">
+                      {language === "es" ? "Compilando… por favor espera" : "Building… please wait"}
+                    </span>
+                  </div>
+                )}
+
+                <motion.button
+                  whileHover={{ scale: buildStatus.status === "building" ? 1 : 1.02 }}
+                  whileTap={{ scale: 0.97 }}
+                  onClick={handleRebuild}
+                  disabled={buildStatus.status === "building"}
+                  data-testid="desktop-rebuild-btn"
+                  className="w-full flex items-center justify-center gap-2 py-3 rounded-xl text-sm font-bold text-white transition-all disabled:opacity-60"
+                  style={{ background: buildStatus.status === "ready" ? "linear-gradient(135deg,#10b981,#059669)" : "linear-gradient(135deg,var(--t-from),var(--t-to))" }}
+                >
+                  {buildStatus.status === "building"
+                    ? <><Loader2 size={14} className="animate-spin" /> {language === "es" ? "Actualizando… espera" : "Updating… please wait"}</>
+                    : buildStatus.status === "ready"
+                    ? <><CheckCircle size={14} /> {language === "es" ? "App actualizada — actualizar de nuevo" : "App updated — rebuild again"}</>
+                    : <><RefreshCw size={14} /> {language === "es" ? "Actualizar App" : "Update App"}</>
+                  }
+                </motion.button>
+              </div>
+
+              {/* Step 2 — Download */}
+              <div className="px-4 pt-3 pb-4">
+                <div className="flex items-center gap-2 mb-2.5">
+                  <div className={`w-5 h-5 rounded-full flex items-center justify-center text-white text-[10px] font-black flex-shrink-0 ${buildStatus.status === "ready" ? "btn-primary" : "bg-slate-300"}`}>2</div>
+                  <p className={`text-xs font-bold ${buildStatus.status === "ready" ? "text-slate-700" : "text-slate-400"}`}>
+                    {language === "es" ? "Descargar app actualizada (.zip)" : "Download updated app (.zip)"}
+                  </p>
+                </div>
+                <motion.button
+                  whileHover={{ scale: buildStatus.status === "ready" ? 1.02 : 1 }}
+                  whileTap={{ scale: 0.97 }}
+                  onClick={handleDownloadPackage}
+                  disabled={downloadLoading || buildStatus.status === "building"}
+                  data-testid="desktop-download-btn"
+                  className="w-full flex items-center justify-center gap-2 py-3 rounded-xl text-sm font-bold transition-all disabled:opacity-40"
+                  style={{
+                    background: buildStatus.status === "ready" ? "linear-gradient(135deg,var(--t-from),var(--t-to))" : "#e2e8f0",
+                    color: buildStatus.status === "ready" ? "white" : "#94a3b8",
+                    cursor: buildStatus.status === "ready" || buildStatus.status === "idle" ? "pointer" : "not-allowed",
+                  }}
+                >
+                  {downloadLoading
+                    ? <><Loader2 size={14} className="animate-spin" /> {s.desktopDownloading}</>
+                    : <><Package size={14} /> {s.desktopDownload}</>
+                  }
+                </motion.button>
+                {buildStatus.status !== "ready" && buildStatus.status !== "idle" && (
+                  <p className="text-[10px] text-slate-400 text-center mt-1.5">
+                    {language === "es" ? "Primero actualiza la app (Paso 1)" : "First update the app (Step 1)"}
+                  </p>
+                )}
+              </div>
             </div>
 
             {/* Note */}

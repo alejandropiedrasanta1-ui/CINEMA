@@ -1082,7 +1082,66 @@ Cinema Productions - Sistema de Gestion de Reservas
 """
 
 
-@api_router.get("/download/package")
+# ─── Frontend Build State ────────────────────────────────
+_build_state = {"status": "idle", "message": "Listo para actualizar", "started_at": None, "finished_at": None}
+
+
+async def _run_frontend_build():
+    global _build_state
+    try:
+        frontend_dir = str(ROOT_DIR.parent / "frontend")
+        process = await asyncio.create_subprocess_exec(
+            "yarn", "build",
+            cwd=frontend_dir,
+            stdout=asyncio.subprocess.PIPE,
+            stderr=asyncio.subprocess.PIPE,
+            env={**dict(__import__("os").environ), "CI": "false", "GENERATE_SOURCEMAP": "false"},
+        )
+        stdout, stderr = await asyncio.wait_for(process.communicate(), timeout=300)
+        if process.returncode == 0:
+            _build_state = {
+                "status": "ready",
+                "message": "App actualizada correctamente. Ya puedes descargarla.",
+                "started_at": _build_state["started_at"],
+                "finished_at": datetime.now(timezone.utc).isoformat(),
+            }
+            logger.info("Frontend build completed successfully")
+        else:
+            err = stderr.decode("utf-8", errors="replace")[:300]
+            _build_state = {
+                "status": "error",
+                "message": f"Error en la compilación: {err}",
+                "started_at": _build_state["started_at"],
+                "finished_at": datetime.now(timezone.utc).isoformat(),
+            }
+            logger.error(f"Frontend build failed: {err}")
+    except asyncio.TimeoutError:
+        _build_state = {**_build_state, "status": "error", "message": "Tiempo de espera agotado (5 min). Inténtalo de nuevo."}
+    except Exception as e:
+        _build_state = {**_build_state, "status": "error", "message": f"Error inesperado: {str(e)}"}
+
+
+@api_router.post("/download/package/rebuild")
+async def rebuild_package():
+    global _build_state
+    if _build_state["status"] == "building":
+        return {"status": "building", "message": "Ya hay una compilación en progreso. Por favor espera."}
+    _build_state = {
+        "status": "building",
+        "message": "Compilando la app con los últimos cambios… esto tarda 1–3 minutos.",
+        "started_at": datetime.now(timezone.utc).isoformat(),
+        "finished_at": None,
+    }
+    asyncio.create_task(_run_frontend_build())
+    return _build_state
+
+
+@api_router.get("/download/package/build-status")
+async def get_build_status():
+    return _build_state
+
+
+
 async def download_package():
     import zipfile
 
