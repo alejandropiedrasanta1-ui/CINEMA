@@ -1,21 +1,112 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { getCalendarEvents } from "@/lib/api";
-import { ChevronLeft, ChevronRight, Plus, Search } from "lucide-react";
+import { ChevronLeft, ChevronRight, Plus, Search, BarChart2 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useSettings } from "@/context/SettingsContext";
 import ReservationForm from "@/components/ReservationForm";
 
-const EVENT_TYPE_COLORS = {
-  "Boda": "bg-pink-100/90 text-pink-700 border-pink-200/60",
-  "Quinceañera": "bg-purple-100/90 text-purple-700 border-purple-200/60",
-  "Fiesta Social": "bg-orange-100/90 text-orange-700 border-orange-200/60",
-  "Evento Corporativo": "bg-blue-100/90 text-blue-700 border-blue-200/60",
-  "Conferencia": "bg-teal-100/90 text-teal-700 border-teal-200/60",
-  "Otro": "bg-slate-100/90 text-slate-700 border-slate-200/60",
+const EVENT_HEX = {
+  "Boda":              { fg: "#be185d", bg: "#fdf2f8", border: "#fbcfe8" },
+  "Quinceañera":       { fg: "#7e22ce", bg: "#faf5ff", border: "#e9d5ff" },
+  "Fiesta Social":     { fg: "#c2410c", bg: "#fff7ed", border: "#fed7aa" },
+  "Evento Corporativo":{ fg: "#1d4ed8", bg: "#eff6ff", border: "#bfdbfe" },
+  "Conferencia":       { fg: "#0f766e", bg: "#f0fdfa", border: "#99f6e4" },
+  "Otro":              { fg: "#475569", bg: "#f8fafc", border: "#e2e8f0" },
 };
+const CHART_HEX = { "Boda":"#ec4899","Quinceañera":"#a855f7","Fiesta Social":"#f97316","Evento Corporativo":"#3b82f6","Conferencia":"#14b8a6","Otro":"#64748b" };
+const YEAR_RANGE = 10;
 
-const YEAR_RANGE = 10; // show ±10 years from current year
+function getColor(type) { return EVENT_HEX[type] || EVENT_HEX["Otro"]; }
+
+function MonthDistribution({ events, year, month, language }) {
+  const monthStr = `${year}-${String(month + 1).padStart(2, "0")}`;
+  const monthEvents = events.filter(e => e.event_date?.startsWith(monthStr));
+  const counts = monthEvents.reduce((a, e) => { a[e.event_type || "Otro"] = (a[e.event_type || "Otro"] || 0) + 1; return a; }, {});
+  const entries = Object.entries(counts).sort((a, b) => b[1] - a[1]);
+  const max = Math.max(...entries.map(([, v]) => v), 1);
+  const total = entries.reduce((s, [, v]) => s + v, 0);
+
+  if (!entries.length) return (
+    <div className="flex items-center justify-center py-6 text-slate-400 text-xs">
+      {language === "es" ? "Sin eventos este mes" : "No events this month"}
+    </div>
+  );
+
+  return (
+    <div className="space-y-2.5">
+      {entries.map(([type, count], i) => {
+        const hex = CHART_HEX[type] || CHART_HEX["Otro"];
+        return (
+          <div key={type}>
+            <div className="flex justify-between items-center mb-1">
+              <div className="flex items-center gap-1.5">
+                <span className="w-2 h-2 rounded-full flex-shrink-0" style={{ background: hex }} />
+                <span className="text-xs font-semibold text-slate-600 truncate max-w-[140px]">{type}</span>
+              </div>
+              <span className="text-xs font-black text-slate-500">
+                {count} <span className="text-slate-300 font-medium">({Math.round(count / total * 100)}%)</span>
+              </span>
+            </div>
+            <div className="h-2 bg-slate-100/80 rounded-full overflow-hidden">
+              <motion.div initial={{ width: 0 }} animate={{ width: `${(count / max) * 100}%` }}
+                transition={{ duration: 0.7, delay: i * 0.08, ease: "easeOut" }}
+                style={{ background: hex }} className="h-full rounded-full" />
+            </div>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+function YearActivity({ events, year, currentMonth, language, onMonthClick }) {
+  const MONTH_ABBR_ES = ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
+  const MONTH_ABBR_EN = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  const abbr = language === "es" ? MONTH_ABBR_ES : MONTH_ABBR_EN;
+  const counts = Array(12).fill(0);
+  events.forEach(e => {
+    if (e.event_date?.startsWith(`${year}-`)) {
+      const m = parseInt(e.event_date.split('-')[1]) - 1;
+      if (m >= 0 && m < 12) counts[m]++;
+    }
+  });
+  const max = Math.max(...counts, 1);
+
+  return (
+    <div className="flex items-end gap-1 h-20 pt-2">
+      {counts.map((count, i) => {
+        const isActive = i === currentMonth;
+        const pct = Math.max(count / max, count > 0 ? 0.08 : 0);
+        return (
+          <motion.div key={i} className="flex-1 flex flex-col items-center gap-1 cursor-pointer group"
+            onClick={() => onMonthClick(i)} title={`${abbr[i]}: ${count}`}
+            whileHover={{ scaleY: 1.05 }} style={{ originY: 1 }}>
+            <motion.div
+              initial={{ height: 0 }}
+              animate={{ height: `${pct * 52}px` }}
+              transition={{ duration: 0.6, delay: i * 0.04, ease: "easeOut" }}
+              style={{
+                background: isActive
+                  ? "linear-gradient(180deg, var(--t-from), var(--t-to))"
+                  : count > 0 ? "linear-gradient(180deg,#94a3b8,#cbd5e1)" : "#e2e8f0",
+                boxShadow: isActive ? "0 2px 8px rgba(99,102,241,0.35)" : "none",
+                minHeight: count > 0 ? "4px" : "2px",
+              }}
+              className="w-full rounded-t-full"
+            />
+            <span className={`text-[9px] font-bold transition-colors ${isActive ? "gradient-text" : count > 0 ? "text-slate-500" : "text-slate-300"}`}>
+              {abbr[i]}
+            </span>
+            {count > 0 && (
+              <span className={`text-[8px] font-black ${isActive ? "text-indigo-500" : "text-slate-400"}`}>{count}</span>
+            )}
+          </motion.div>
+        );
+      })}
+    </div>
+  );
+}
 
 export default function CalendarView() {
   const [events, setEvents] = useState([]);
@@ -23,66 +114,53 @@ export default function CalendarView() {
   const [showForm, setShowForm] = useState(false);
   const [direction, setDirection] = useState(1);
   const [showSearch, setShowSearch] = useState(false);
+  const [tooltip, setTooltip] = useState(null);
   const navigate = useNavigate();
-  const { tr } = useSettings();
+  const { tr, language } = useSettings();
 
   useEffect(() => { getCalendarEvents().then(setEvents).catch(console.error); }, []);
 
   const year = currentDate.getFullYear();
   const month = currentDate.getMonth();
-
   const firstDay = new Date(year, month, 1).getDay();
   const daysInMonth = new Date(year, month + 1, 0).getDate();
+  const cells = [...Array(firstDay).fill(null), ...Array.from({ length: daysInMonth }, (_, i) => i + 1)];
 
-  const cells = [];
-  for (let i = 0; i < firstDay; i++) cells.push(null);
-  for (let d = 1; d <= daysInMonth; d++) cells.push(d);
-
-  const getEventsForDay = (day) => {
+  const getEventsForDay = useCallback((day) => {
     if (!day) return [];
     const dateStr = `${year}-${String(month + 1).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
     return events.filter(e => e.event_date === dateStr);
-  };
+  }, [events, year, month]);
 
   const today = new Date();
   const isToday = (day) => day === today.getDate() && month === today.getMonth() && year === today.getFullYear();
-
-  const goTo = (newYear, newMonth, dir) => {
-    setDirection(dir);
-    setCurrentDate(new Date(newYear, newMonth, 1));
+  const isPast = (day) => {
+    const d = new Date(year, month, day);
+    d.setHours(0, 0, 0, 0);
+    const t = new Date(); t.setHours(0, 0, 0, 0);
+    return d < t;
   };
 
-  const prev = () => {
-    if (month === 0) goTo(year - 1, 11, -1);
-    else goTo(year, month - 1, -1);
-  };
-
-  const next = () => {
-    if (month === 11) goTo(year + 1, 0, 1);
-    else goTo(year, month + 1, 1);
-  };
-
+  const goTo = (y, m, dir) => { setDirection(dir); setCurrentDate(new Date(y, m, 1)); };
+  const prev = () => month === 0 ? goTo(year - 1, 11, -1) : goTo(year, month - 1, -1);
+  const next = () => month === 11 ? goTo(year + 1, 0, 1) : goTo(year, month + 1, 1);
   const reload = () => getCalendarEvents().then(setEvents).catch(console.error);
 
-  // Generate year list
-  const currentYear = today.getFullYear();
-  const yearList = Array.from({ length: YEAR_RANGE * 2 + 1 }, (_, i) => currentYear - YEAR_RANGE + i);
+  const yearList = Array.from({ length: YEAR_RANGE * 2 + 1 }, (_, i) => today.getFullYear() - YEAR_RANGE + i);
 
   return (
     <div className="px-6 py-8 max-w-7xl mx-auto">
+      {/* Header */}
       <motion.div initial={{ opacity: 0, y: -16 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4 }}
-        className="flex items-center justify-between mb-8">
+        className="flex items-center justify-between mb-6">
         <div>
-          <h1 className="text-5xl font-black gradient-text tracking-tight" style={{ fontFamily: 'Cabinet Grotesk, sans-serif' }}>
-            {tr.nav.calendar}
-          </h1>
+          <h1 className="text-5xl font-black gradient-text tracking-tight" style={{ fontFamily: 'Cabinet Grotesk, sans-serif' }}>{tr.nav.calendar}</h1>
           <p className="text-sm text-slate-500 font-medium mt-1.5">{tr.calendar.subtitle}</p>
         </div>
         <div className="flex items-center gap-2">
           <motion.button whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.97 }}
-            onClick={() => setShowSearch(s => !s)}
-            data-testid="calendar-search-toggle"
-            className={`flex items-center gap-2 px-4 py-2.5 rounded-full text-sm font-bold transition-all ${showSearch ? "btn-primary text-white" : "glass text-slate-600 hover:bg-white/50"}`}>
+            onClick={() => setShowSearch(s => !s)} data-testid="calendar-search-toggle"
+            className={`p-2.5 rounded-full text-sm font-bold transition-all ${showSearch ? "btn-primary text-white" : "glass text-slate-600 hover:bg-white/50"}`}>
             <Search size={15} />
           </motion.button>
           <motion.button whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.97 }}
@@ -93,59 +171,32 @@ export default function CalendarView() {
         </div>
       </motion.div>
 
-      {/* Month/Year search bar */}
+      {/* Search bar */}
       <AnimatePresence>
         {showSearch && (
-          <motion.div
-            initial={{ opacity: 0, height: 0, marginBottom: 0 }}
-            animate={{ opacity: 1, height: "auto", marginBottom: 20 }}
-            exit={{ opacity: 0, height: 0, marginBottom: 0 }}
-            transition={{ duration: 0.3 }}
-            className="overflow-hidden"
-          >
+          <motion.div initial={{ opacity: 0, height: 0, marginBottom: 0 }} animate={{ opacity: 1, height: "auto", marginBottom: 16 }}
+            exit={{ opacity: 0, height: 0, marginBottom: 0 }} transition={{ duration: 0.3 }} className="overflow-hidden">
             <div className="glass rounded-2xl px-5 py-4 flex items-center gap-4 flex-wrap">
-              <Search size={16} className="text-slate-400 shrink-0" />
-              <div className="flex items-center gap-2 flex-wrap flex-1">
-                {/* Month selector */}
+              <Search size={15} className="text-slate-400 shrink-0" />
+              <div className="flex items-center gap-3 flex-wrap flex-1">
                 <div className="flex flex-col gap-1">
-                  <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
-                    {tr.months[0].includes("enero") || tr.months[0] === "Enero" ? "Mes" : "Month"}
-                  </label>
-                  <select
-                    value={month}
-                    onChange={e => goTo(year, parseInt(e.target.value), 0)}
-                    data-testid="calendar-month-select"
-                    className="bg-white/70 border border-white/80 rounded-xl px-3 py-2 text-sm font-bold text-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-300 cursor-pointer"
-                  >
-                    {tr.months.map((m, i) => (
-                      <option key={i} value={i}>{m}</option>
-                    ))}
+                  <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">{language === "es" ? "Mes" : "Month"}</label>
+                  <select value={month} onChange={e => goTo(year, parseInt(e.target.value), 0)} data-testid="calendar-month-select"
+                    className="bg-white/70 border border-white/80 rounded-xl px-3 py-2 text-sm font-bold text-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-300 cursor-pointer">
+                    {tr.months.map((m, i) => <option key={i} value={i}>{m}</option>)}
                   </select>
                 </div>
-
-                {/* Year selector */}
                 <div className="flex flex-col gap-1">
-                  <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
-                    {tr.months[0] === "Enero" ? "Año" : "Year"}
-                  </label>
-                  <select
-                    value={year}
-                    onChange={e => goTo(parseInt(e.target.value), month, 0)}
-                    data-testid="calendar-year-select"
-                    className="bg-white/70 border border-white/80 rounded-xl px-3 py-2 text-sm font-bold text-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-300 cursor-pointer"
-                  >
-                    {yearList.map(y => (
-                      <option key={y} value={y}>{y}</option>
-                    ))}
+                  <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">{language === "es" ? "Año" : "Year"}</label>
+                  <select value={year} onChange={e => goTo(parseInt(e.target.value), month, 0)} data-testid="calendar-year-select"
+                    className="bg-white/70 border border-white/80 rounded-xl px-3 py-2 text-sm font-bold text-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-300 cursor-pointer">
+                    {yearList.map(y => <option key={y} value={y}>{y}</option>)}
                   </select>
                 </div>
-
-                {/* Today button */}
                 <motion.button whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.97 }}
-                  onClick={() => goTo(today.getFullYear(), today.getMonth(), 0)}
-                  data-testid="calendar-today-btn"
+                  onClick={() => goTo(today.getFullYear(), today.getMonth(), 0)} data-testid="calendar-today-btn"
                   className="self-end px-4 py-2 rounded-xl btn-primary text-white text-xs font-bold">
-                  {tr.months[0] === "Enero" ? "Hoy" : "Today"}
+                  {language === "es" ? "Hoy" : "Today"}
                 </motion.button>
               </div>
             </div>
@@ -156,79 +207,131 @@ export default function CalendarView() {
       {/* Calendar grid */}
       <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4, delay: 0.1 }}
         className="glass rounded-3xl overflow-hidden">
-        <div className="flex items-center justify-between px-6 py-5 border-b border-white/30">
+        {/* Nav header */}
+        <div className="flex items-center justify-between px-6 py-4 border-b border-white/30">
           <motion.button whileHover={{ scale: 1.1, x: -2 }} whileTap={{ scale: 0.9 }} onClick={prev}
             className="p-2.5 rounded-2xl glass hover:bg-white/50 text-slate-600 transition-colors" data-testid="prev-month-btn">
             <ChevronLeft size={16} />
           </motion.button>
-
           <AnimatePresence mode="wait">
             <motion.h2 key={`${month}-${year}`}
-              initial={{ opacity: 0, y: direction * 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: direction * -10 }}
-              transition={{ duration: 0.25 }}
-              className="text-xl font-black text-slate-900 cursor-pointer select-none"
+              initial={{ opacity: 0, y: direction * 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: direction * -8 }}
+              transition={{ duration: 0.22 }}
+              className="text-xl font-black text-slate-900 cursor-pointer select-none hover:opacity-70 transition-opacity"
               style={{ fontFamily: 'Cabinet Grotesk, sans-serif' }}
-              onClick={() => setShowSearch(s => !s)}
-              data-testid="calendar-month-title"
-              title={tr.months[0] === "Enero" ? "Clic para buscar mes/año" : "Click to search month/year"}>
+              onClick={() => setShowSearch(s => !s)} data-testid="calendar-month-title">
               {tr.months[month]} {year}
             </motion.h2>
           </AnimatePresence>
-
           <motion.button whileHover={{ scale: 1.1, x: 2 }} whileTap={{ scale: 0.9 }} onClick={next}
             className="p-2.5 rounded-2xl glass hover:bg-white/50 text-slate-600 transition-colors" data-testid="next-month-btn">
             <ChevronRight size={16} />
           </motion.button>
         </div>
 
-        <div className="grid grid-cols-7 border-b border-white/20 bg-white/10">
+        {/* Day headers */}
+        <div className="grid grid-cols-7 bg-white/10 border-b border-white/20">
           {tr.days.map(d => (
-            <div key={d} className="py-3 text-center text-xs font-black text-slate-500 uppercase tracking-widest">{d}</div>
+            <div key={d} className="py-2.5 text-center text-[11px] font-black text-slate-500 uppercase tracking-widest">{d}</div>
           ))}
         </div>
 
+        {/* Day cells */}
         <div className="grid grid-cols-7" data-testid="calendar-grid">
           {cells.map((day, i) => {
             const dayEvents = getEventsForDay(day);
+            const visible = dayEvents.slice(0, 3);
+            const extra = dayEvents.length - visible.length;
+            const past = day ? isPast(day) : false;
             return (
-              <motion.div key={i} whileHover={day ? { backgroundColor: "rgba(255,255,255,0.45)" } : {}}
-                className={`min-h-[90px] p-2 border-r border-b border-white/20 last:border-r-0 transition-colors ${!day ? "bg-slate-50/30" : ""}`}
+              <div key={i}
+                className={`min-h-[110px] p-2 border-r border-b border-white/20 last:border-r-0 transition-colors ${!day ? "bg-slate-50/20" : past ? "bg-slate-50/30" : "hover:bg-white/30"}`}
                 data-testid={day ? `calendar-day-${day}` : undefined}>
                 {day && (
                   <>
-                    <span className={`inline-flex items-center justify-center w-7 h-7 text-sm rounded-full mb-1.5 font-bold transition-all ${isToday(day) ? "theme-today" : "text-slate-700 hover:bg-white/60"}`}>
+                    <span className={`inline-flex items-center justify-center w-7 h-7 text-sm rounded-full mb-1.5 font-bold transition-all ${isToday(day) ? "theme-today" : past ? "text-slate-300" : "text-slate-700 hover:bg-white/60"}`}>
                       {day}
                     </span>
                     <div className="space-y-0.5">
-                      {dayEvents.map(ev => (
-                        <motion.div key={ev.id} whileHover={{ scale: 1.03 }}
-                          onClick={() => navigate(`/reservaciones/${ev.id}`)}
-                          className={`text-xs px-2 py-0.5 rounded-full border truncate cursor-pointer font-bold transition-all ${EVENT_TYPE_COLORS[ev.event_type] || EVENT_TYPE_COLORS["Otro"]}`}
-                          title={`${ev.client_name} — ${ev.event_type}`}
-                          data-testid={`calendar-event-${ev.id}`}>
-                          {ev.client_name}
-                        </motion.div>
-                      ))}
+                      {visible.map(ev => {
+                        const c = getColor(ev.event_type);
+                        return (
+                          <motion.div key={ev.id} whileHover={{ scale: 1.02 }}
+                            onClick={() => navigate(`/reservaciones/${ev.id}`)}
+                            style={{ borderLeftColor: c.fg, background: c.bg }}
+                            className="flex flex-col pl-2 pr-1.5 py-1 rounded-r-lg rounded-l-sm border-l-[3px] cursor-pointer"
+                            data-testid={`calendar-event-${ev.id}`}>
+                            <span className="text-[11px] font-bold truncate leading-tight" style={{ color: c.fg }}>
+                              {ev.client_name}
+                            </span>
+                            <span className="text-[10px] leading-tight" style={{ color: c.fg, opacity: 0.7 }}>
+                              {ev.event_type}
+                            </span>
+                          </motion.div>
+                        );
+                      })}
+                      {extra > 0 && (
+                        <span className="text-[10px] font-bold text-slate-400 pl-1 block">+{extra} más</span>
+                      )}
                     </div>
                   </>
                 )}
-              </motion.div>
+              </div>
             );
           })}
         </div>
       </motion.div>
 
-      {/* Legend */}
+      {/* Legend row */}
       <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.4 }}
-        className="flex flex-wrap gap-2 mt-5">
-        {Object.entries(EVENT_TYPE_COLORS).map(([type, cls]) => (
-          <span key={type} className={`text-xs px-3 py-1.5 rounded-full border font-bold ${cls}`}>{type}</span>
+        className="flex flex-wrap gap-2 mt-4">
+        {Object.entries(EVENT_HEX).map(([type, c]) => (
+          <span key={type} className="flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-full font-bold"
+            style={{ background: c.bg, color: c.fg, border: `1px solid ${c.border}` }}>
+            <span className="w-2 h-2 rounded-full" style={{ background: c.fg }} />
+            {type}
+          </span>
         ))}
       </motion.div>
 
-      {showForm && (
-        <ReservationForm onClose={() => setShowForm(false)} onSaved={() => { setShowForm(false); reload(); }} />
-      )}
+      {/* ── Charts Section ─────────────────────────────── */}
+      <motion.div initial={{ opacity: 0, y: 24 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5, delay: 0.5 }}
+        className="glass rounded-3xl p-6 mt-5" data-testid="calendar-charts">
+        <div className="flex items-center gap-2.5 mb-5">
+          <div className="w-8 h-8 rounded-2xl btn-primary flex items-center justify-center">
+            <BarChart2 size={14} className="text-white" />
+          </div>
+          <h2 className="text-base font-black text-slate-900" style={{ fontFamily: 'Cabinet Grotesk, sans-serif' }}>
+            {language === "es" ? "Análisis del Calendario" : "Calendar Analysis"}
+          </h2>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+          {/* Monthly distribution */}
+          <div>
+            <p className="text-sm font-black text-slate-700 mb-3" style={{ fontFamily: 'Cabinet Grotesk, sans-serif' }}>
+              {language === "es" ? `Tipos — ${tr.months[month]}` : `Types — ${tr.months[month]}`}
+            </p>
+            <MonthDistribution events={events} year={year} month={month} language={language} />
+          </div>
+
+          {/* Yearly activity bars */}
+          <div>
+            <p className="text-sm font-black text-slate-700 mb-1" style={{ fontFamily: 'Cabinet Grotesk, sans-serif' }}>
+              {language === "es" ? `Actividad ${year}` : `Activity ${year}`}
+            </p>
+            <p className="text-xs text-slate-400 mb-3">
+              {language === "es" ? "Clic en un mes para ir a él" : "Click a month to navigate"}
+            </p>
+            <YearActivity
+              events={events} year={year} currentMonth={month} language={language}
+              onMonthClick={(m) => goTo(year, m, m > month ? 1 : -1)}
+            />
+          </div>
+        </div>
+      </motion.div>
+
+      {showForm && <ReservationForm onClose={() => setShowForm(false)} onSaved={() => { setShowForm(false); reload(); }} />}
     </div>
   );
 }

@@ -10,6 +10,8 @@ import CalendarView from "@/pages/CalendarView";
 import Settings from "@/pages/Settings";
 import Socios from "@/pages/Socios";
 import { Toaster } from "@/components/ui/toaster";
+import { useEffect } from "react";
+import { useNotifications } from "@/hooks/useNotifications";
 
 const pageVariants = {
   initial: { opacity: 0, y: 16, filter: "blur(4px)" },
@@ -37,6 +39,16 @@ function AnimatedRoutes() {
 }
 
 function App() {
+  const { start } = useNotifications();
+
+  useEffect(() => {
+    // Auto-start notifications if permission already granted
+    if ('Notification' in window && Notification.permission === 'granted') {
+      const saved = localStorage.getItem('cp_notif_enabled');
+      if (saved !== 'false') start(true);
+    }
+  }, [start]);
+
   return (
     <SettingsProvider>
       <div className="App">

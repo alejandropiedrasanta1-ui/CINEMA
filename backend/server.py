@@ -638,7 +638,22 @@ async def reset_database():
 
 # ─── Reminders (manual trigger) ───────────────────────────
 
-@api_router.post("/reminders/send")
+@api_router.get("/notifications/pending")
+async def get_pending_notifications():
+    settings_doc = await db.app_settings.find_one({}, {"_id": 0})
+    days = int(settings_doc.get("reminder_days", 3)) if settings_doc else 3
+    today = datetime.now(timezone.utc).date()
+    end = (today + timedelta(days=days)).isoformat()
+    today_str = today.isoformat()
+    cursor = db.reservations.find(
+        {"event_date": {"$gte": today_str, "$lte": end}, "status": {"$nin": ["Cancelado", "Completado"]}},
+        {"client_name": 1, "event_date": 1, "event_type": 1, "venue": 1, "_id": 1}
+    )
+    docs = await cursor.to_list(100)
+    return [doc_to_dict(d) for d in docs]
+
+
+
 async def trigger_reminders_manual():
     """Manual trigger for testing reminders."""
     try:

@@ -49,3 +49,6 @@ export const resetDatabase = () => api.post("/settings/database/reset").then(r =
 
 // Reminders
 export const sendTestReminder = () => api.post("/reminders/send").then(r => r.data);
+
+// Notifications
+export const getPendingNotifications = () => api.get("/notifications/pending").then(r => r.data);
