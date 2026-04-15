@@ -251,6 +251,12 @@ export function SettingsProvider({ children }) {
   const [sidebarStyle,   setSidebarStyle]   = useState(() => localStorage.getItem("sidebar_style")   || "normal");
   const [bgImage,        setBgImage]        = useState(() => localStorage.getItem("bg_image")         || "");
 
+  // ── advancedStyle: 50+ new appearance options ────────────────────────
+  const [advancedStyle, setAdvancedStyle] = useState(() => {
+    try { return JSON.parse(localStorage.getItem("advanced_style") || "{}"); }
+    catch { return {}; }
+  });
+
   const changePdfTheme = (t) => { setPdfTheme(t); localStorage.setItem("pdf_theme", t); };
 
   useEffect(() => {
@@ -281,6 +287,8 @@ export function SettingsProvider({ children }) {
       document.documentElement.style.setProperty("--bg-image", `url('${bgImage}')`);
       document.documentElement.dataset.bgImage = "true";
     }
+    // Apply all advanced style options
+    Object.entries(advancedStyle).forEach(([k, v]) => applyOneAdvancedStyle(k, v));
     if (customBgEnabled) {
       document.documentElement.style.setProperty("--bg-c1", bgColor1);
       document.documentElement.style.setProperty("--bg-c2", bgColor2);
@@ -449,6 +457,77 @@ export function SettingsProvider({ children }) {
     }
   };
 
+  // ── advancedStyle single change function ──────────────────────────────
+  const applyOneAdvancedStyle = (key, value) => {
+    const el = document.documentElement;
+    const a = (name, v, def) => { el.dataset[name] = (v === def) ? "" : String(v); };
+    const c = (prop, v) => el.style.setProperty(prop, String(v));
+    switch (key) {
+      case "accentGradient":  a("accentGrad",  value, "gradient");    break;
+      case "btnVariant":      a("btnVariant",  value, "primary");     break;
+      case "linkStyle":       a("linkStyle",   value, "hover");       break;
+      case "selectionColor":  a("selColor",    value, "accent");      break;
+      case "letterSpacing":   a("ltrSpacing",  value, "normal");      break;
+      case "lineHeight":      a("lineHeight",  value, "normal");      break;
+      case "cardHoverAnim":   a("cardHover",   value, "lift");        break;
+      case "btnClickAnim":    a("btnClick",    value, "scale");       break;
+      case "toastPosition":   a("toastPos",    value, "bottom-right"); break;
+      case "loadingAnim":     a("loadingAnim", value, "spin");        break;
+      case "dividerStyle":    a("divider",     value, "solid");       break;
+      case "badgeShape":      a("badgeShape",  value, "pill");        break;
+      case "cardGap":         a("cardGap",     value, "normal");      break;
+      case "headerHeight":    a("headerH",     value, "normal");      break;
+      case "navActiveStyle":  a("navActive",   value, "background");  break;
+      case "sidebarBrand":    a("sidebarBrand",value, "both");        break;
+      case "noiseTexture":    c("--noise-opacity", `${value / 100}`); break;
+      case "bgPattern":       a("bgPattern",   value, "none");        break;
+      case "vignette":        a("vignette",    value, "none");        break;
+      case "glassOpacity":    c("--glass-bg-opacity", `${value / 100}`); break;
+      case "glassBorder":     c("--glass-border-opacity", `${value / 100}`); break;
+      case "blobCount":       a("blobCount",   value, 4);             break;
+      case "blobAnim":        a("blobAnim",    value, "normal");      break;
+      case "headingWeight":   c("--heading-weight", value);           break;
+      case "headingCase":     a("headingCase", value, "normal");      break;
+      case "textShadow":      a("textShadow",  value, "none");        break;
+      case "bodyAlign":       a("bodyAlign",   value, "left");        break;
+      case "monoFont":        a("monoFont",    value, "default");     break;
+      case "linkDecoration":  a("linkDecor",   value, "hover");       break;
+      case "inputStyle":      a("inputStyle",  value, "box");         break;
+      case "inputSize":       a("inputSize",   value, "normal");      break;
+      case "focusRing":       a("focusRing",   value, "glow");        break;
+      case "checkboxStyle":   a("checkboxStyle",value,"default");     break;
+      case "formLayout":      a("formLayout",  value, "stacked");     break;
+      case "selectStyle":     a("selectStyle", value, "custom");      break;
+      case "tableStyle":      a("tableStyle",  value, "minimal");     break;
+      case "statusBadge":     a("statusBadge", value, "soft");        break;
+      case "chartPalette":    a("chartPalette",value, "default");     break;
+      case "rowHover":        a("rowHover",    value, "highlight");   break;
+      case "numberFormat":    a("numberFormat",value, "comma");       break;
+      case "progressStyle":   a("progressStyle",value,"rounded");     break;
+      case "metricCard":      a("metricCard",  value, "gradient");    break;
+      case "chartType":       a("chartType",   value, "bar");         break;
+      case "statsSize":       a("statsSize",   value, "normal");      break;
+      case "cardLayout":      a("cardLayout",  value, "grid");        break;
+      case "emptyState":      a("emptyState",  value, "icon");        break;
+      case "widgetCorner":    a("widgetCorner",value, "round");       break;
+      case "reducedMotion":   a("reducedMotion",value,"auto");        break;
+      case "highContrast":    a("highContrast",value, "off");         break;
+      case "colorBlindMode":  a("colorBlind",  value, "none");        break;
+      case "cursorStyle":     a("cursor",      value, "default");     break;
+      case "focusVisibility": a("focusVis",    value, "auto");        break;
+      default: break;
+    }
+  };
+
+  const changeAdvancedStyle = (key, value) => {
+    setAdvancedStyle(prev => {
+      const next = { ...prev, [key]: value };
+      localStorage.setItem("advanced_style", JSON.stringify(next));
+      applyOneAdvancedStyle(key, value);
+      return next;
+    });
+  };
+
   // ── Event type custom configs ──────────────────────────────
   const [eventConfigs, setEventConfigs] = useState(() => {
     try { return JSON.parse(localStorage.getItem("cp_event_configs") || "{}"); } catch { return {}; }
@@ -529,6 +608,7 @@ export function SettingsProvider({ children }) {
       iconSize, changeIconSize,
       sidebarStyle, changeSidebarStyle,
       bgImage, changeBgImage,
+      advancedStyle, changeAdvancedStyle,
       // Event & logo
       eventConfigs, updateEventTypeConfig, resetEventTypeConfig,
       logoUrl, pdfLogoUrl, logoSize, usePdfLogo, useCustomPdfLogo, updateLogoSettings,

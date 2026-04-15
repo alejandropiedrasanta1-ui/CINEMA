@@ -890,6 +890,99 @@ export default function Settings() {
           </svg>
         </Link>
 
+        {/* ── HERRAMIENTAS DE CONFIGURACIÓN ─────────── */}
+        <Section icon={Download} title={language === "es" ? "Importar / Exportar Configuración" : "Import / Export Settings"} desc={language === "es" ? "Guarda o restaura todos tus ajustes y apariencia" : "Save or restore all your settings"}>
+          <div className="space-y-4">
+            <p className="text-xs text-slate-400">{language === "es" ? "Exporta tus ajustes como JSON para respaldo. Importa un archivo para restaurar en otro dispositivo." : "Export settings as JSON for backup. Import a file to restore on another device."}</p>
+            <div className="grid grid-cols-2 gap-3">
+              <motion.button whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.97 }} data-testid="export-settings-btn"
+                onClick={() => {
+                  const keys = ["theme","preset","animations","radius","pdf_theme","dark_mode","font_scale","bg_intensity","sidebar_compact","date_format","font_family","card_style","anim_speed","shadow_depth","page_width","btn_corner","scrollbar","custom_bg","saturation","hover_effect","glass_blur","layout_density","page_transition","icon_size","sidebar_style","bg_image","advanced_style","custom_accent"];
+                  const exported = {};
+                  keys.forEach(k => { const v = localStorage.getItem(k); if (v) exported[k] = v; });
+                  const blob = new Blob([JSON.stringify(exported, null, 2)], { type: "application/json" });
+                  const url = URL.createObjectURL(blob);
+                  const a = document.createElement("a"); a.href = url; a.download = "cinema-settings.json";
+                  document.body.appendChild(a); a.click(); document.body.removeChild(a); URL.revokeObjectURL(url);
+                  toast({ title: language === "es" ? "Configuración exportada ✓" : "Settings exported ✓" });
+                }}
+                className="flex flex-col items-center gap-2 py-4 px-3 rounded-2xl bg-white/70 border-2 border-slate-200/70 hover:bg-white hover:border-[var(--t-from)] transition-all">
+                <Download size={18} className="text-emerald-500" />
+                <span className="text-xs font-black text-slate-700">{language === "es" ? "Exportar ajustes" : "Export settings"}</span>
+                <span className="text-[9px] text-slate-400">.json</span>
+              </motion.button>
+              <motion.button whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.97 }} data-testid="import-settings-btn"
+                onClick={() => {
+                  const input = document.createElement("input"); input.type = "file"; input.accept = ".json";
+                  input.onchange = async (e) => {
+                    const file = e.target.files?.[0]; if (!file) return;
+                    try {
+                      const text = await file.text(); const data = JSON.parse(text);
+                      Object.entries(data).forEach(([k, v]) => localStorage.setItem(k, v));
+                      toast({ title: language === "es" ? "Ajustes importados — recargando..." : "Settings imported — reloading..." });
+                      setTimeout(() => window.location.reload(), 1500);
+                    } catch { toast({ title: language === "es" ? "Archivo inválido" : "Invalid file", variant: "destructive" }); }
+                  };
+                  input.click();
+                }}
+                className="flex flex-col items-center gap-2 py-4 px-3 rounded-2xl bg-white/70 border-2 border-slate-200/70 hover:bg-white hover:border-[var(--t-from)] transition-all">
+                <RefreshCw size={18} className="text-sky-500" />
+                <span className="text-xs font-black text-slate-700">{language === "es" ? "Importar ajustes" : "Import settings"}</span>
+                <span className="text-[9px] text-slate-400">.json</span>
+              </motion.button>
+            </div>
+          </div>
+        </Section>
+
+        {/* ── ATAJOS DE TECLADO ─────────────────────── */}
+        <Section icon={Zap} title={language === "es" ? "Atajos de Teclado" : "Keyboard Shortcuts"} desc={language === "es" ? "Referencia de atajos disponibles en la app" : "Available keyboard shortcuts"}>
+          <div className="space-y-2.5">
+            {[
+              { keys: ["Ctrl","N"],          action: language === "es" ? "Nueva reserva"         : "New reservation"     },
+              { keys: ["Ctrl","F"],          action: language === "es" ? "Buscar reservas"        : "Search"              },
+              { keys: ["Ctrl","E"],          action: language === "es" ? "Exportar datos"         : "Export data"         },
+              { keys: ["Alt","1"],           action: language === "es" ? "Ir a Dashboard"         : "Dashboard"           },
+              { keys: ["Alt","2"],           action: language === "es" ? "Ir a Reservaciones"     : "Reservations"        },
+              { keys: ["Alt","3"],           action: language === "es" ? "Ir a Calendario"        : "Calendar"            },
+              { keys: ["Alt","S"],           action: language === "es" ? "Ir a Ajustes"           : "Settings"            },
+              { keys: ["Esc"],               action: language === "es" ? "Cerrar modal/cancelar"  : "Close modal"         },
+              { keys: ["Ctrl","Shift","D"],  action: language === "es" ? "Modo oscuro"            : "Toggle dark mode"    },
+            ].map((s, i) => (
+              <div key={i} className="flex items-center justify-between py-2 px-3 rounded-xl bg-white/50 hover:bg-white/70 transition-colors">
+                <span className="text-xs text-slate-600 font-medium">{s.action}</span>
+                <div className="flex items-center gap-1">
+                  {s.keys.map((k, j) => (
+                    <React.Fragment key={j}>
+                      <kbd className="px-2 py-0.5 rounded-md bg-slate-100 border border-slate-200 text-[10px] font-mono font-bold text-slate-700 shadow-sm">{k}</kbd>
+                      {j < s.keys.length - 1 && <span className="text-[9px] text-slate-400">+</span>}
+                    </React.Fragment>
+                  ))}
+                </div>
+              </div>
+            ))}
+          </div>
+        </Section>
+
+        {/* ── PLANTILLAS DE MENSAJES ──────────────────── */}
+        <Section icon={Bell} title={language === "es" ? "Plantillas de Recordatorio" : "Reminder Templates"} desc={language === "es" ? "Personaliza el texto de cada canal de aviso" : "Customize each reminder channel message"}>
+          <div className="space-y-4">
+            <p className="text-[11px] text-slate-400">{language === "es" ? "Variables disponibles: {nombre} {fecha} {evento} {lugar} {anticipo} {saldo}" : "Variables: {nombre} {fecha} {evento} {lugar} {anticipo} {saldo}"}</p>
+            {[
+              { key:"tpl_email",    icon:Mail,          label:"Email",    def:"Hola {nombre}, tu {evento} es el {fecha} en {lugar}. Anticipo: {anticipo}. Saldo: {saldo}." },
+              { key:"tpl_telegram", icon:MessageCircle, label:"Telegram", def:"🎬 {nombre} — {evento} el {fecha} en {lugar}." },
+              { key:"tpl_ntfy",     icon:Bell,          label:"ntfy.sh",  def:"Próxima reserva: {nombre} — {fecha}" },
+            ].map(t => (
+              <div key={t.key}>
+                <div className="flex items-center gap-2 mb-1.5"><t.icon size={12} className="text-slate-500" /><p className="text-xs font-black text-slate-600">{t.label}</p></div>
+                <textarea rows={2} defaultValue={localStorage.getItem(t.key) || t.def}
+                  onBlur={e => { localStorage.setItem(t.key, e.target.value); toast({ title: language === "es" ? "Guardado ✓" : "Saved ✓" }); }}
+                  data-testid={`template-${t.key}`}
+                  className="w-full bg-white/60 border border-slate-200/80 rounded-xl px-3 py-2.5 text-xs font-mono text-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-300 resize-none" />
+              </div>
+            ))}
+          </div>
+        </Section>
+
         {/* ── CONFIGURACIÓN DEL NEGOCIO ── */}
         <Section icon={ShieldCheck} title={language === "es" ? "Configuración del Negocio" : "Business Configuration"}
           desc={language === "es" ? "Datos de empresa, horarios, anticipo por defecto" : "Company data, hours, default advance"}>
