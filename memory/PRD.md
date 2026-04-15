@@ -66,7 +66,16 @@ Sistema de gestión de reservas para eventos (bodas, quinceañeras, fiestas soci
 - Sub-totales en TeamSection: "Pagado al equipo" y "Pendiente equipo"
 - Panel en página Socios: 4 cards → Total Eventos, Costo Equipo, Pagado Equipo, Ingreso Real
 
-### Rediseño Visual con Iconos (Iteración 9 - Abril 2026) ✅
+### Apariencia y Personalización (Iteración 10 - Feb 2026) ✅
+- **3 Presets de Diseño**: Glass Aurora (glassmorphismo + blobs), Crystal (cristal opaco), Minimal (blanco sólido sin blobs)
+- Cada preset tiene mini-preview visual interactiva en la tarjeta de selección
+- CSS overrides via `data-preset` attribute en `<html>` para cambiar `.glass`, `.glass-*`, `body bg`, y `.mesh-bg`
+- **Toggle de Animaciones**: usa `MotionConfig reducedMotion` de framer-motion para desactivar todas las animaciones JS
+- **Estilo de Bordes**: 3 opciones (Suaves/Medios/Rectos) via `data-radius` overrides en CSS para `rounded-*`
+- Sección "Apariencia" en Ajustes reemplaza la anterior sección de solo colores
+- Layout sidebar footer muestra nombre del preset activo (v1.0 · Crystal, etc.)
+- Todo persiste en localStorage: claves `preset`, `animations`, `radius`
+
 - Creado `/frontend/src/lib/eventConfig.js` — configuración centralizada: icono Lucide + colores por tipo de evento
 - Dashboard: "Tipos de Evento" con tarjetas visuales (icono, contador animado, barra de progreso, %)
 - Eliminado el gráfico de estado del Dashboard (solo distribución por tipo)
