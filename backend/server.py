@@ -1141,7 +1141,7 @@ async def get_build_status():
     return _build_state
 
 
-
+@api_router.get("/download/package")
 async def download_package():
     import zipfile
 
