@@ -224,7 +224,11 @@ Sistema de gestión de reservas para eventos (bodas, quinceañeras, fiestas soci
 - Fix: `getEventTypeName` importado correctamente en Settings.jsx
 - Nombres de tipos de evento persisten correctamente en localStorage tras recarga
 
-## Backlog / Próximas mejoras
+### Fix /api/reminders/send 404 (Abril 2026) ✅
+- La función `trigger_reminders_manual()` existía pero sin el decorador `@api_router.post`
+- Ahora registrada como ruta POST `/api/reminders/send`
+- Mejorada: busca eventos en ventana de N días (no solo fecha exacta), intenta Resend → Gmail → Push en cascada
+- Toast muestra mensaje correcto con eventos encontrados y método de envío usado
 
 ### P1 (Próximo sprint)
 - [ ] WhatsApp automático vía Twilio (actualmente es link manual wa.me)
