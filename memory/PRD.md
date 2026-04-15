@@ -251,22 +251,19 @@ Sistema de gestión de reservas para eventos (bodas, quinceañeras, fiestas soci
 - Endpoint mejorado: busca eventos en ventana N días, intenta Resend → Push en cascada
 - **Email verificado: llegó a alejandropiedrasanta1@gmail.com correctamente ✓**
 
-### Fix crítico Settings.jsx (Abril 2026) ✅
-- Corregido bug `motion is not defined` en Settings.jsx: faltaba `import { motion } from "framer-motion"`
-- Página /ajustes cargaba en blanco con error en consola — ahora funciona correctamente
-
-### DatabasePage + Testing completo (Iteración 17 - Abril 2026) ✅
-- Página `/base-de-datos` rediseñada con glassmorphism UI
-- Testeado al 100%: backup download, CSV export, JSON export, PDF export, backup history
-- Restaurar desde archivo .json funciona con auto-backup previo
-- Botones Telegram/ntfy muestran error apropiado cuando no están configurados
-- Todas las APIs: `/api/backup/download`, `/api/export/reservations`, `/api/backup/create`, `/api/backup/history` retornan 200
+### DatabasePage — Nuevas funciones (Abril 2026) ✅
+- Respaldo automático al PC: toggle ON/OFF, frecuencia (30min/1h/2h/6h/12h/24h), carpeta Descargas o carpeta fija (File System API Chrome/Edge), countdown en vivo, conteo de backups por sesión
+- Exportar Excel (.xlsx): nuevo formato con headers coloreados, columnas auto-width, saldo calculado — via openpyxl backend
+- Importar desde CSV: upload .csv, mapeo automático de columnas (ES/EN), preview de errores, +2 importaciones de prueba en DB
+- Conexiones guardadas (presets): guarda múltiples MongoDB URLs con nombre/color en localStorage, conectar/eliminar con un clic
+- Limpieza de BD: preview de conteos (canceladas, completadas > 6 meses), auto-backup previo a limpieza
+- Hooks: useAutoBackup.js creado con IndexedDB para persistir FileSystem handle entre sesiones
 
 ### P1 (Próximo sprint)
 - [ ] Configurar Telegram Bot (usuario necesita: token @BotFather + Chat ID)
 - [ ] Configurar ntfy.sh (usuario necesita: elegir nombre de tema + instalar app)
-- [ ] WhatsApp automático vía Twilio (actualmente es link manual wa.me)
-- [ ] Imprimir comprobante directamente desde el detalle
+- [ ] WhatsApp automático vía Twilio
+- [ ] Imprimir comprobante directamente desde detalle de reserva
 
 ### P2
 - [ ] Portal para clientes (ver su reserva con link único)
