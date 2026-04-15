@@ -2,13 +2,14 @@ import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
 import {
   Download, Globe, DollarSign, Palette, FileText,
-  Bell, Database, CheckCircle, XCircle, RefreshCw,
+  Bell, BellRing, Database, CheckCircle, XCircle, RefreshCw,
   Wifi, WifiOff, MessageCircle, Mail, Loader2, Monitor,
   Package, AlertCircle, Sparkles, Zap, Layers
 } from "lucide-react";
 import { useSettings, THEMES, CURRENCIES, PRESETS } from "@/context/SettingsContext";
 import { useToast } from "@/hooks/use-toast";
-import { api, getAppSettings, updateAppSettings, getDbStats, testDbConnection, switchDatabase, resetDatabase, sendTestReminder } from "@/lib/api";
+import { api, getAppSettings, updateAppSettings, getDbStats, testDbConnection, switchDatabase, resetDatabase, sendTestReminder, getReservations } from "@/lib/api";
+import { generateAllReservationsPDF } from "@/lib/generatePDF";
 
 const item = {
   hidden: { opacity: 0, y: 20 },
@@ -235,6 +236,64 @@ export default function Settings() {
       toast({ title: msg, variant: "destructive" });
     } finally {
       setDbResetting(false);
+    }
+  };
+
+  // ── System Notifications ──────────────────────────────────────
+  const [notifPermission, setNotifPermission] = useState(() =>
+    (typeof window !== "undefined" && "Notification" in window) ? Notification.permission : "unsupported"
+  );
+
+  const handleRequestPermission = async () => {
+    if (!("Notification" in window)) {
+      toast({ title: language === "es" ? "Tu navegador no soporta notificaciones" : "Browser does not support notifications", variant: "destructive" });
+      return;
+    }
+    try {
+      const permission = await Notification.requestPermission();
+      setNotifPermission(permission);
+      if (permission === "granted") {
+        localStorage.setItem("cp_notif_enabled", "true");
+        new Notification("Cinema Productions", {
+          body: language === "es" ? "¡Notificaciones de sistema activadas correctamente!" : "System notifications enabled!",
+          icon: "/logo.png",
+        });
+        toast({ title: language === "es" ? "Notificaciones de sistema activadas ✓" : "System notifications enabled ✓" });
+      } else {
+        toast({ title: language === "es" ? "Permiso denegado" : "Permission denied", variant: "destructive" });
+      }
+    } catch {
+      toast({ title: "Error al solicitar permiso", variant: "destructive" });
+    }
+  };
+
+  const handleTestSystemNotif = () => {
+    if (Notification.permission !== "granted") return;
+    new Notification("Cinema Productions — Prueba", {
+      body: language === "es" ? "Las notificaciones de sistema están funcionando correctamente." : "System notifications are working.",
+      icon: "/logo.png",
+      tag: "cp-test-notif",
+    });
+    toast({ title: language === "es" ? "Notificación enviada ✓" : "Test notification sent ✓" });
+  };
+
+  // ── PDF Export ────────────────────────────────────────────────
+  const [pdfLoading, setPdfLoading] = useState(false);
+
+  const handleExportPDF = async () => {
+    setPdfLoading(true);
+    try {
+      const reservations = await getReservations();
+      if (!reservations.length) {
+        toast({ title: language === "es" ? "No hay reservas para exportar" : "No reservations to export", variant: "destructive" });
+        return;
+      }
+      await generateAllReservationsPDF(reservations, formatCurrency);
+      toast({ title: language === "es" ? `PDF generado — ${reservations.length} reservas ✓` : `PDF generated — ${reservations.length} reservations ✓` });
+    } catch (err) {
+      toast({ title: err.message || "Error al generar PDF", variant: "destructive" });
+    } finally {
+      setPdfLoading(false);
     }
   };
 
@@ -537,6 +596,122 @@ export default function Settings() {
               </button>
             </div>
 
+            {/* ── Windows / System Notifications ──────────────── */}
+            <div
+              className="rounded-2xl overflow-hidden"
+              style={{
+                border: notifPermission === "granted"
+                  ? "1px solid rgba(16,185,129,0.3)"
+                  : notifPermission === "denied"
+                  ? "1px solid rgba(239,68,68,0.25)"
+                  : "1px solid rgba(226,232,240,0.8)",
+                background: notifPermission === "granted"
+                  ? "rgba(16,185,129,0.04)"
+                  : "rgba(255,255,255,0.5)",
+              }}
+            >
+              {/* Header row */}
+              <div className="flex items-center gap-3 px-4 py-3.5">
+                <div
+                  className="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0"
+                  style={{
+                    background: notifPermission === "granted"
+                      ? "rgba(16,185,129,0.12)"
+                      : notifPermission === "denied" ? "rgba(239,68,68,0.08)" : "#f1f5f9",
+                  }}
+                >
+                  <BellRing
+                    size={16}
+                    style={{
+                      color: notifPermission === "granted" ? "#10b981"
+                        : notifPermission === "denied" ? "#ef4444" : "#94a3b8",
+                    }}
+                  />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-bold text-slate-800">
+                    {language === "es" ? "Notificaciones del Sistema" : "System Notifications"}
+                  </p>
+                  <p className="text-xs text-slate-400">
+                    {language === "es" ? "Alertas emergentes en Windows / macOS" : "Pop-up alerts on Windows / macOS"}
+                  </p>
+                </div>
+                <span
+                  className={`text-[10px] font-black px-2.5 py-1 rounded-full flex-shrink-0 ${
+                    notifPermission === "granted" ? "bg-emerald-100 text-emerald-700"
+                    : notifPermission === "denied" ? "bg-red-100 text-red-600"
+                    : "bg-slate-100 text-slate-400"
+                  }`}
+                  data-testid="system-notif-status"
+                >
+                  {notifPermission === "granted" ? "ACTIVO"
+                    : notifPermission === "denied" ? "BLOQUEADO"
+                    : notifPermission === "unsupported" ? "NO SOPORTADO"
+                    : "INACTIVO"}
+                </span>
+              </div>
+
+              {/* Body */}
+              <div className="px-4 pb-4">
+                {notifPermission === "unsupported" ? (
+                  <p className="text-xs text-slate-400 text-center py-1">
+                    {language === "es" ? "Tu navegador no soporta notificaciones nativas." : "Your browser does not support native notifications."}
+                  </p>
+                ) : notifPermission === "denied" ? (
+                  <div className="flex items-start gap-2 bg-red-50/80 border border-red-200/60 rounded-xl px-3 py-2.5">
+                    <XCircle size={13} className="text-red-500 mt-0.5 flex-shrink-0" />
+                    <p className="text-xs text-red-600 font-medium">
+                      {language === "es"
+                        ? "Permiso denegado. Ve a Configuración del navegador → Privacidad → Notificaciones y permite este sitio."
+                        : "Permission denied. Go to Browser Settings → Privacy → Notifications and allow this site."}
+                    </p>
+                  </div>
+                ) : notifPermission === "granted" ? (
+                  <div className="space-y-2">
+                    <div className="flex items-center gap-2 bg-emerald-50/80 border border-emerald-200/50 rounded-xl px-3 py-2.5">
+                      <CheckCircle size={13} className="text-emerald-500 flex-shrink-0" />
+                      <p className="text-xs text-emerald-700 font-semibold">
+                        {language === "es" ? "Notificaciones de sistema activas — recordatorios en tiempo real" : "System notifications active — real-time reminders"}
+                      </p>
+                    </div>
+                    <motion.button
+                      whileHover={{ scale: 1.02 }}
+                      whileTap={{ scale: 0.97 }}
+                      onClick={handleTestSystemNotif}
+                      data-testid="system-notif-test-btn"
+                      className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl glass text-slate-700 text-xs font-bold hover:bg-white/50 transition-all border border-white/60"
+                    >
+                      <Bell size={13} />
+                      {language === "es" ? "Enviar notificación de prueba" : "Send test notification"}
+                    </motion.button>
+                  </div>
+                ) : (
+                  <div className="space-y-2">
+                    <p className="text-xs text-slate-500 mb-3">
+                      {language === "es"
+                        ? "Recibe alertas emergentes directamente en Windows o macOS cuando hay eventos próximos, sin necesidad de tener la app abierta."
+                        : "Receive pop-up alerts directly on Windows or macOS for upcoming events."}
+                    </p>
+                    <motion.button
+                      whileHover={{ scale: 1.02 }}
+                      whileTap={{ scale: 0.97 }}
+                      onClick={handleRequestPermission}
+                      data-testid="system-notif-enable-btn"
+                      className="w-full flex items-center justify-center gap-2 py-3 rounded-xl btn-primary text-white text-sm font-bold"
+                    >
+                      <BellRing size={15} />
+                      {language === "es" ? "Activar notificaciones de Windows" : "Enable Windows notifications"}
+                    </motion.button>
+                    <p className="text-[10px] text-slate-400 text-center mt-1">
+                      {language === "es"
+                        ? "El navegador pedirá permiso. Haz clic en \"Permitir\" para activar."
+                        : "The browser will ask for permission. Click \"Allow\" to enable."}
+                    </p>
+                  </div>
+                )}
+              </div>
+            </div>
+
             {/* Days */}
             <div>
               <label className="text-xs font-bold text-slate-500 mb-1.5 block">{s.notifDays}</label>
@@ -787,17 +962,57 @@ export default function Settings() {
 
         {/* Export */}
         <Section icon={FileText} title={s.exportTitle} desc={s.exportDesc}>
-          <div className="flex gap-3">
-            <motion.button whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.97 }}
-              onClick={() => handleExport("csv")} data-testid="export-csv-btn"
-              className="flex items-center gap-2.5 px-6 py-3 rounded-2xl btn-primary text-white text-sm font-bold flex-1 justify-center">
-              <Download size={15} /> {s.downloadCSV}
-            </motion.button>
-            <motion.button whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.97 }}
-              onClick={() => handleExport("json")} data-testid="export-json-btn"
-              className="flex items-center gap-2.5 px-6 py-3 rounded-2xl glass border-white/60 text-slate-700 text-sm font-bold flex-1 justify-center hover:bg-white/50 transition-all">
-              <Download size={15} /> {s.downloadJSON}
-            </motion.button>
+          <div className="space-y-3">
+
+            {/* CSV + JSON row */}
+            <div className="flex gap-3">
+              <motion.button whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.97 }}
+                onClick={() => handleExport("csv")} data-testid="export-csv-btn"
+                className="flex items-center gap-2.5 px-6 py-3 rounded-2xl btn-primary text-white text-sm font-bold flex-1 justify-center">
+                <Download size={15} /> {s.downloadCSV}
+              </motion.button>
+              <motion.button whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.97 }}
+                onClick={() => handleExport("json")} data-testid="export-json-btn"
+                className="flex items-center gap-2.5 px-6 py-3 rounded-2xl glass border-white/60 text-slate-700 text-sm font-bold flex-1 justify-center hover:bg-white/50 transition-all">
+                <Download size={15} /> {s.downloadJSON}
+              </motion.button>
+            </div>
+
+            {/* PDF Export — full-width visual report */}
+            <div className="rounded-2xl overflow-hidden" style={{ border: "1px solid rgba(220,38,38,0.2)", background: "rgba(254,242,242,0.5)" }}>
+              <div className="px-4 py-3 flex items-center gap-3">
+                <div className="w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0" style={{ background: "rgba(220,38,38,0.1)" }}>
+                  <FileText size={15} style={{ color: "#dc2626" }} />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-bold text-slate-800">
+                    {language === "es" ? "Reporte Visual PDF" : "PDF Visual Report"}
+                  </p>
+                  <p className="text-xs text-slate-400">
+                    {language === "es"
+                      ? "Todas las reservas agrupadas por estado con detalles y montos"
+                      : "All reservations grouped by status with details and amounts"}
+                  </p>
+                </div>
+              </div>
+              <div className="px-4 pb-4">
+                <motion.button
+                  whileHover={{ scale: 1.02, boxShadow: "0 8px 24px rgba(220,38,38,0.28)" }}
+                  whileTap={{ scale: 0.97 }}
+                  onClick={handleExportPDF}
+                  disabled={pdfLoading}
+                  data-testid="export-pdf-btn"
+                  className="w-full flex items-center justify-center gap-2.5 py-3.5 rounded-xl text-sm font-bold text-white disabled:opacity-60 transition-all"
+                  style={{ background: "linear-gradient(135deg, #dc2626, #b91c1c)" }}
+                >
+                  {pdfLoading
+                    ? <><Loader2 size={15} className="animate-spin" /> {language === "es" ? "Generando PDF..." : "Generating PDF..."}</>
+                    : <><FileText size={15} /> {language === "es" ? "Exportar reporte PDF — todas las reservas" : "Export PDF report — all reservations"}</>
+                  }
+                </motion.button>
+              </div>
+            </div>
+
           </div>
         </Section>
 

@@ -218,3 +218,202 @@ export async function generateReservationPDF(reservation, formatCurrency) {
   const filename = `reserva_${(reservation.client_name || "cliente").replace(/\s+/g, "_").toLowerCase()}_${reservation.event_date || "fecha"}.pdf`;
   doc.save(filename);
 }
+
+// ─────────────────────────────────────────────────────────────────
+// ALL RESERVATIONS REPORT PDF
+// ─────────────────────────────────────────────────────────────────
+const ALL_STATUS_ORDER = ["Confirmado", "Pendiente", "Completado", "Cancelado"];
+
+const ALL_STATUS_COLORS = {
+  Confirmado: [59, 130, 246],
+  Pendiente:  [245, 158, 11],
+  Completado: [16, 185, 129],
+  Cancelado:  [239, 68, 68],
+};
+
+const ALL_STATUS_LIGHT = {
+  Confirmado: [235, 244, 255],
+  Pendiente:  [255, 251, 235],
+  Completado: [236, 253, 245],
+  Cancelado:  [254, 242, 242],
+};
+
+export async function generateAllReservationsPDF(reservations, formatCurrency) {
+  const doc = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" });
+  const W  = doc.internal.pageSize.getWidth();
+  const H  = doc.internal.pageSize.getHeight();
+  const ml = 14;
+  const mr = W - 14;
+  const contentW = mr - ml;
+
+  const today = new Date().toLocaleDateString("es-GT", { day: "2-digit", month: "2-digit", year: "numeric" });
+
+  const formatDate = (d) => {
+    if (!d) return "—";
+    const [yr, m, day] = d.split("-");
+    return `${day}/${m}/${yr}`;
+  };
+
+  // ── DARK HEADER ──────────────────────────────────────────────
+  doc.setFillColor(12, 14, 30);
+  doc.rect(0, 0, W, 48, "F");
+
+  // Accent gradient bar at top
+  doc.setFillColor(99, 102, 241);
+  doc.rect(0, 0, W, 2.5, "F");
+
+  // Logo
+  try {
+    const logoBase64 = await loadImageAsBase64(window.location.origin + "/logo.png");
+    if (logoBase64) doc.addImage(logoBase64, "PNG", ml, 7, 46, 26);
+  } catch {}
+
+  // Title
+  doc.setTextColor(255, 255, 255);
+  doc.setFontSize(16);
+  doc.setFont("helvetica", "bold");
+  doc.text("REPORTE DE RESERVAS", mr, 18, { align: "right" });
+
+  doc.setFontSize(7.5);
+  doc.setFont("helvetica", "normal");
+  doc.setTextColor(150, 155, 200);
+  doc.text(`Generado: ${today}`, mr, 25, { align: "right" });
+  doc.text(`Total de reservas: ${reservations.length}`, mr, 31, { align: "right" });
+
+  // ── STATS BAR ───────────────────────────────────────────────
+  doc.setFillColor(22, 25, 52);
+  doc.rect(0, 48, W, 20, "F");
+
+  const active  = reservations.filter(r => r.status !== "Cancelado");
+  const confirmed = reservations.filter(r => r.status === "Confirmado").length;
+  const pending   = reservations.filter(r => r.status === "Pendiente").length;
+  const totalIncome = active.reduce((s, r) => s + (r.total_amount || 0), 0);
+  const totalAdv    = active.reduce((s, r) => s + (r.advance_paid  || 0), 0);
+  const totalBal    = totalIncome - totalAdv;
+
+  const statsData = [
+    { label: "ACTIVAS",   value: String(active.length)         },
+    { label: "CONFIRMADAS", value: String(confirmed)           },
+    { label: "PENDIENTES",  value: String(pending)             },
+    { label: "SALDO TOTAL", value: formatCurrency(totalBal)    },
+  ];
+
+  const sw = W / statsData.length;
+  statsData.forEach((st, i) => {
+    const cx = i * sw + sw / 2;
+    doc.setTextColor(255, 255, 255);
+    doc.setFontSize(11);
+    doc.setFont("helvetica", "bold");
+    doc.text(st.value, cx, 60, { align: "center" });
+    doc.setFontSize(5.5);
+    doc.setFont("helvetica", "normal");
+    doc.setTextColor(110, 115, 165);
+    doc.text(st.label, cx, 64.5, { align: "center" });
+  });
+
+  let y = 76;
+
+  // ── TABLE COLUMNS ────────────────────────────────────────────
+  const COL_X  = [ml,       ml + 52,  ml + 92,  ml + 119, ml + 148];
+  const COL_W  = [50,        38,       25,        27,       28];
+  const COL_H  = ["CLIENTE", "TIPO",   "FECHA",   "TOTAL",  "ANTICIPO"];
+  const ROW_H  = 7.5;
+
+  function drawGroupHeader(yPos, status) {
+    const col = ALL_STATUS_COLORS[status] || [100, 100, 100];
+    const count = reservations.filter(r => r.status === status).length;
+    doc.setFillColor(...col);
+    doc.roundedRect(ml, yPos, contentW, 9, 2, 2, "F");
+    doc.setTextColor(255, 255, 255);
+    doc.setFontSize(8.5);
+    doc.setFont("helvetica", "bold");
+    doc.text(
+      `${status.toUpperCase()}  ·  ${count} reserva${count !== 1 ? "s" : ""}`,
+      ml + 5, yPos + 6.2
+    );
+    return yPos + 11;
+  }
+
+  function drawColHeader(yPos, color) {
+    const light = ALL_STATUS_LIGHT[color] || [245, 247, 255];
+    doc.setFillColor(...(ALL_STATUS_LIGHT[color] || [242, 244, 255]));
+    doc.rect(ml, yPos, contentW, 6.5, "F");
+    doc.setTextColor(...(ALL_STATUS_COLORS[color] || [80, 80, 180]));
+    doc.setFontSize(6);
+    doc.setFont("helvetica", "bold");
+    COL_H.forEach((h, i) => doc.text(h, COL_X[i] + 1.5, yPos + 4.5));
+    return yPos + 7;
+  }
+
+  function drawRow(r, yPos, isEven) {
+    if (isEven) {
+      doc.setFillColor(249, 250, 254);
+      doc.rect(ml, yPos, contentW, ROW_H, "F");
+    }
+    // Client
+    doc.setTextColor(20, 20, 45);
+    doc.setFontSize(8.5);
+    doc.setFont("helvetica", "bold");
+    doc.text(doc.splitTextToSize(r.client_name || "—", COL_W[0] - 2)[0], COL_X[0] + 1.5, yPos + 5);
+    // Type
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(7.5);
+    doc.setTextColor(80, 80, 110);
+    doc.text(doc.splitTextToSize(r.event_type || "—", COL_W[1] - 2)[0], COL_X[1] + 1.5, yPos + 5);
+    // Date
+    doc.setTextColor(60, 60, 90);
+    doc.text(formatDate(r.event_date), COL_X[2] + 1.5, yPos + 5);
+    // Total
+    doc.setFont("helvetica", "bold");
+    doc.setTextColor(20, 20, 45);
+    doc.text(formatCurrency(r.total_amount || 0), COL_X[3] + 1.5, yPos + 5);
+    // Advance
+    doc.setTextColor(16, 160, 90);
+    doc.text(formatCurrency(r.advance_paid || 0), COL_X[4] + 1.5, yPos + 5);
+    // Divider
+    doc.setDrawColor(230, 232, 245);
+    doc.setLineWidth(0.2);
+    doc.line(ml, yPos + ROW_H, mr, yPos + ROW_H);
+    return yPos + ROW_H;
+  }
+
+  // ── GROUPS ────────────────────────────────────────────────────
+  for (const status of ALL_STATUS_ORDER) {
+    const group = reservations.filter(r => r.status === status);
+    if (!group.length) continue;
+
+    if (y + 22 > H - 22) { doc.addPage(); y = 20; }
+
+    y = drawGroupHeader(y, status);
+    y = drawColHeader(y, status);
+
+    group.forEach((r, idx) => {
+      if (y + ROW_H > H - 22) {
+        doc.addPage();
+        y = 20;
+        y = drawColHeader(y, status);
+      }
+      y = drawRow(r, y, idx % 2 === 0);
+    });
+
+    y += 8;
+  }
+
+  // ── PAGE FOOTERS ──────────────────────────────────────────────
+  const pageCount = doc.internal.getNumberOfPages();
+  for (let i = 1; i <= pageCount; i++) {
+    doc.setPage(i);
+    doc.setDrawColor(210, 215, 240);
+    doc.setLineWidth(0.25);
+    doc.line(ml, H - 14, mr, H - 14);
+    doc.setFillColor(248, 249, 255);
+    doc.rect(ml, H - 13.5, contentW, 10, "F");
+    doc.setTextColor(130, 130, 170);
+    doc.setFontSize(6.5);
+    doc.setFont("helvetica", "normal");
+    doc.text("Cinema Productions — Reporte de Reservas", ml + 3, H - 6.5);
+    doc.text(`Pág. ${i} / ${pageCount}`, mr - 3, H - 6.5, { align: "right" });
+  }
+
+  doc.save(`reporte_reservas_${new Date().toISOString().slice(0, 10)}.pdf`);
+}
