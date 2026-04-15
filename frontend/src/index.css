@@ -74,13 +74,7 @@ h1, h2, h3, h4, h5, h6 {
 }
 
 /* Glass card utility */
-.glass {
-  background: rgba(255, 255, 255, 0.45);
-  backdrop-filter: blur(20px) saturate(180%);
-  -webkit-backdrop-filter: blur(20px) saturate(180%);
-  border: 1px solid rgba(255, 255, 255, 0.65);
-  box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.07), 0 1px 0 rgba(255,255,255,0.8) inset;
-}
+/* .glass defined via --glass-blur CSS variable at bottom of file */
 
 .glass-strong {
   background: rgba(255, 255, 255, 0.65);
@@ -560,3 +554,59 @@ body  { font-family: var(--font-body) !important; }
 [data-hover="glow"] .glass:hover { box-shadow: 0 12px 40px color-mix(in srgb, var(--t-from) 22%, transparent) !important; }
 [data-hover="lift"] .glass:hover { transform: translateY(-3px); }
 [data-hover="scale"] button:hover { transform: scale(1.02); }
+
+
+/* ═══════════════════════════════════════════
+   GLASS BLUR INTENSITY
+═══════════════════════════════════════════ */
+:root { --glass-blur: 20px; }
+.glass {
+  background: rgba(255, 255, 255, 0.45);
+  backdrop-filter: blur(var(--glass-blur)) saturate(180%);
+  -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(180%);
+  border: 1px solid rgba(255, 255, 255, 0.65);
+  box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.07), 0 1px 0 rgba(255,255,255,0.8) inset;
+}
+
+
+/* ═══════════════════════════════════════════
+   LAYOUT DENSITY
+═══════════════════════════════════════════ */
+[data-density="comfortable"] .px-6 { padding-left: 2rem !important; padding-right: 2rem !important; }
+[data-density="comfortable"] .py-8 { padding-top: 2.5rem !important; padding-bottom: 2.5rem !important; }
+[data-density="comfortable"] .p-7  { padding: 2.25rem !important; }
+[data-density="comfortable"] .space-y-5 > * + * { margin-top: 1.75rem !important; }
+[data-density="compact"] .px-6 { padding-left: 0.75rem !important; padding-right: 0.75rem !important; }
+[data-density="compact"] .py-8 { padding-top: 0.75rem !important; padding-bottom: 0.75rem !important; }
+[data-density="compact"] .p-7  { padding: 0.875rem !important; }
+[data-density="compact"] .space-y-5 > * + * { margin-top: 0.625rem !important; }
+[data-density="compact"] .space-y-4 > * + * { margin-top: 0.5rem !important; }
+
+
+/* ═══════════════════════════════════════════
+   SIDEBAR STYLE
+═══════════════════════════════════════════ */
+[data-sidebar-style="floating"] .glass-sidebar {
+  margin: 12px 0 12px 12px !important;
+  border-radius: 20px !important;
+  min-height: calc(100vh - 24px) !important;
+  border-right-width: 1px !important;
+  box-shadow: 0 20px 60px rgba(31,38,135,0.14), 0 4px 16px rgba(0,0,0,0.06) !important;
+  overflow: hidden;
+}
+[data-sidebar-style="borderless"] .glass-sidebar {
+  border-right: none !important;
+  box-shadow: none !important;
+}
+
+
+/* ═══════════════════════════════════════════
+   BACKGROUND IMAGE
+═══════════════════════════════════════════ */
+[data-bg-image="true"] body {
+  background-image: var(--bg-image) !important;
+  background-size: cover !important;
+  background-position: center !important;
+  background-attachment: fixed !important;
+}
+[data-bg-image="true"] .mesh-bg { opacity: 0.3; }

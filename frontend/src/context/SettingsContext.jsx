@@ -243,6 +243,14 @@ export function SettingsProvider({ children }) {
   const [saturation,     setSaturation]     = useState(() => localStorage.getItem("saturation")   || "normal");
   const [hoverEffect,    setHoverEffect]    = useState(() => localStorage.getItem("hover_effect") || "normal");
 
+  // ── New advanced appearance options ───────────────────────────────────
+  const [glassBlur,      setGlassBlur]      = useState(() => parseInt(localStorage.getItem("glass_blur") || "20", 10));
+  const [layoutDensity,  setLayoutDensity]  = useState(() => localStorage.getItem("layout_density")  || "standard");
+  const [pageTransition, setPageTransition] = useState(() => localStorage.getItem("page_transition") || "fade");
+  const [iconSize,       setIconSize]       = useState(() => localStorage.getItem("icon_size")        || "medium");
+  const [sidebarStyle,   setSidebarStyle]   = useState(() => localStorage.getItem("sidebar_style")   || "normal");
+  const [bgImage,        setBgImage]        = useState(() => localStorage.getItem("bg_image")         || "");
+
   const changePdfTheme = (t) => { setPdfTheme(t); localStorage.setItem("pdf_theme", t); };
 
   useEffect(() => {
@@ -264,6 +272,15 @@ export function SettingsProvider({ children }) {
     document.documentElement.dataset.customBg = String(customBgEnabled);
     document.documentElement.dataset.sat      = saturation === "normal" ? "" : saturation;
     document.documentElement.dataset.hover    = hoverEffect === "normal" ? "" : hoverEffect;
+    document.documentElement.style.setProperty("--glass-blur", `${glassBlur}px`);
+    document.documentElement.dataset.density      = layoutDensity === "standard" ? "" : layoutDensity;
+    document.documentElement.dataset.pageTransition = pageTransition === "fade" ? "" : pageTransition;
+    document.documentElement.dataset.iconSize     = iconSize === "medium" ? "" : iconSize;
+    document.documentElement.dataset.sidebarStyle = sidebarStyle === "normal" ? "" : sidebarStyle;
+    if (bgImage) {
+      document.documentElement.style.setProperty("--bg-image", `url('${bgImage}')`);
+      document.documentElement.dataset.bgImage = "true";
+    }
     if (customBgEnabled) {
       document.documentElement.style.setProperty("--bg-c1", bgColor1);
       document.documentElement.style.setProperty("--bg-c2", bgColor2);
@@ -394,6 +411,44 @@ export function SettingsProvider({ children }) {
     document.documentElement.dataset.hover = val === "normal" ? "" : val;
   };
 
+  // ── New advanced appearance features ─────────────────────────
+  const changeGlassBlur = (val) => {
+    setGlassBlur(val);
+    localStorage.setItem("glass_blur", String(val));
+    document.documentElement.style.setProperty("--glass-blur", `${val}px`);
+  };
+  const changeLayoutDensity = (val) => {
+    setLayoutDensity(val);
+    localStorage.setItem("layout_density", val);
+    document.documentElement.dataset.density = val === "standard" ? "" : val;
+  };
+  const changePageTransition = (val) => {
+    setPageTransition(val);
+    localStorage.setItem("page_transition", val);
+    document.documentElement.dataset.pageTransition = val === "fade" ? "" : val;
+  };
+  const changeIconSize = (val) => {
+    setIconSize(val);
+    localStorage.setItem("icon_size", val);
+    document.documentElement.dataset.iconSize = val === "medium" ? "" : val;
+  };
+  const changeSidebarStyle = (val) => {
+    setSidebarStyle(val);
+    localStorage.setItem("sidebar_style", val);
+    document.documentElement.dataset.sidebarStyle = val === "normal" ? "" : val;
+  };
+  const changeBgImage = (url) => {
+    setBgImage(url);
+    localStorage.setItem("bg_image", url);
+    if (url) {
+      document.documentElement.style.setProperty("--bg-image", `url('${url}')`);
+      document.documentElement.dataset.bgImage = "true";
+    } else {
+      document.documentElement.style.removeProperty("--bg-image");
+      document.documentElement.dataset.bgImage = "";
+    }
+  };
+
   // ── Event type custom configs ──────────────────────────────
   const [eventConfigs, setEventConfigs] = useState(() => {
     try { return JSON.parse(localStorage.getItem("cp_event_configs") || "{}"); } catch { return {}; }
@@ -467,6 +522,13 @@ export function SettingsProvider({ children }) {
       customAccent, changeCustomAccent,
       saturation, changeSaturation,
       hoverEffect, changeHoverEffect,
+      // New advanced appearance
+      glassBlur, changeGlassBlur,
+      layoutDensity, changeLayoutDensity,
+      pageTransition, changePageTransition,
+      iconSize, changeIconSize,
+      sidebarStyle, changeSidebarStyle,
+      bgImage, changeBgImage,
       // Event & logo
       eventConfigs, updateEventTypeConfig, resetEventTypeConfig,
       logoUrl, pdfLogoUrl, logoSize, usePdfLogo, useCustomPdfLogo, updateLogoSettings,
