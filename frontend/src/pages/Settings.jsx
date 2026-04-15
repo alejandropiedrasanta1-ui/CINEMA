@@ -4,12 +4,13 @@ import {
   Download, Globe, DollarSign, Palette, FileText,
   Bell, BellRing, Database, CheckCircle, XCircle, RefreshCw,
   Wifi, WifiOff, MessageCircle, Mail, Loader2, Monitor,
-  Package, AlertCircle, Sparkles, Zap, Layers
+  Package, AlertCircle, Sparkles, Zap, Layers, Clock
 } from "lucide-react";
 import { useSettings, THEMES, CURRENCIES, PRESETS } from "@/context/SettingsContext";
 import { useToast } from "@/hooks/use-toast";
 import { api, getAppSettings, updateAppSettings, getDbStats, testDbConnection, switchDatabase, resetDatabase, sendTestReminder, getReservations } from "@/lib/api";
 import { generateAllReservationsPDF } from "@/lib/generatePDF";
+import { useNotifications } from "@/hooks/useNotifications";
 
 const item = {
   hidden: { opacity: 0, y: 20 },
@@ -58,7 +59,8 @@ function buildWhatsappLink(phone, events) {
 
 export default function Settings() {
   const { language, currency, theme, tr, changeLanguage, changeCurrency, changeTheme,
-          preset, animations, radius, changePreset, changeAnimations, changeRadius } = useSettings();
+          preset, animations, radius, changePreset, changeAnimations, changeRadius, formatCurrency } = useSettings();
+  const { start: startNotifications, notifyImmediate } = useNotifications();
   const { toast } = useToast();
   const s = tr.settings;
 
@@ -66,6 +68,7 @@ export default function Settings() {
   const [notif, setNotif] = useState({
     reminders_enabled: false,
     reminder_days: 3,
+    reminder_time: "09:00",
     admin_email: "",
     admin_whatsapp: "",
     notification_channel: "email",
@@ -94,6 +97,7 @@ export default function Settings() {
           ...prev,
           reminders_enabled: data.reminders_enabled ?? false,
           reminder_days: data.reminder_days ?? 3,
+          reminder_time: data.reminder_time ?? "09:00",
           admin_email: data.admin_email ?? "",
           admin_whatsapp: data.admin_whatsapp ?? "",
           notification_channel: data.notification_channel ?? "email",
@@ -165,6 +169,13 @@ export default function Settings() {
         delete payload.resend_api_key;
       }
       await updateAppSettings(payload);
+      // Persist reminder settings to localStorage so the hook can read them
+      localStorage.setItem("cp_reminder_time", notif.reminder_time || "09:00");
+      localStorage.setItem("cp_reminder_days", String(notif.reminder_days || 3));
+      // Restart notification timer with updated settings
+      if (Notification.permission === "granted") {
+        startNotifications(notif.reminders_enabled);
+      }
       toast({ title: s.notifSaved + " ✓" });
     } catch {
       toast({ title: "Error al guardar", variant: "destructive" });
@@ -243,6 +254,7 @@ export default function Settings() {
   const [notifPermission, setNotifPermission] = useState(() =>
     (typeof window !== "undefined" && "Notification" in window) ? Notification.permission : "unsupported"
   );
+  const [immediateLoading, setImmediateLoading] = useState(false);
 
   const handleRequestPermission = async () => {
     if (!("Notification" in window)) {
@@ -254,9 +266,15 @@ export default function Settings() {
       setNotifPermission(permission);
       if (permission === "granted") {
         localStorage.setItem("cp_notif_enabled", "true");
+        // Start the periodic reminder timer
+        localStorage.setItem("cp_reminder_time", notif.reminder_time || "09:00");
+        localStorage.setItem("cp_reminder_days", String(notif.reminder_days || 3));
+        startNotifications(true);
+        // Welcome notification
         new Notification("Cinema Productions", {
-          body: language === "es" ? "¡Notificaciones de sistema activadas correctamente!" : "System notifications enabled!",
+          body: language === "es" ? "¡Notificaciones activadas! Te avisaré de eventos próximos." : "Notifications enabled! I'll alert you about upcoming events.",
           icon: "/logo.png",
+          tag: "cp-welcome",
         });
         toast({ title: language === "es" ? "Notificaciones de sistema activadas ✓" : "System notifications enabled ✓" });
       } else {
@@ -270,11 +288,31 @@ export default function Settings() {
   const handleTestSystemNotif = () => {
     if (Notification.permission !== "granted") return;
     new Notification("Cinema Productions — Prueba", {
-      body: language === "es" ? "Las notificaciones de sistema están funcionando correctamente." : "System notifications are working.",
+      body: language === "es" ? "Las notificaciones de sistema están funcionando." : "System notifications are working.",
       icon: "/logo.png",
       tag: "cp-test-notif",
     });
-    toast({ title: language === "es" ? "Notificación enviada ✓" : "Test notification sent ✓" });
+    toast({ title: language === "es" ? "Notificación de prueba enviada ✓" : "Test notification sent ✓" });
+  };
+
+  const handleNotifyImmediate = async () => {
+    if (Notification.permission !== "granted") {
+      toast({ title: language === "es" ? "Primero activa las notificaciones del sistema" : "Enable system notifications first", variant: "destructive" });
+      return;
+    }
+    setImmediateLoading(true);
+    try {
+      const result = await notifyImmediate();
+      if (!result.ok) {
+        toast({ title: language === "es" ? "Error al obtener eventos" : "Error fetching events", variant: "destructive" });
+      } else if (result.count === 0) {
+        toast({ title: language === "es" ? "Sin eventos próximos pendientes" : "No upcoming events" });
+      } else {
+        toast({ title: language === "es" ? `Notificación enviada — ${result.count} eventos próximos ✓` : `Notification sent — ${result.count} upcoming events ✓` });
+      }
+    } finally {
+      setImmediateLoading(false);
+    }
   };
 
   // ── PDF Export ────────────────────────────────────────────────
@@ -674,6 +712,20 @@ export default function Settings() {
                         {language === "es" ? "Notificaciones de sistema activas — recordatorios en tiempo real" : "System notifications active — real-time reminders"}
                       </p>
                     </div>
+                    {/* Immediate test button */}
+                    <motion.button
+                      whileHover={{ scale: 1.02 }}
+                      whileTap={{ scale: 0.97 }}
+                      onClick={handleNotifyImmediate}
+                      disabled={immediateLoading}
+                      data-testid="system-notif-immediate-btn"
+                      className="w-full flex items-center justify-center gap-2 py-3 rounded-xl btn-primary text-white text-sm font-bold disabled:opacity-60"
+                    >
+                      {immediateLoading
+                        ? <><Loader2 size={13} className="animate-spin" /> {language === "es" ? "Buscando eventos..." : "Fetching events..."}</>
+                        : <><BellRing size={14} /> {language === "es" ? "Probar ahora — notificar evento más próximo" : "Test now — notify next upcoming event"}</>
+                      }
+                    </motion.button>
                     <motion.button
                       whileHover={{ scale: 1.02 }}
                       whileTap={{ scale: 0.97 }}
@@ -682,7 +734,7 @@ export default function Settings() {
                       className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl glass text-slate-700 text-xs font-bold hover:bg-white/50 transition-all border border-white/60"
                     >
                       <Bell size={13} />
-                      {language === "es" ? "Enviar notificación de prueba" : "Send test notification"}
+                      {language === "es" ? "Enviar notificación simple de prueba" : "Send simple test notification"}
                     </motion.button>
                   </div>
                 ) : (
@@ -712,17 +764,35 @@ export default function Settings() {
               </div>
             </div>
 
-            {/* Days */}
-            <div>
-              <label className="text-xs font-bold text-slate-500 mb-1.5 block">{s.notifDays}</label>
-              <div className="flex items-center gap-3">
-                <input type="range" min={1} max={30} value={notif.reminder_days}
-                  onChange={e => setNotif(p => ({ ...p, reminder_days: parseInt(e.target.value) }))}
-                  data-testid="notif-days-slider"
-                  className="flex-1 accent-indigo-500" />
-                <span className="text-sm font-black text-slate-800 w-14 text-center bg-white/60 rounded-xl py-1">
-                  {notif.reminder_days}d
-                </span>
+            {/* Days + Time row */}
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="text-xs font-bold text-slate-500 mb-1.5 block">{s.notifDays}</label>
+                <div className="flex items-center gap-2">
+                  <input type="range" min={1} max={30} value={notif.reminder_days}
+                    onChange={e => setNotif(p => ({ ...p, reminder_days: parseInt(e.target.value) }))}
+                    data-testid="notif-days-slider"
+                    className="flex-1 accent-indigo-500" />
+                  <span className="text-sm font-black text-slate-800 w-12 text-center bg-white/60 rounded-xl py-1">
+                    {notif.reminder_days}d
+                  </span>
+                </div>
+              </div>
+              <div>
+                <label className="text-xs font-bold text-slate-500 mb-1.5 flex items-center gap-1.5 block">
+                  <Clock size={11} />
+                  {language === "es" ? "Hora de aviso diario" : "Daily reminder time"}
+                </label>
+                <input
+                  type="time"
+                  value={notif.reminder_time || "09:00"}
+                  onChange={e => setNotif(p => ({ ...p, reminder_time: e.target.value }))}
+                  data-testid="notif-time-input"
+                  className="w-full bg-white/70 border border-white/80 rounded-xl px-3 py-2 text-sm font-bold text-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-300"
+                />
+                <p className="text-[10px] text-slate-400 mt-1">
+                  {language === "es" ? "Recibirás una notificación cada día a esta hora" : "You'll get a daily notification at this time"}
+                </p>
               </div>
             </div>
 

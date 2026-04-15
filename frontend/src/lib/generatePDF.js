@@ -400,7 +400,9 @@ export async function generateAllReservationsPDF(reservations, formatCurrency) {
   }
 
   // ── PAGE FOOTERS ──────────────────────────────────────────────
-  const pageCount = doc.internal.getNumberOfPages();
+  const pageCount = doc.getNumberOfPages
+    ? doc.getNumberOfPages()
+    : doc.internal.getNumberOfPages();
   for (let i = 1; i <= pageCount; i++) {
     doc.setPage(i);
     doc.setDrawColor(210, 215, 240);

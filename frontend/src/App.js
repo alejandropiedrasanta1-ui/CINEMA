@@ -46,7 +46,14 @@ function AppInner() {
   useEffect(() => {
     if ("Notification" in window && Notification.permission === "granted") {
       const saved = localStorage.getItem("cp_notif_enabled");
-      if (saved !== "false") start(true);
+      if (saved !== "false") {
+        // Sync saved settings from backend to localStorage keys the hook reads
+        const reminderTime = localStorage.getItem("cp_reminder_time") || "09:00";
+        const reminderDays = localStorage.getItem("cp_reminder_days") || "3";
+        localStorage.setItem("cp_reminder_time", reminderTime);
+        localStorage.setItem("cp_reminder_days", reminderDays);
+        start(true);
+      }
     }
   }, [start]);
 
