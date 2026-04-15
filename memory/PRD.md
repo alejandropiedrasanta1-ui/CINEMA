@@ -214,21 +214,21 @@ Sistema de gestión de reservas para eventos (bodas, quinceañeras, fiestas soci
 ---
 
 ### Gmail OAuth2 + Web Push Notifications (Abril 2026) ✅
-- Flujo completo Google OAuth2 para Gmail API: `/api/oauth/gmail/start`, `/api/oauth/gmail/callback`, `/api/oauth/gmail/status`, `/api/oauth/gmail/disconnect`, `/api/oauth/gmail/test`
-- Botón "Conectar con Google / Gmail" en Ajustes → Recordatorios
-- Token de refresh almacenado en MongoDB (colección `oauth_tokens`)
+- REEMPLAZADO por Resend.com (usuario prefirió esta opción)
 - Web Push API con VAPID keys: `/api/push/vapid-key`, `/api/push/subscribe`, `/api/push/test`
 - Service Worker (`/sw.js`) para notificaciones nativas en Windows/macOS
-- APScheduler que revisa cada minuto si es la hora configurada y envía Push + Gmail simultáneamente
+- APScheduler que revisa cada minuto si es la hora configurada y envía email + Push automáticamente
 - Fix bug: `startNotifications` → `startPolling` en Settings.jsx
 - Fix: `getEventTypeName` importado correctamente en Settings.jsx
-- Nombres de tipos de evento persisten correctamente en localStorage tras recarga
 
-### Fix /api/reminders/send 404 (Abril 2026) ✅
-- La función `trigger_reminders_manual()` existía pero sin el decorador `@api_router.post`
-- Ahora registrada como ruta POST `/api/reminders/send`
-- Mejorada: busca eventos en ventana de N días (no solo fecha exacta), intenta Resend → Gmail → Push en cascada
-- Toast muestra mensaje correcto con eventos encontrados y método de envío usado
+### Resend Email Integration + Fix bugs (Abril 2026) ✅
+- Configurado Resend con API key `re_T5Jb9ze3...` y email `alejandropiedrasanta1@gmail.com`
+- Eliminada sección Gmail OAuth de la UI (Settings.jsx)
+- Nuevo badge "Resend configurado — correos activos" en la UI
+- Fix: `reminder_time` agregado al modelo `NotificationSettingsModel`
+- Fix: `/api/reminders/send` era 404 (función sin decorador de ruta) — ahora registrado correctamente
+- Endpoint mejorado: busca eventos en ventana N días, intenta Resend → Push en cascada
+- **Email verificado: llegó a alejandropiedrasanta1@gmail.com correctamente ✓**
 
 ### P1 (Próximo sprint)
 - [ ] WhatsApp automático vía Twilio (actualmente es link manual wa.me)
