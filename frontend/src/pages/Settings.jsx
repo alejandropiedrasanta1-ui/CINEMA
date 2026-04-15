@@ -8,7 +8,7 @@ import {
   Upload, ImageIcon, Trash2,
 } from "lucide-react";
 import { useSettings, THEMES, CURRENCIES, PRESETS } from "@/context/SettingsContext";
-import { getEventConfig, AVAILABLE_ICONS, AVAILABLE_COLORS, EVENT_TYPES, ICON_MAP } from "@/lib/eventConfig";
+import { getEventConfig, getEventTypeName, AVAILABLE_ICONS, AVAILABLE_COLORS, EVENT_TYPES, ICON_MAP } from "@/lib/eventConfig";
 import { useToast } from "@/hooks/use-toast";
 import { api, getAppSettings, updateAppSettings, getDbStats, testDbConnection, switchDatabase, resetDatabase, sendTestReminder, getReservations } from "@/lib/api";
 import { generateAllReservationsPDF, PDF_THEMES } from "@/lib/generatePDF";
@@ -66,7 +66,7 @@ export default function Settings() {
           preset, animations, radius, pdfTheme, changePreset, changeAnimations, changeRadius, changePdfTheme, formatCurrency,
           eventConfigs, updateEventTypeConfig, resetEventTypeConfig,
           logoUrl, pdfLogoUrl, logoSize, usePdfLogo, useCustomPdfLogo, updateLogoSettings } = useSettings();
-  const { requestPermission, showNotification } = useNotifications();
+  const { requestPermission, showNotification, startPolling } = useNotifications();
   const { toast } = useToast();
   const s = tr.settings;
 
@@ -216,9 +216,9 @@ export default function Settings() {
       // Persist reminder settings to localStorage so the hook can read them
       localStorage.setItem("cp_reminder_time", notif.reminder_time || "09:00");
       localStorage.setItem("cp_reminder_days", String(notif.reminder_days || 3));
-      // Restart notification timer with updated settings
-      if (Notification.permission === "granted") {
-        startNotifications(notif.reminders_enabled);
+      // Restart notification polling if reminders are enabled
+      if (Notification.permission === "granted" && notif.reminders_enabled) {
+        startPolling();
       }
       toast({ title: s.notifSaved + " ✓" });
     } catch {
@@ -819,7 +819,7 @@ export default function Settings() {
                         <cfg.icon size={20} style={{ color: cfg.fg }} strokeWidth={1.8} />
                       </div>
                       <p className="text-[10px] font-bold leading-tight" style={{ color: cfg.fg }}>
-                        {typeName}
+                        {getEventTypeName(typeName)}
                       </p>
                       <div className="flex items-center gap-1">
                         <Pencil size={9} style={{ color: cfg.fg, opacity: 0.6 }} />
