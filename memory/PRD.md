@@ -221,7 +221,15 @@ Sistema de gestión de reservas para eventos (bodas, quinceañeras, fiestas soci
 - Fix bug: `startNotifications` → `startPolling` en Settings.jsx
 - Fix: `getEventTypeName` importado correctamente en Settings.jsx
 
-### Sistema de Recordatorios Multi-Canal (Abril 2026) ✅
+### Sistema de Respaldos de Base de Datos (Abril 2026) ✅
+- **Descargar a mi PC**: GET /api/backup/download — JSON completo (reservas + socios + settings)
+- **Guardar en servidor**: POST /api/backup/create — guarda en /app/backend/backups/, máx 15 archivos
+- **Historial en servidor**: GET /api/backup/history — lista con fecha/tamaño, botones descarga/eliminar
+- **Restaurar desde archivo**: POST /api/backup/restore — sube .json y restaura todo
+- **Auto-respaldo antes de borrar**: DELETE /api/data/clear-all?auto_backup=true — respaldo automático de seguridad
+- **Auto-respaldo antes de restaurar**: el endpoint lo crea antes de sobre-escribir datos
+- **Guía MongoDB Atlas**: instrucciones de 4 pasos para base de datos gratuita en la nube (512 MB)
+- Testeado al 100% (iteration_16.json)
 - **Múltiples períodos**: Pills para 7d, 3d, 2d, 1d, Mismo día (se pueden combinar)
 - **Horas antes del evento**: Slider 0–12h (requiere campo hora en la reserva)
 - **Telegram Bot**: Gratis, ilimitado. UI con guía de 3 pasos, input token + chat_id, botón Probar
