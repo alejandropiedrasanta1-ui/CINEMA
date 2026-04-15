@@ -7,14 +7,14 @@ import {
   Package, AlertCircle, Sparkles, Zap, Layers, Clock, Pencil, RotateCcw,
   Upload, ImageIcon, Trash2,
 } from "lucide-react";
-import { Slider } from "@/components/ui/slider";
-import { Switch } from "@/components/ui/switch";
 import { useSettings, THEMES, CURRENCIES, PRESETS } from "@/context/SettingsContext";
 import { getEventConfig, AVAILABLE_ICONS, AVAILABLE_COLORS, EVENT_TYPES, ICON_MAP } from "@/lib/eventConfig";
 import { useToast } from "@/hooks/use-toast";
 import { api, getAppSettings, updateAppSettings, getDbStats, testDbConnection, switchDatabase, resetDatabase, sendTestReminder, getReservations } from "@/lib/api";
-import { generateAllReservationsPDF } from "@/lib/generatePDF";
+import { generateAllReservationsPDF, PDF_THEMES } from "@/lib/generatePDF";
 import { useNotifications } from "@/hooks/useNotifications";
+import { Slider } from "@/components/ui/slider";
+import { Switch } from "@/components/ui/switch";
 
 const item = {
   hidden: { opacity: 0, y: 20 },
@@ -63,7 +63,7 @@ function buildWhatsappLink(phone, events) {
 
 export default function Settings() {
   const { language, currency, theme, tr, changeLanguage, changeCurrency, changeTheme,
-          preset, animations, radius, changePreset, changeAnimations, changeRadius, formatCurrency,
+          preset, animations, radius, pdfTheme, changePreset, changeAnimations, changeRadius, changePdfTheme, formatCurrency,
           eventConfigs, updateEventTypeConfig, resetEventTypeConfig,
           logoUrl, pdfLogoUrl, logoSize, usePdfLogo, useCustomPdfLogo, updateLogoSettings } = useSettings();
   const { start: startNotifications, notifyImmediate } = useNotifications();
@@ -412,6 +412,25 @@ export default function Settings() {
 
   // ── Event Type Editor ────────────────────────────────────────
   const [activeEventType, setActiveEventType] = useState(null);
+  const [typeNameEdit, setTypeNameEdit] = useState("");
+
+  // ── Clear All Data ───────────────────────────────────────────
+  const [showClearConfirm, setShowClearConfirm] = useState(false);
+  const [clearLoading, setClearLoading] = useState(false);
+
+  const handleClearAll = async () => {
+    setClearLoading(true);
+    try {
+      const res = await fetch(`${process.env.REACT_APP_BACKEND_URL}/api/data/clear-all`, { method: "DELETE" });
+      const data = await res.json();
+      setShowClearConfirm(false);
+      toast({ title: `✓ Datos eliminados — ${data.deleted_reservations} reservas, ${data.deleted_socios} socios` });
+    } catch {
+      toast({ title: "Error al borrar los datos", variant: "destructive" });
+    } finally {
+      setClearLoading(false);
+    }
+  };
 
   const handleExportPDF = async () => {
     setPdfLoading(true);
@@ -424,7 +443,7 @@ export default function Settings() {
       const effectiveLogo = usePdfLogo
         ? (useCustomPdfLogo && pdfLogoUrl ? pdfLogoUrl : logoUrl || undefined)
         : null;
-      await generateAllReservationsPDF(reservations, formatCurrency, effectiveLogo);
+      await generateAllReservationsPDF(reservations, formatCurrency, effectiveLogo, pdfTheme);
       toast({ title: language === "es" ? `PDF generado — ${reservations.length} reservas ✓` : `PDF generated — ${reservations.length} reservations ✓` });
     } catch (err) {
       toast({ title: err.message || "Error al generar PDF", variant: "destructive" });
@@ -734,7 +753,11 @@ export default function Settings() {
                       key={typeName}
                       whileHover={{ y: -2, scale: 1.02 }}
                       whileTap={{ scale: 0.97 }}
-                      onClick={() => setActiveEventType(isActive ? null : typeName)}
+                      onClick={() => {
+                        const next = isActive ? null : typeName;
+                        setActiveEventType(next);
+                        if (next) setTypeNameEdit(eventConfigs[next]?.name || "");
+                      }}
                       data-testid={`event-type-edit-${typeName.replace(/\s+/g, "-").toLowerCase()}`}
                       className="relative flex flex-col items-center gap-2 py-4 px-3 rounded-2xl transition-all text-center"
                       style={{
@@ -809,6 +832,24 @@ export default function Settings() {
                     </div>
 
                     <div className="p-4 space-y-4">
+                      {/* Editable name */}
+                      <div>
+                        <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">
+                          {language === "es" ? "Nombre" : "Name"}
+                        </p>
+                        <input
+                          type="text"
+                          value={typeNameEdit}
+                          onChange={(e) => {
+                            setTypeNameEdit(e.target.value);
+                            updateEventTypeConfig(activeEventType, { name: e.target.value || undefined });
+                          }}
+                          placeholder={activeEventType}
+                          data-testid={`event-type-name-input-${activeEventType?.replace(/\s+/g, "-").toLowerCase()}`}
+                          className="w-full px-3 py-2 rounded-xl bg-white/70 border border-white/60 text-sm font-bold text-slate-800 focus:outline-none focus:ring-2 placeholder-slate-300"
+                          style={{ "--tw-ring-color": cfg.fg + "80" }}
+                        />
+                      </div>
                       {/* Color palette */}
                       <div>
                         <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2.5">
@@ -884,7 +925,73 @@ export default function Settings() {
 
             <div className="border-t border-white/40" />
 
-            {/* 6 ── LOGO & BRANDING ────────────────────────────── */}
+            {/* 6 ── PDF THEME ──────────────────────────────────── */}
+            <div>
+              <p className="text-[11px] font-black text-slate-400 uppercase tracking-widest mb-1">
+                {language === "es" ? "Diseño de PDF" : "PDF Design"}
+              </p>
+              <p className="text-xs text-slate-400 mb-4">
+                {language === "es" ? "Elige el estilo visual de todos los PDFs generados." : "Choose the visual style for all generated PDFs."}
+              </p>
+              <div className="grid grid-cols-3 gap-2.5">
+                {Object.values(PDF_THEMES).map((theme) => {
+                  const isActive = pdfTheme === theme.id;
+                  return (
+                    <motion.button
+                      key={theme.id}
+                      whileHover={{ y: -2, scale: 1.02 }}
+                      whileTap={{ scale: 0.97 }}
+                      onClick={() => changePdfTheme(theme.id)}
+                      data-testid={`pdf-theme-${theme.id}`}
+                      className="flex flex-col rounded-2xl overflow-hidden transition-all"
+                      style={{ border: isActive ? `2px solid var(--t-from)` : "2px solid rgba(226,232,240,0.7)" }}
+                    >
+                      {/* Mini preview */}
+                      <div className="h-20 relative overflow-hidden" style={{ background: theme.preview.headerBg }}>
+                        {/* accent bar */}
+                        {theme.id === "claro" && (
+                          <div className="absolute top-0 left-0 right-0 h-2" style={{ background: theme.preview.accentBar }} />
+                        )}
+                        {theme.id === "elegante" && (
+                          <div className="absolute bottom-0 left-0 right-0 h-1.5" style={{ background: theme.preview.accentBar }} />
+                        )}
+                        {theme.id === "oscuro" && (
+                          <div className="absolute top-0 left-0 right-0 h-1.5" style={{ background: theme.preview.accentBar }} />
+                        )}
+                        {/* fake logo rect */}
+                        <div className="absolute left-2 top-3 w-8 h-5 rounded opacity-30 bg-white" />
+                        {/* fake title lines */}
+                        <div className="absolute right-2 top-3 space-y-1">
+                          <div className="h-1.5 w-14 rounded-full opacity-40 bg-white" />
+                          <div className="h-1 w-10 rounded-full opacity-25 bg-white" />
+                        </div>
+                      </div>
+                      {/* Rows */}
+                      <div className="flex-1 p-2 space-y-1" style={{ background: "white" }}>
+                        <div className="h-2 rounded" style={{ background: theme.preview.sectionBg }} />
+                        <div className="h-1 rounded bg-gray-100 w-4/5" />
+                        <div className="h-1 rounded bg-gray-100 w-3/5" />
+                      </div>
+                      {/* Label */}
+                      <div className="px-2 pb-2 flex items-center justify-between"
+                        style={{ background: isActive ? "rgba(255,255,255,0.8)" : "white" }}>
+                        <p className="text-[10px] font-black text-slate-700">{theme.name}</p>
+                        {isActive && (
+                          <div className="w-4 h-4 rounded-full flex items-center justify-center"
+                            style={{ background: "var(--t-from)" }}>
+                            <CheckCircle size={9} className="text-white" />
+                          </div>
+                        )}
+                      </div>
+                    </motion.button>
+                  );
+                })}
+              </div>
+            </div>
+
+            <div className="border-t border-white/40" />
+
+            {/* 7 ── LOGO & BRANDING ────────────────────────────── */}
             <div>
               <p className="text-[11px] font-black text-slate-400 uppercase tracking-widest mb-3">
                 {language === "es" ? "Logo y Branding" : "Logo & Branding"}
@@ -1390,6 +1497,56 @@ export default function Settings() {
                 </motion.button>
               )}
             </div>
+
+            {/* ── CLEAR ALL DATA ──────────────────────────────── */}
+            <div className="border-t border-red-100/60 pt-4">
+              {!showClearConfirm ? (
+                <motion.button
+                  whileHover={{ scale: 1.02 }}
+                  whileTap={{ scale: 0.97 }}
+                  onClick={() => setShowClearConfirm(true)}
+                  data-testid="clear-all-data-btn"
+                  className="w-full flex items-center justify-center gap-2 py-3 rounded-2xl text-sm font-bold text-red-600 transition-all"
+                  style={{ background: "#fef2f2", border: "1.5px dashed #fca5a5" }}
+                >
+                  <Trash2 size={14} />
+                  {language === "es" ? "Borrar todos los datos" : "Delete all data"}
+                </motion.button>
+              ) : (
+                <motion.div initial={{ opacity: 0, y: -6 }} animate={{ opacity: 1, y: 0 }}
+                  className="rounded-2xl overflow-hidden" style={{ border: "1.5px solid #fca5a5", background: "#fff5f5" }}>
+                  <div className="px-4 py-3 flex items-start gap-3">
+                    <AlertCircle size={16} className="text-red-500 mt-0.5 shrink-0" />
+                    <div>
+                      <p className="text-sm font-black text-red-700">
+                        {language === "es" ? "¿Borrar todos los datos?" : "Delete all data?"}
+                      </p>
+                      <p className="text-xs text-red-500 mt-1">
+                        {language === "es"
+                          ? "Se eliminarán TODAS las reservas y socios. Esta acción no se puede deshacer."
+                          : "ALL reservations and partners will be deleted. This cannot be undone."}
+                      </p>
+                    </div>
+                  </div>
+                  <div className="flex gap-2 px-4 pb-4">
+                    <motion.button whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.97 }}
+                      onClick={handleClearAll} disabled={clearLoading}
+                      data-testid="clear-all-confirm-btn"
+                      className="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl text-xs font-bold text-white bg-red-500 hover:bg-red-600 transition-all disabled:opacity-60">
+                      {clearLoading ? <Loader2 size={12} className="animate-spin" /> : <Trash2 size={12} />}
+                      {language === "es" ? "Sí, borrar todo" : "Yes, delete all"}
+                    </motion.button>
+                    <motion.button whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.97 }}
+                      onClick={() => setShowClearConfirm(false)}
+                      data-testid="clear-all-cancel-btn"
+                      className="flex-1 py-2.5 rounded-xl text-xs font-bold text-slate-600 bg-white hover:bg-slate-50 transition-all">
+                      {language === "es" ? "Cancelar" : "Cancel"}
+                    </motion.button>
+                  </div>
+                </motion.div>
+              )}
+            </div>
+
           </div>
         </Section>
 

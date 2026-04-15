@@ -4,6 +4,7 @@ import { ArrowLeft } from "lucide-react";
 import { motion } from "framer-motion";
 import { useToast } from "@/hooks/use-toast";
 import { useSettings } from "@/context/SettingsContext";
+import { getEventTypeName } from "@/lib/eventConfig";
 
 const EVENT_TYPES = ["Boda","Quinceañera","Fiesta Social","Evento Corporativo","Conferencia","Otro"];
 const STATUSES   = ["Pendiente","Confirmado","Completado","Cancelado"];
@@ -119,7 +120,7 @@ export default function ReservationForm({ reservation, onClose, onSaved }) {
           <div>
             <Label>{f.eventType}</Label>
             <select value={form.event_type} onChange={set("event_type")} required data-testid="input-event-type" className={sel}>
-              {EVENT_TYPES.map(t => <option key={t} className="bg-white">{t}</option>)}
+              {EVENT_TYPES.map(t => <option key={t} value={t} className="bg-white">{getEventTypeName(t)}</option>)}
             </select>
           </div>
           <div>

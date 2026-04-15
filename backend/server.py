@@ -223,6 +223,18 @@ async def root():
     return {"message": "Event Reservation API"}
 
 
+@api_router.delete("/data/clear-all")
+async def clear_all_data():
+    """Elimina todas las reservas y socios (no afecta app_settings)."""
+    res_result  = await db.reservations.delete_many({})
+    soc_result  = await db.socios.delete_many({})
+    return {
+        "ok": True,
+        "deleted_reservations": res_result.deleted_count,
+        "deleted_socios": soc_result.deleted_count,
+    }
+
+
 @api_router.get("/stats")
 async def get_stats():
     total = await db.reservations.count_documents({})

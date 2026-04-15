@@ -96,6 +96,11 @@ export function deriveEventColors(fg) {
   return { fg, bg: fg + "14", border: fg + "38" };
 }
 
+// Return the display name for an event type (custom or original)
+export function getEventTypeName(type) {
+  return _overrides[type]?.name || type;
+}
+
 export const getEventConfig = (type) => {
   const defaults = DEFAULT_CONFIGS[type] || DEFAULT_CONFIGS["Otro"];
   const custom = _overrides[type];

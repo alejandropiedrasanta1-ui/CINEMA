@@ -219,6 +219,9 @@ export function SettingsProvider({ children }) {
   const [preset, setPreset] = useState(() => localStorage.getItem("preset") || "aurora");
   const [animations, setAnimations] = useState(() => (localStorage.getItem("animations") ?? "true") !== "false");
   const [radius, setRadius] = useState(() => localStorage.getItem("radius") || "rounded");
+  const [pdfTheme, setPdfTheme] = useState(() => localStorage.getItem("pdf_theme") || "oscuro");
+
+  const changePdfTheme = (t) => { setPdfTheme(t); localStorage.setItem("pdf_theme", t); };
 
   useEffect(() => {
     applyThemeVars(theme);
@@ -305,8 +308,8 @@ export function SettingsProvider({ children }) {
     <SettingsContext.Provider value={{
       language, currency, theme, tr, formatCurrency,
       changeLanguage, changeCurrency, changeTheme,
-      preset, animations, radius,
-      changePreset, changeAnimations, changeRadius,
+      preset, animations, radius, pdfTheme,
+      changePreset, changeAnimations, changeRadius, changePdfTheme,
       eventConfigs, updateEventTypeConfig, resetEventTypeConfig,
       logoUrl, pdfLogoUrl, logoSize, usePdfLogo, useCustomPdfLogo, updateLogoSettings,
     }}>

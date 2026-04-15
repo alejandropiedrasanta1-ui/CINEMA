@@ -22,7 +22,7 @@ export default function ReservationDetail() {
   const { id } = useParams();
   const navigate = useNavigate();
   const { toast } = useToast();
-  const { tr, formatCurrency, logoUrl, pdfLogoUrl, usePdfLogo, useCustomPdfLogo } = useSettings();
+  const { tr, formatCurrency, logoUrl, pdfLogoUrl, usePdfLogo, useCustomPdfLogo, pdfTheme } = useSettings();
   const dt = tr.detail;
   const [reservation, setReservation] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -105,7 +105,7 @@ export default function ReservationDetail() {
             <Edit2 size={13} /> {tr.common.edit}
           </motion.button>
           <motion.button whileHover={{ scale:1.05 }} whileTap={{ scale:0.95 }}
-            onClick={async () => { try { await generateReservationPDF(reservation, formatCurrency, getEffectivePdfLogo()); toast({ title: "PDF descargado" }); } catch { toast({ title: "Error al generar PDF", variant: "destructive" }); } }}
+            onClick={async () => { try { await generateReservationPDF(reservation, formatCurrency, getEffectivePdfLogo(), pdfTheme); toast({ title: "PDF descargado" }); } catch { toast({ title: "Error al generar PDF", variant: "destructive" }); } }}
             data-testid="download-pdf-btn"
             className="flex items-center gap-1.5 px-4 py-2 rounded-full btn-primary text-white text-sm font-bold">
             <FileDown size={13} /> PDF

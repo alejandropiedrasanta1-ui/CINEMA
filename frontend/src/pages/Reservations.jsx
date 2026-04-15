@@ -7,7 +7,7 @@ import { useSettings } from "@/context/SettingsContext";
 import ReservationForm from "@/components/ReservationForm";
 import { useToast } from "@/hooks/use-toast";
 import { generateReservationPDF } from "@/lib/generatePDF";
-import { getEventConfig } from "@/lib/eventConfig";
+import { getEventConfig, getEventTypeName } from "@/lib/eventConfig";
 
 const STATUS_COLORS = {
   Pendiente: "bg-amber-100/80 text-amber-700 border-amber-200/60",
@@ -25,7 +25,7 @@ export default function Reservations() {
   const [showForm, setShowForm] = useState(false);
   const navigate = useNavigate();
   const { toast } = useToast();
-  const { tr, formatCurrency, logoUrl, pdfLogoUrl, usePdfLogo, useCustomPdfLogo } = useSettings();
+  const { tr, formatCurrency, logoUrl, pdfLogoUrl, usePdfLogo, useCustomPdfLogo, pdfTheme } = useSettings();
   const l = tr.list;
 
   const getEffectivePdfLogo = () => {
@@ -37,7 +37,7 @@ export default function Reservations() {
   const handleDownloadPDF = async (r, e) => {
     e.stopPropagation();
     try {
-      await generateReservationPDF(r, formatCurrency, getEffectivePdfLogo());
+      await generateReservationPDF(r, formatCurrency, getEffectivePdfLogo(), pdfTheme);
       toast({ title: "PDF generado exitosamente" });
     } catch {
       toast({ title: "Error al generar PDF", variant: "destructive" });
@@ -97,7 +97,7 @@ export default function Reservations() {
         <select value={filterType} onChange={e => setFilterType(e.target.value)} data-testid="filter-type"
           className="text-sm glass rounded-2xl px-4 py-2.5 bg-transparent text-slate-700 focus:outline-none focus:ring-2 focus:ring-[var(--t-from)]/30 font-medium">
           <option value="all" className="bg-white">{l.all}</option>
-          {EVENT_TYPES.map(t => <option key={t} value={t} className="bg-white">{t}</option>)}
+          {EVENT_TYPES.map(t => <option key={t} value={t} className="bg-white">{getEventTypeName(t)}</option>)}
         </select>
         <select value={filterStatus} onChange={e => setFilterStatus(e.target.value)} data-testid="filter-status"
           className="text-sm glass rounded-2xl px-4 py-2.5 bg-transparent text-slate-700 focus:outline-none focus:ring-2 focus:ring-[var(--t-from)]/30 font-medium">
@@ -151,7 +151,7 @@ export default function Reservations() {
                             <span className="inline-flex w-6 h-6 rounded-lg items-center justify-center flex-shrink-0" style={{ background: cfg.fg + "18" }}>
                               <EvIcon size={12} style={{ color: cfg.fg }} strokeWidth={1.8} />
                             </span>
-                            <span className="font-medium">{r.event_type}</span>
+                            <span className="font-medium">{getEventTypeName(r.event_type)}</span>
                           </span>
                         );
                       })()}
