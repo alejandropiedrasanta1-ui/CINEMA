@@ -40,13 +40,19 @@ export default function Layout({ children }) {
               data-testid={`nav-${path.replace("/", "")}`}
               className={({ isActive }) =>
                 `flex items-center gap-3 px-4 py-2.5 rounded-2xl text-sm font-semibold transition-all duration-300 ${
-                  isActive ? "nav-active" : "text-slate-600 hover:bg-white/50 hover:text-slate-900"
+                  isActive ? "nav-active" : "text-slate-600 hover:bg-white/50 hover:text-slate-900 hover:translate-x-0.5"
                 }`
               }
             >
               {({ isActive }) => (
                 <>
-                  <Icon size={16} strokeWidth={isActive ? 2 : 1.5} />
+                  <motion.span
+                    animate={{ scale: isActive ? 1.1 : 1 }}
+                    transition={{ duration: 0.2 }}
+                    className="flex-shrink-0"
+                  >
+                    <Icon size={16} strokeWidth={isActive ? 2.2 : 1.5} />
+                  </motion.span>
                   {label}
                 </>
               )}

@@ -7,6 +7,7 @@ import { useSettings } from "@/context/SettingsContext";
 import ReservationForm from "@/components/ReservationForm";
 import { useToast } from "@/hooks/use-toast";
 import { generateReservationPDF } from "@/lib/generatePDF";
+import { getEventConfig } from "@/lib/eventConfig";
 
 const STATUS_COLORS = {
   Pendiente: "bg-amber-100/80 text-amber-700 border-amber-200/60",
@@ -14,7 +15,6 @@ const STATUS_COLORS = {
   Completado: "bg-emerald-100/80 text-emerald-700 border-emerald-200/60",
   Cancelado:  "bg-red-100/80 text-red-700 border-red-200/60",
 };
-const EVENT_TYPE_ICONS = { "Boda":"💍","Quinceañera":"👑","Fiesta Social":"🎉","Evento Corporativo":"🏢","Conferencia":"🎤","Otro":"📅" };
 
 export default function Reservations() {
   const [reservations, setReservations] = useState([]);
@@ -137,7 +137,18 @@ export default function Reservations() {
                       </div>
                     </td>
                     <td className="px-5 py-4 text-slate-600 hidden sm:table-cell">
-                      <span className="flex items-center gap-1.5"><span>{EVENT_TYPE_ICONS[r.event_type]||"📅"}</span><span className="font-medium">{r.event_type}</span></span>
+                      {(() => {
+                        const cfg = getEventConfig(r.event_type);
+                        const EvIcon = cfg.icon;
+                        return (
+                          <span className="flex items-center gap-1.5">
+                            <span className="inline-flex w-6 h-6 rounded-lg items-center justify-center flex-shrink-0" style={{ background: cfg.fg + "18" }}>
+                              <EvIcon size={12} style={{ color: cfg.fg }} strokeWidth={1.8} />
+                            </span>
+                            <span className="font-medium">{r.event_type}</span>
+                          </span>
+                        );
+                      })()}
                     </td>
                     <td className="px-5 py-4 font-bold text-slate-800">{formatDate(r.event_date)}</td>
                     <td className="px-5 py-4 font-bold text-slate-800 hidden md:table-cell">{formatCurrency(r.total_amount)}</td>
