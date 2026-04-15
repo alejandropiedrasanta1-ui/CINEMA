@@ -824,46 +824,102 @@ async def get_pending_notifications():
 
 
 
+@api_router.post("/reminders/send")
 async def trigger_reminders_manual():
-    """Manual trigger for testing reminders."""
+    """Manual trigger — send reminder email/push for upcoming events."""
     try:
         settings_doc = await db.app_settings.find_one({}, {"_id": 0})
         if not settings_doc:
             raise HTTPException(status_code=400, detail="Primero configura los ajustes de notificaciones")
 
-        days = int(settings_doc.get("reminder_days", 3))
-        target_date = (datetime.now(timezone.utc).date() + timedelta(days=days)).isoformat()
+        days  = int(settings_doc.get("reminder_days", 3))
+        today = datetime.now(timezone.utc).date()
+        # Look for events in the next `days` window (not just one exact date)
+        end_date    = (today + timedelta(days=days)).isoformat()
+        today_str   = today.isoformat()
 
         cursor = db.reservations.find(
-            {"event_date": target_date, "status": {"$nin": ["Cancelado", "Completado"]}},
+            {
+                "event_date": {"$gte": today_str, "$lte": end_date},
+                "status": {"$nin": ["Cancelado", "Completado"]},
+            },
             {"client_name": 1, "event_date": 1, "event_type": 1, "venue": 1, "_id": 0}
         )
         upcoming = await cursor.to_list(100)
 
-        channel = settings_doc.get("notification_channel", "email")
-        sent = 0
+        channel    = settings_doc.get("notification_channel", "email")
+        email_sent = False
+        push_sent  = 0
+        errors     = []
 
+        # ── Resend email ──────────────────────────────────────
         if channel in ("email", "both"):
-            api_key = settings_doc.get("resend_api_key")
+            api_key     = settings_doc.get("resend_api_key")
             admin_email = settings_doc.get("admin_email")
-            if api_key and admin_email and upcoming:
-                resend_lib.api_key = api_key
-                html = _build_reminder_html(upcoming, days)
-                params = {
-                    "from": "Cinema Productions <onboarding@resend.dev>",
-                    "to": [admin_email],
-                    "subject": f"Recordatorio: {len(upcoming)} evento(s) en {days} día(s)",
-                    "html": html,
-                }
-                await asyncio.to_thread(resend_lib.Emails.send, params)
-                sent += 1
+            if api_key and admin_email:
+                try:
+                    resend_lib.api_key = api_key
+                    html = _build_reminder_html(upcoming, days)
+                    params = {
+                        "from": "Cinema Productions <onboarding@resend.dev>",
+                        "to": [admin_email],
+                        "subject": f"Recordatorio: {len(upcoming)} evento(s) en los próximos {days} día(s)",
+                        "html": html,
+                    }
+                    await asyncio.to_thread(resend_lib.Emails.send, params)
+                    email_sent = True
+                except Exception as e:
+                    errors.append(f"Resend: {e}")
+            else:
+                errors.append("Email: configura admin_email y clave Resend en Ajustes")
+
+        # ── Gmail OAuth email ─────────────────────────────────
+        if not email_sent and channel in ("email", "both"):
+            try:
+                token_doc = await db.oauth_tokens.find_one({"provider": "gmail"}, {"_id": 0})
+                if token_doc and token_doc.get("refresh_token"):
+                    html = _build_reminder_html(upcoming, days)
+                    await _send_gmail(
+                        to=token_doc["email"],
+                        subject=f"Recordatorio: {len(upcoming)} evento(s) en los próximos {days} día(s)",
+                        html=html,
+                    )
+                    email_sent = True
+            except Exception as e:
+                errors.append(f"Gmail: {e}")
+
+        # ── Web Push ──────────────────────────────────────────
+        if channel in ("both", "whatsapp") or not email_sent:
+            try:
+                title = f"Recordatorio: {len(upcoming)} evento(s) próximos"
+                body  = ", ".join(r.get("client_name", "?") for r in upcoming[:3])
+                await _send_push_to_all(title, body, "/dashboard")
+                count = await db.push_subscriptions.count_documents({})
+                push_sent = count
+            except Exception as e:
+                errors.append(f"Push: {e}")
+
+        # Build response message
+        parts = []
+        if email_sent:
+            parts.append("correo enviado")
+        if push_sent:
+            parts.append(f"push a {push_sent} dispositivo(s)")
+        if not parts:
+            if errors:
+                raise HTTPException(
+                    status_code=400,
+                    detail="No se pudo enviar. " + " | ".join(errors)
+                )
+            parts.append("no hay método de envío configurado")
 
         return {
             "success": True,
             "events_found": len(upcoming),
-            "target_date": target_date,
-            "sent": sent,
-            "message": f"Recordatorio enviado para {len(upcoming)} evento(s) en {target_date}"
+            "end_date": end_date,
+            "email_sent": email_sent,
+            "push_sent": push_sent,
+            "message": f"{len(upcoming)} evento(s) encontrados — {', '.join(parts)}",
         }
     except HTTPException:
         raise

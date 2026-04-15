@@ -233,10 +233,11 @@ export default function Settings() {
     setTestResult(null);
     try {
       const res = await sendTestReminder();
-      setTestResult({ ok: true, msg: res.message || s.notifTestSent, events: res.events_found });
-      toast({ title: `${s.notifTestSent}: ${res.events_found} evento(s)` });
+      const msg = res.message || s.notifTestSent;
+      setTestResult({ ok: true, msg, events: res.events_found });
+      toast({ title: msg });
     } catch (err) {
-      const msg = err.response?.data?.detail || "Error";
+      const msg = err.response?.data?.detail || err.message || "Error al enviar";
       setTestResult({ ok: false, msg });
       toast({ title: msg, variant: "destructive" });
     } finally {
