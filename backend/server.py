@@ -498,7 +498,138 @@ async def root():
     return {"message": "Event Reservation API"}
 
 
-@api_router.delete("/data/clear-all")
+@api_router.get("/deployment/env-template")
+async def get_env_template():
+    """Returns a .env template for deployment (with current non-sensitive values where safe)."""
+    settings = await db.app_settings.find_one({}, {"_id": 0}) or {}
+    template = f"""# ══════════════════════════════════════════
+# Cinema Productions — Deployment Config
+# ══════════════════════════════════════════
+# Copy this file to .env and fill in the values
+
+# ── Database ──────────────────────────────
+MONGO_URL=mongodb+srv://<user>:<password>@cluster.mongodb.net/?retryWrites=true&w=majority
+DB_NAME=cinema_productions
+
+# ── App URLs ──────────────────────────────
+REACT_APP_BACKEND_URL=https://your-domain.com
+
+# ── Email (Resend) ─────────────────────────
+RESEND_API_KEY=re_xxxxxxxxxxxxxxxxxxxxxxxx
+
+# ── Notifications ─────────────────────────
+# Telegram (optional)
+TELEGRAM_BOT_TOKEN=
+TELEGRAM_CHAT_ID=
+
+# ntfy.sh (optional, free)
+NTFY_TOPIC={settings.get('ntfy_topic', 'cinema-reservas')}
+
+# ── Web Push (optional) ───────────────────
+VAPID_PUBLIC_KEY=
+VAPID_PRIVATE_KEY=
+VAPID_SUBJECT=mailto:admin@yourdomain.com
+
+# ══════════════════════════════════════════
+# Docker Compose: docker-compose up -d
+# Railway: connect GitHub repo and add these vars
+# Render: add as Environment Variables in dashboard
+# ══════════════════════════════════════════
+"""
+    return Response(
+        content=template.encode(),
+        media_type="text/plain",
+        headers={"Content-Disposition": 'attachment; filename=".env.template"'},
+    )
+
+
+@api_router.get("/deployment/docker-compose")
+async def get_docker_compose():
+    """Returns a docker-compose.yml for self-hosting."""
+    compose = """version: '3.9'
+services:
+  backend:
+    image: python:3.11-slim
+    working_dir: /app/backend
+    command: uvicorn server:app --host 0.0.0.0 --port 8001 --reload
+    volumes:
+      - ./backend:/app/backend
+    env_file: .env
+    ports:
+      - "8001:8001"
+    restart: unless-stopped
+    depends_on:
+      - mongo
+
+  frontend:
+    image: node:20-alpine
+    working_dir: /app/frontend
+    command: sh -c "yarn install && yarn build && npx serve -s build -l 3000"
+    volumes:
+      - ./frontend:/app/frontend
+    env_file: .env
+    ports:
+      - "3000:3000"
+    restart: unless-stopped
+
+  mongo:
+    image: mongo:7
+    volumes:
+      - mongo_data:/data/db
+    ports:
+      - "27017:27017"
+    restart: unless-stopped
+    # Note: Use MongoDB Atlas instead of local mongo for production
+
+  nginx:
+    image: nginx:alpine
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx.conf:/etc/nginx/conf.d/default.conf
+      - ./ssl:/etc/nginx/ssl
+    depends_on:
+      - frontend
+      - backend
+    restart: unless-stopped
+
+volumes:
+  mongo_data:
+
+# ─── Usage ────────────────────────────────
+# 1. Copy .env.template to .env and fill values
+# 2. docker-compose up -d
+# 3. Access: http://your-server-ip
+"""
+    return Response(
+        content=compose.encode(),
+        media_type="text/plain",
+        headers={"Content-Disposition": 'attachment; filename="docker-compose.yml"'},
+    )
+
+
+@api_router.post("/deployment/health-check")
+async def health_check_url(url: str):
+    """Pings a URL and returns if it's responding."""
+    if not url.startswith(("http://", "https://")):
+        return {"ok": False, "error": "URL inválida"}
+    try:
+        async with httpx.AsyncClient(timeout=8.0, follow_redirects=True) as client:
+            r = await client.get(url)
+            return {
+                "ok": r.status_code < 400,
+                "status": r.status_code,
+                "latency_ms": round(r.elapsed.total_seconds() * 1000),
+                "message": f"HTTP {r.status_code} — responde en {round(r.elapsed.total_seconds()*1000)}ms",
+            }
+    except httpx.TimeoutException:
+        return {"ok": False, "error": "Timeout — no responde (>8s)"}
+    except Exception as e:
+        return {"ok": False, "error": str(e)[:100]}
+
+
+
 async def clear_all_data(auto_backup: bool = True):
     """Elimina todas las reservas y socios. Crea respaldo automático si auto_backup=True."""
     if auto_backup:

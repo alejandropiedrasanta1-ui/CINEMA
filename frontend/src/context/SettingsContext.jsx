@@ -228,6 +228,21 @@ export function SettingsProvider({ children }) {
   const [sidebarCompact, setSidebarCompact] = useState(() => localStorage.getItem("sidebar_compact") === "true");
   const [dateFormat,     setDateFormat]     = useState(() => localStorage.getItem("date_format") || "DD/MM/YYYY");
 
+  // ── Extended appearance options ────────────────────────────────────────
+  const [fontFamily,     setFontFamily]     = useState(() => localStorage.getItem("font_family")  || "satoshi");
+  const [cardStyle,      setCardStyle]      = useState(() => localStorage.getItem("card_style")   || "glass");
+  const [animSpeed,      setAnimSpeed]      = useState(() => localStorage.getItem("anim_speed")   || "normal");
+  const [shadowDepth,    setShadowDepth]    = useState(() => localStorage.getItem("shadow_depth") || "normal");
+  const [pageWidth,      setPageWidth]      = useState(() => localStorage.getItem("page_width")   || "medium");
+  const [btnCorner,      setBtnCorner]      = useState(() => localStorage.getItem("btn_corner")   || "rounded");
+  const [scrollbar,      setScrollbar]      = useState(() => localStorage.getItem("scrollbar")    || "default");
+  const [customBgEnabled,setCustomBgEnabled]= useState(() => localStorage.getItem("custom_bg")    === "true");
+  const [bgColor1,       setBgColor1]       = useState(() => localStorage.getItem("bg_color1")    || "#f8fafc");
+  const [bgColor2,       setBgColor2]       = useState(() => localStorage.getItem("bg_color2")    || "#ede9fe");
+  const [customAccent,   setCustomAccent]   = useState(() => localStorage.getItem("custom_accent")|| "");
+  const [saturation,     setSaturation]     = useState(() => localStorage.getItem("saturation")   || "normal");
+  const [hoverEffect,    setHoverEffect]    = useState(() => localStorage.getItem("hover_effect") || "normal");
+
   const changePdfTheme = (t) => { setPdfTheme(t); localStorage.setItem("pdf_theme", t); };
 
   useEffect(() => {
@@ -236,10 +251,27 @@ export function SettingsProvider({ children }) {
     document.documentElement.dataset.animations = String(animations);
     document.documentElement.dataset.radius = radius;
     // Apply new appearance settings
-    document.documentElement.dataset.dark = String(darkMode);
-    document.documentElement.dataset.fs   = fontScale === "normal" ? "" : fontScale;
-    document.documentElement.dataset.bg   = bgIntensity;
-    // Aplica overrides guardados en localStorage al inicio
+    document.documentElement.dataset.dark     = String(darkMode);
+    document.documentElement.dataset.fs       = fontScale === "normal" ? "" : fontScale;
+    document.documentElement.dataset.bg       = bgIntensity;
+    document.documentElement.dataset.font     = fontFamily === "satoshi" ? "" : fontFamily;
+    document.documentElement.dataset.card     = cardStyle === "glass" ? "" : cardStyle;
+    document.documentElement.dataset.animSpeed= animSpeed === "normal" ? "" : animSpeed;
+    document.documentElement.dataset.shadow   = shadowDepth === "normal" ? "" : shadowDepth;
+    document.documentElement.dataset.width    = pageWidth === "medium" ? "" : pageWidth;
+    document.documentElement.dataset.btnCorner= btnCorner === "rounded" ? "" : btnCorner;
+    document.documentElement.dataset.scrollbar= scrollbar === "default" ? "" : scrollbar;
+    document.documentElement.dataset.customBg = String(customBgEnabled);
+    document.documentElement.dataset.sat      = saturation === "normal" ? "" : saturation;
+    document.documentElement.dataset.hover    = hoverEffect === "normal" ? "" : hoverEffect;
+    if (customBgEnabled) {
+      document.documentElement.style.setProperty("--bg-c1", bgColor1);
+      document.documentElement.style.setProperty("--bg-c2", bgColor2);
+    }
+    if (customAccent) {
+      document.documentElement.style.setProperty("--t-from", customAccent);
+      document.documentElement.style.setProperty("--t-to",   customAccent + "cc");
+    }
     setEventConfigOverrides(eventConfigs);
   }, []);
 
@@ -291,6 +323,75 @@ export function SettingsProvider({ children }) {
   const changeDateFormat = (val) => {
     setDateFormat(val);
     localStorage.setItem("date_format", val);
+  };
+
+  const changeFontFamily = (val) => {
+    setFontFamily(val);
+    localStorage.setItem("font_family", val);
+    document.documentElement.dataset.font = val === "satoshi" ? "" : val;
+  };
+  const changeCardStyle = (val) => {
+    setCardStyle(val);
+    localStorage.setItem("card_style", val);
+    document.documentElement.dataset.card = val === "glass" ? "" : val;
+  };
+  const changeAnimSpeed = (val) => {
+    setAnimSpeed(val);
+    localStorage.setItem("anim_speed", val);
+    document.documentElement.dataset.animSpeed = val === "normal" ? "" : val;
+  };
+  const changeShadowDepth = (val) => {
+    setShadowDepth(val);
+    localStorage.setItem("shadow_depth", val);
+    document.documentElement.dataset.shadow = val === "normal" ? "" : val;
+  };
+  const changePageWidth = (val) => {
+    setPageWidth(val);
+    localStorage.setItem("page_width", val);
+    document.documentElement.dataset.width = val === "medium" ? "" : val;
+  };
+  const changeBtnCorner = (val) => {
+    setBtnCorner(val);
+    localStorage.setItem("btn_corner", val);
+    document.documentElement.dataset.btnCorner = val === "rounded" ? "" : val;
+  };
+  const changeScrollbar = (val) => {
+    setScrollbar(val);
+    localStorage.setItem("scrollbar", val);
+    document.documentElement.dataset.scrollbar = val === "default" ? "" : val;
+  };
+  const changeCustomBg = (enabled, c1, c2) => {
+    const color1 = c1 ?? bgColor1;
+    const color2 = c2 ?? bgColor2;
+    setCustomBgEnabled(enabled);
+    setBgColor1(color1);
+    setBgColor2(color2);
+    localStorage.setItem("custom_bg", String(enabled));
+    localStorage.setItem("bg_color1", color1);
+    localStorage.setItem("bg_color2", color2);
+    document.documentElement.dataset.customBg = String(enabled);
+    document.documentElement.style.setProperty("--bg-c1", color1);
+    document.documentElement.style.setProperty("--bg-c2", color2);
+  };
+  const changeCustomAccent = (hex) => {
+    setCustomAccent(hex);
+    localStorage.setItem("custom_accent", hex);
+    if (hex) {
+      document.documentElement.style.setProperty("--t-from", hex);
+      document.documentElement.style.setProperty("--t-to",   hex + "cc");
+    } else {
+      applyThemeVars(theme);
+    }
+  };
+  const changeSaturation = (val) => {
+    setSaturation(val);
+    localStorage.setItem("saturation", val);
+    document.documentElement.dataset.sat = val === "normal" ? "" : val;
+  };
+  const changeHoverEffect = (val) => {
+    setHoverEffect(val);
+    localStorage.setItem("hover_effect", val);
+    document.documentElement.dataset.hover = val === "normal" ? "" : val;
   };
 
   // ── Event type custom configs ──────────────────────────────
@@ -349,12 +450,23 @@ export function SettingsProvider({ children }) {
       changeLanguage, changeCurrency, changeTheme,
       preset, animations, radius, pdfTheme,
       changePreset, changeAnimations, changeRadius, changePdfTheme,
-      // New appearance
+      // Appearance (basic)
       darkMode, changeDarkMode,
       fontScale, changeFontScale,
       bgIntensity, changeBgIntensity,
       sidebarCompact, changeSidebarCompact,
       dateFormat, changeDateFormat,
+      // Appearance (extended)
+      fontFamily, changeCardStyle, cardStyle, changeFontFamily,
+      animSpeed, changeAnimSpeed,
+      shadowDepth, changeShadowDepth,
+      pageWidth, changePageWidth,
+      btnCorner, changeBtnCorner,
+      scrollbar, changeScrollbar,
+      customBgEnabled, bgColor1, bgColor2, changeCustomBg,
+      customAccent, changeCustomAccent,
+      saturation, changeSaturation,
+      hoverEffect, changeHoverEffect,
       // Event & logo
       eventConfigs, updateEventTypeConfig, resetEventTypeConfig,
       logoUrl, pdfLogoUrl, logoSize, usePdfLogo, useCustomPdfLogo, updateLogoSettings,

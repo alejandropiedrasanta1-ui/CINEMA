@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 import { Link } from "react-router-dom";
 import {
   Download, Globe, DollarSign, Palette, FileText,
@@ -67,6 +67,10 @@ export default function Settings() {
           preset, animations, radius, pdfTheme, changePreset, changeAnimations, changeRadius, changePdfTheme, formatCurrency,
           darkMode, changeDarkMode, fontScale, changeFontScale,
           bgIntensity, changeBgIntensity, sidebarCompact, changeSidebarCompact, dateFormat, changeDateFormat,
+          fontFamily, changeFontFamily, cardStyle, changeCardStyle, animSpeed, changeAnimSpeed,
+          shadowDepth, changeShadowDepth, pageWidth, changePageWidth, btnCorner, changeBtnCorner,
+          scrollbar, changeScrollbar, customBgEnabled, bgColor1, bgColor2, changeCustomBg,
+          customAccent, changeCustomAccent, saturation, changeSaturation, hoverEffect, changeHoverEffect,
           eventConfigs, updateEventTypeConfig, resetEventTypeConfig,
           logoUrl, pdfLogoUrl, logoSize, usePdfLogo, useCustomPdfLogo, updateLogoSettings } = useSettings();
   const { requestPermission, showNotification, startPolling } = useNotifications();
@@ -74,8 +78,7 @@ export default function Settings() {
   const s = tr.settings;
 
   // Notification + Business settings state
-  const [notif, setNotif] = useState({
-    reminders_enabled: false,
+  const [notif, setNotif] = useState({    reminders_enabled: false,
     reminder_periods: [3],
     reminder_time: "09:00",
     reminder_hours_before: 0,
@@ -111,6 +114,13 @@ export default function Settings() {
   const [downloadLoading, setDownloadLoading] = useState(false);
   const [buildStatus, setBuildStatus] = useState({ status: "idle", message: "" });
   const [buildPolling, setBuildPolling] = useState(false);
+
+  // Deployment / hosting state
+  const [deployUrl,        setDeployUrl]        = useState("");
+  const [healthLoading,    setHealthLoading]     = useState(false);
+  const [healthResult,     setHealthResult]      = useState(null);
+  const [expandedPlatform, setExpandedPlatform]  = useState(null);
+  const [accentColorInput, setAccentColorInput]  = useState(customAccent || "");
 
   // DB state
   const [dbStats, setDbStats] = useState(null);
@@ -972,7 +982,288 @@ export default function Settings() {
 
             <div className="border-t border-white/40" />
 
-            {/* 6 ── EVENT TYPE ICONS & COLORS ──────────────────── */}
+            {/* 7 ── EXTENDED APPEARANCE (10+ OPTIONS) ─────────── */}
+            <div className="space-y-5">
+              <p className="text-[11px] font-black text-slate-400 uppercase tracking-widest">
+                {language === "es" ? "Personalización completa" : "Full Customization"}
+              </p>
+
+              {/* Custom Accent Color */}
+              <div>
+                <p className="text-xs font-black text-slate-600 mb-2">
+                  {language === "es" ? "Color de acento personalizado" : "Custom Accent Color"}
+                </p>
+                <div className="flex items-center gap-3">
+                  <input type="color" value={accentColorInput || "#6366f1"}
+                    onChange={e => setAccentColorInput(e.target.value)}
+                    className="w-10 h-10 rounded-xl cursor-pointer border-2 border-slate-200/60 bg-transparent" />
+                  <input type="text" value={accentColorInput}
+                    onChange={e => setAccentColorInput(e.target.value)}
+                    placeholder="#6366f1" maxLength={7}
+                    className="flex-1 bg-white/60 border border-slate-200/80 rounded-xl px-3 py-2 text-sm font-mono text-slate-800 placeholder-slate-300 focus:outline-none focus:ring-2 focus:ring-indigo-300" />
+                  <motion.button whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.97 }}
+                    onClick={() => { changeCustomAccent(accentColorInput); toast({ title: language === "es" ? "Color de acento aplicado ✓" : "Accent color applied ✓" }); }}
+                    className="px-4 py-2 rounded-xl btn-primary text-white text-xs font-bold">
+                    {language === "es" ? "Aplicar" : "Apply"}
+                  </motion.button>
+                  {customAccent && (
+                    <button onClick={() => { changeCustomAccent(""); setAccentColorInput(""); toast({ title: "Color restablecido" }); }}
+                      className="px-3 py-2 rounded-xl text-xs font-bold bg-slate-100 text-slate-600 hover:bg-slate-200 transition-colors">
+                      {language === "es" ? "Restablecer" : "Reset"}
+                    </button>
+                  )}
+                </div>
+              </div>
+
+              {/* Font Family */}
+              <div>
+                <p className="text-xs font-black text-slate-600 mb-2.5">
+                  {language === "es" ? "Familia de fuente" : "Font Family"}
+                </p>
+                <div className="flex flex-wrap gap-2">
+                  {[
+                    { id: "satoshi",  label: "Satoshi",       preview: "Aa" },
+                    { id: "cabinet",  label: "Cabinet",        preview: "Aa" },
+                    { id: "outfit",   label: "Outfit",         preview: "Aa" },
+                    { id: "space",    label: "Space Grotesk",  preview: "Aa" },
+                    { id: "poppins",  label: "Poppins",        preview: "Aa" },
+                    { id: "sora",     label: "Sora",           preview: "Aa" },
+                    { id: "dmsans",   label: "DM Sans",        preview: "Aa" },
+                    { id: "mono",     label: "Monospace",      preview: "Aa" },
+                  ].map(f => (
+                    <motion.button key={f.id} whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.97 }}
+                      data-testid={`font-${f.id}`}
+                      onClick={() => { changeFontFamily(f.id); toast({ title: `Fuente: ${f.label}` }); }}
+                      className={`px-3.5 py-2 rounded-xl border-2 text-xs font-bold transition-all ${fontFamily === f.id ? "border-[var(--t-from)] bg-white/80 text-[var(--t-from)]" : "border-slate-200/70 bg-white/40 text-slate-600 hover:bg-white/60"}`}
+                      style={{ fontFamily: f.id === "mono" ? "monospace" : f.id === "satoshi" ? "Satoshi" : f.label }}>
+                      {f.label}
+                    </motion.button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Card Style */}
+              <div>
+                <p className="text-xs font-black text-slate-600 mb-2.5">
+                  {language === "es" ? "Estilo de tarjetas" : "Card Style"}
+                </p>
+                <div className="grid grid-cols-3 gap-2">
+                  {[
+                    { id: "glass",   label: language === "es" ? "Vidrio"   : "Glass",   desc: "Glassmorphism", preview: "blur" },
+                    { id: "solid",   label: language === "es" ? "Sólido"   : "Solid",   desc: "Blanco limpio", preview: "white" },
+                    { id: "minimal", label: language === "es" ? "Mínimal"  : "Minimal", desc: "Sin fondo",     preview: "transparent" },
+                    { id: "neon",    label: "Neon",               desc: "Dark + glow",   preview: "dark" },
+                    { id: "frosted", label: language === "es" ? "Escarcha" : "Frosted",  desc: "Ultra blur",    preview: "frost" },
+                  ].map(c => (
+                    <motion.button key={c.id} whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.97 }}
+                      data-testid={`card-${c.id}`}
+                      onClick={() => { changeCardStyle(c.id); toast({ title: `Tarjetas: ${c.label}` }); }}
+                      className={`flex flex-col items-center py-3 rounded-2xl border-2 transition-all gap-1.5 ${cardStyle === c.id ? "border-[var(--t-from)] bg-white/80" : "border-slate-200/70 bg-white/30 hover:bg-white/60"}`}>
+                      <div className={`w-8 h-6 rounded-lg border ${c.preview === "blur" ? "bg-white/60 backdrop-blur-sm border-white/60" : c.preview === "white" ? "bg-white border-slate-200" : c.preview === "transparent" ? "bg-transparent border-dashed border-slate-300" : c.preview === "dark" ? "bg-slate-800 border-indigo-500" : "bg-white/20 backdrop-blur border-white/80"}`} />
+                      <span className={`text-[10px] font-black ${cardStyle === c.id ? "text-[var(--t-from)]" : "text-slate-600"}`}>{c.label}</span>
+                      <span className="text-[8px] text-slate-400">{c.desc}</span>
+                    </motion.button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Animation Speed */}
+              <div>
+                <p className="text-xs font-black text-slate-600 mb-2.5">
+                  {language === "es" ? "Velocidad de animaciones" : "Animation Speed"}
+                </p>
+                <div className="flex gap-2">
+                  {[
+                    { id: "slow",    label: language === "es" ? "Lenta"    : "Slow",    icon: "🐢" },
+                    { id: "normal",  label: language === "es" ? "Normal"   : "Normal",  icon: "✦" },
+                    { id: "fast",    label: language === "es" ? "Rápida"   : "Fast",    icon: "⚡" },
+                    { id: "instant", label: language === "es" ? "Instante" : "Instant", icon: "⚡⚡" },
+                  ].map(a => (
+                    <motion.button key={a.id} whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.97 }}
+                      data-testid={`anim-${a.id}`}
+                      onClick={() => changeAnimSpeed(a.id)}
+                      className={`flex-1 flex flex-col items-center py-2.5 rounded-2xl border-2 transition-all gap-1 ${animSpeed === a.id ? "border-[var(--t-from)] bg-white/80" : "border-slate-200/70 bg-white/40 hover:bg-white/60"}`}>
+                      <span className="text-sm">{a.icon}</span>
+                      <span className={`text-[9px] font-bold ${animSpeed === a.id ? "text-[var(--t-from)]" : "text-slate-500"}`}>{a.label}</span>
+                    </motion.button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Shadow Depth */}
+              <div>
+                <p className="text-xs font-black text-slate-600 mb-2.5">
+                  {language === "es" ? "Profundidad de sombras" : "Shadow Depth"}
+                </p>
+                <div className="flex gap-2">
+                  {[
+                    { id: "flat",   label: language === "es" ? "Plano"    : "Flat",   preview: "shadow-none" },
+                    { id: "normal", label: language === "es" ? "Normal"   : "Normal", preview: "shadow-md" },
+                    { id: "deep",   label: language === "es" ? "Profundo" : "Deep",   preview: "shadow-xl" },
+                    { id: "glow",   label: "Glow",                                    preview: "shadow-[0_0_20px]" },
+                  ].map(s_ => (
+                    <motion.button key={s_.id} whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.97 }}
+                      data-testid={`shadow-${s_.id}`}
+                      onClick={() => changeShadowDepth(s_.id)}
+                      className={`flex-1 flex flex-col items-center py-2.5 rounded-2xl border-2 transition-all gap-2 ${shadowDepth === s_.id ? "border-[var(--t-from)] bg-white/80" : "border-slate-200/70 bg-white/40 hover:bg-white/60"}`}>
+                      <div className={`w-8 h-5 bg-white rounded-lg ${s_.preview}`} />
+                      <span className={`text-[9px] font-bold ${shadowDepth === s_.id ? "text-[var(--t-from)]" : "text-slate-500"}`}>{s_.label}</span>
+                    </motion.button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Page Width */}
+              <div>
+                <p className="text-xs font-black text-slate-600 mb-2.5">
+                  {language === "es" ? "Ancho del contenido" : "Content Width"}
+                </p>
+                <div className="flex gap-2">
+                  {[
+                    { id: "narrow", label: language === "es" ? "Estrecho" : "Narrow", bar: "w-1/3" },
+                    { id: "medium", label: language === "es" ? "Normal"   : "Normal", bar: "w-1/2" },
+                    { id: "wide",   label: language === "es" ? "Ancho"    : "Wide",   bar: "w-3/4" },
+                    { id: "full",   label: language === "es" ? "Completo" : "Full",   bar: "w-full" },
+                  ].map(w => (
+                    <motion.button key={w.id} whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.97 }}
+                      data-testid={`width-${w.id}`}
+                      onClick={() => changePageWidth(w.id)}
+                      className={`flex-1 flex flex-col items-center py-2.5 px-1 rounded-2xl border-2 transition-all gap-2 ${pageWidth === w.id ? "border-[var(--t-from)] bg-white/80" : "border-slate-200/70 bg-white/40 hover:bg-white/60"}`}>
+                      <div className="w-full h-3 bg-slate-100 rounded-sm overflow-hidden flex items-center justify-center px-1">
+                        <div className={`h-1.5 bg-slate-400 rounded-sm ${w.bar}`} />
+                      </div>
+                      <span className={`text-[9px] font-bold ${pageWidth === w.id ? "text-[var(--t-from)]" : "text-slate-500"}`}>{w.label}</span>
+                    </motion.button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Button Corner */}
+              <div>
+                <p className="text-xs font-black text-slate-600 mb-2.5">
+                  {language === "es" ? "Estilo de botones" : "Button Corner Style"}
+                </p>
+                <div className="flex gap-3">
+                  {[
+                    { id: "rounded", label: language === "es" ? "Redondeado" : "Rounded", r: "rounded-lg" },
+                    { id: "pill",    label: "Pill",                                         r: "rounded-full" },
+                    { id: "sharp",   label: language === "es" ? "Angular"    : "Sharp",     r: "rounded-sm" },
+                  ].map(b => (
+                    <motion.button key={b.id} whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.97 }}
+                      data-testid={`btn-corner-${b.id}`}
+                      onClick={() => changeBtnCorner(b.id)}
+                      className={`flex-1 flex flex-col items-center py-2.5 rounded-2xl border-2 transition-all gap-2 ${btnCorner === b.id ? "border-[var(--t-from)] bg-white/80" : "border-slate-200/70 bg-white/40 hover:bg-white/60"}`}>
+                      <div className={`w-12 h-5 btn-primary ${b.r} flex items-center justify-center`} style={{ borderRadius: b.id === "pill" ? "9999px" : b.id === "sharp" ? "4px" : "10px" }}>
+                        <span className="text-[8px] text-white font-black">BTN</span>
+                      </div>
+                      <span className={`text-[9px] font-bold ${btnCorner === b.id ? "text-[var(--t-from)]" : "text-slate-500"}`}>{b.label}</span>
+                    </motion.button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Scrollbar Style */}
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-xs font-black text-slate-600">{language === "es" ? "Barra de desplazamiento" : "Scrollbar Style"}</p>
+                  <div className="flex gap-2 mt-2">
+                    {[
+                      { id: "default", label: language === "es" ? "Normal" : "Default" },
+                      { id: "thin",    label: language === "es" ? "Fina"   : "Thin" },
+                      { id: "none",    label: language === "es" ? "Oculta" : "Hidden" },
+                    ].map(s_ => (
+                      <button key={s_.id} data-testid={`scrollbar-${s_.id}`}
+                        onClick={() => changeScrollbar(s_.id)}
+                        className={`px-3 py-1.5 rounded-xl text-[10px] font-bold border-2 transition-all ${scrollbar === s_.id ? "border-[var(--t-from)] text-[var(--t-from)] bg-white/80" : "border-slate-200/70 text-slate-500 bg-white/40"}`}>
+                        {s_.label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              </div>
+
+              {/* Hover Effect */}
+              <div>
+                <p className="text-xs font-black text-slate-600 mb-2">
+                  {language === "es" ? "Efecto al pasar el cursor" : "Hover Effect"}
+                </p>
+                <div className="flex gap-2 flex-wrap">
+                  {[
+                    { id: "normal", label: language === "es" ? "Normal" : "Normal" },
+                    { id: "glow",   label: "Glow" },
+                    { id: "lift",   label: language === "es" ? "Elevar" : "Lift" },
+                    { id: "scale",  label: "Scale" },
+                  ].map(h => (
+                    <button key={h.id} data-testid={`hover-${h.id}`}
+                      onClick={() => changeHoverEffect(h.id)}
+                      className={`px-3.5 py-1.5 rounded-full text-[10px] font-bold border-2 transition-all ${hoverEffect === h.id ? "border-[var(--t-from)] text-[var(--t-from)] bg-white/80" : "border-slate-200/70 text-slate-500 bg-white/40"}`}>
+                      {h.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Color Saturation */}
+              <div>
+                <p className="text-xs font-black text-slate-600 mb-2">
+                  {language === "es" ? "Saturación de color" : "Color Saturation"}
+                </p>
+                <div className="flex gap-2">
+                  {[
+                    { id: "muted",  label: language === "es" ? "Apagado" : "Muted",  bar: "opacity-40" },
+                    { id: "normal", label: language === "es" ? "Normal"  : "Normal", bar: "opacity-70" },
+                    { id: "vivid",  label: language === "es" ? "Vívido"  : "Vivid",  bar: "opacity-100" },
+                  ].map(s_ => (
+                    <motion.button key={s_.id} whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.97 }}
+                      data-testid={`sat-${s_.id}`}
+                      onClick={() => changeSaturation(s_.id)}
+                      className={`flex-1 flex flex-col items-center py-2.5 rounded-2xl border-2 transition-all gap-2 ${saturation === s_.id ? "border-[var(--t-from)] bg-white/80" : "border-slate-200/70 bg-white/40 hover:bg-white/60"}`}>
+                      <div className={`flex gap-0.5 ${s_.bar}`}>
+                        {["bg-red-400","bg-yellow-400","bg-green-400","bg-blue-400","bg-purple-400"].map(c => <div key={c} className={`w-2 h-3 rounded-sm ${c}`} />)}
+                      </div>
+                      <span className={`text-[9px] font-bold ${saturation === s_.id ? "text-[var(--t-from)]" : "text-slate-500"}`}>{s_.label}</span>
+                    </motion.button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Custom Background */}
+              <div>
+                <div className="flex items-center justify-between mb-2">
+                  <p className="text-xs font-black text-slate-600">{language === "es" ? "Fondo de gradiente personalizado" : "Custom Gradient Background"}</p>
+                  <button onClick={() => changeCustomBg(!customBgEnabled)}
+                    data-testid="custom-bg-toggle"
+                    className={`w-10 h-5 rounded-full transition-all relative ${customBgEnabled ? "btn-primary" : "bg-slate-200"}`}>
+                    <span className={`absolute top-0.5 w-4 h-4 bg-white rounded-full shadow-sm transition-all ${customBgEnabled ? "left-[22px]" : "left-0.5"}`} />
+                  </button>
+                </div>
+                <AnimatePresence>
+                  {customBgEnabled && (
+                    <motion.div key="bg-colors" initial={{ height: 0, opacity: 0 }} animate={{ height: "auto", opacity: 1 }} exit={{ height: 0, opacity: 0 }}
+                      className="flex items-center gap-3 mt-2">
+                      <div className="flex flex-col items-center gap-1">
+                        <input type="color" value={bgColor1}
+                          onChange={e => changeCustomBg(true, e.target.value, bgColor2)}
+                          className="w-9 h-9 rounded-xl cursor-pointer border-2 border-slate-200/60" />
+                        <span className="text-[8px] text-slate-400">{language === "es" ? "Inicio" : "Start"}</span>
+                      </div>
+                      <div className="flex-1 h-8 rounded-xl border border-slate-200/60" style={{ background: `linear-gradient(135deg, ${bgColor1}, ${bgColor2})` }} />
+                      <div className="flex flex-col items-center gap-1">
+                        <input type="color" value={bgColor2}
+                          onChange={e => changeCustomBg(true, bgColor1, e.target.value)}
+                          className="w-9 h-9 rounded-xl cursor-pointer border-2 border-slate-200/60" />
+                        <span className="text-[8px] text-slate-400">{language === "es" ? "Final" : "End"}</span>
+                      </div>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+              </div>
+
+            </div>
+
+            <div className="border-t border-white/40" />
+
+            {/* 8 ── EVENT TYPE ICONS & COLORS ──────────────────── */}
             <div>
               <p className="text-[11px] font-black text-slate-400 uppercase tracking-widest mb-3">
                 {language === "es" ? "Iconos y Colores por Tipo de Evento" : "Event Type Icons & Colors"}
@@ -1841,7 +2132,7 @@ export default function Settings() {
               {s.desktopBadge}
             </span>
           }>
-          <div className="space-y-4">
+          <div className="space-y-5">
             {/* Feature list */}
             <div className="grid grid-cols-2 gap-2">
               {[s.desktopFeature1, s.desktopFeature2, s.desktopFeature3, s.desktopFeature4].map((f, i) => (
@@ -1857,114 +2148,272 @@ export default function Settings() {
               <AlertCircle size={14} className="text-amber-500 shrink-0" />
               <p className="text-xs text-amber-700 font-semibold">
                 {s.desktopReq} —{" "}
-                <a href="https://www.python.org/downloads/" target="_blank" rel="noreferrer"
-                  className="underline hover:text-amber-900">
+                <a href="https://www.python.org/downloads/" target="_blank" rel="noreferrer" className="underline hover:text-amber-900">
                   {s.desktopReqLink}
                 </a>
                 {" "}(marcar "Add Python to PATH")
               </p>
             </div>
 
-            {/* ── UPDATE + DOWNLOAD BLOCK ─────────────────────── */}
+            {/* ── UPDATE + DOWNLOAD ── */}
             <div className="rounded-2xl overflow-hidden border border-indigo-100/80 bg-gradient-to-br from-indigo-50/60 to-white/60">
-              {/* Step 1 — Update */}
               <div className="px-4 pt-4 pb-3 border-b border-indigo-100/60">
                 <div className="flex items-center gap-2 mb-2.5">
                   <div className="w-5 h-5 rounded-full btn-primary flex items-center justify-center text-white text-[10px] font-black flex-shrink-0">1</div>
-                  <p className="text-xs font-bold text-slate-700">
-                    {language === "es" ? "Actualizar app con los últimos cambios" : "Update app with latest changes"}
-                  </p>
+                  <p className="text-xs font-bold text-slate-700">{language === "es" ? "Actualizar app con últimos cambios" : "Update app"}</p>
                 </div>
-
-                {/* Build status bar */}
                 {buildStatus.status !== "idle" && (
-                  <div className={`flex items-start gap-2 rounded-xl px-3 py-2.5 mb-3 text-xs font-medium ${
-                    buildStatus.status === "building" ? "bg-indigo-50 text-indigo-700 border border-indigo-200/60"
-                    : buildStatus.status === "ready"   ? "bg-emerald-50 text-emerald-700 border border-emerald-200/60"
-                    : "bg-red-50 text-red-600 border border-red-200/60"
-                  }`}>
-                    {buildStatus.status === "building"
-                      ? <Loader2 size={13} className="animate-spin flex-shrink-0 mt-0.5" />
-                      : buildStatus.status === "ready"
-                      ? <CheckCircle size={13} className="flex-shrink-0 mt-0.5" />
-                      : <XCircle size={13} className="flex-shrink-0 mt-0.5" />
-                    }
+                  <div className={`flex items-start gap-2 rounded-xl px-3 py-2.5 mb-3 text-xs font-medium ${buildStatus.status === "building" ? "bg-indigo-50 text-indigo-700 border border-indigo-200/60" : buildStatus.status === "ready" ? "bg-emerald-50 text-emerald-700 border border-emerald-200/60" : "bg-red-50 text-red-600 border border-red-200/60"}`}>
+                    {buildStatus.status === "building" ? <Loader2 size={13} className="animate-spin flex-shrink-0 mt-0.5" /> : buildStatus.status === "ready" ? <CheckCircle size={13} className="flex-shrink-0 mt-0.5" /> : <XCircle size={13} className="flex-shrink-0 mt-0.5" />}
                     <span>{buildStatus.message}</span>
                   </div>
                 )}
-
-                {/* Animated progress dots while building */}
-                {buildStatus.status === "building" && (
-                  <div className="flex items-center gap-1.5 mb-3">
-                    {[0, 1, 2, 3, 4].map(i => (
-                      <div
-                        key={i}
-                        className="w-1.5 h-1.5 rounded-full bg-indigo-400"
-                        style={{ animation: `pulse 1.4s ease-in-out ${i * 0.2}s infinite` }}
-                      />
-                    ))}
-                    <span className="text-[10px] text-indigo-500 font-medium ml-1">
-                      {language === "es" ? "Compilando… por favor espera" : "Building… please wait"}
-                    </span>
-                  </div>
-                )}
-
-                <motion.button
-                  whileHover={{ scale: buildStatus.status === "building" ? 1 : 1.02 }}
-                  whileTap={{ scale: 0.97 }}
-                  onClick={handleRebuild}
-                  disabled={buildStatus.status === "building"}
-                  data-testid="desktop-rebuild-btn"
+                <motion.button whileHover={{ scale: buildStatus.status === "building" ? 1 : 1.02 }} whileTap={{ scale: 0.97 }}
+                  onClick={handleRebuild} disabled={buildStatus.status === "building"} data-testid="desktop-rebuild-btn"
                   className="w-full flex items-center justify-center gap-2 py-3 rounded-xl text-sm font-bold text-white transition-all disabled:opacity-60"
-                  style={{ background: buildStatus.status === "ready" ? "linear-gradient(135deg,#10b981,#059669)" : "linear-gradient(135deg,var(--t-from),var(--t-to))" }}
-                >
-                  {buildStatus.status === "building"
-                    ? <><Loader2 size={14} className="animate-spin" /> {language === "es" ? "Actualizando… espera" : "Updating… please wait"}</>
-                    : buildStatus.status === "ready"
-                    ? <><CheckCircle size={14} /> {language === "es" ? "App actualizada — actualizar de nuevo" : "App updated — rebuild again"}</>
-                    : <><RefreshCw size={14} /> {language === "es" ? "Actualizar App" : "Update App"}</>
-                  }
+                  style={{ background: buildStatus.status === "ready" ? "linear-gradient(135deg,#10b981,#059669)" : "linear-gradient(135deg,var(--t-from),var(--t-to))" }}>
+                  {buildStatus.status === "building" ? <><Loader2 size={14} className="animate-spin" /> {language === "es" ? "Actualizando…" : "Updating…"}</> : buildStatus.status === "ready" ? <><CheckCircle size={14} /> {language === "es" ? "App actualizada ✓" : "Updated ✓"}</> : <><RefreshCw size={14} /> {language === "es" ? "Actualizar App" : "Update App"}</>}
                 </motion.button>
               </div>
-
-              {/* Step 2 — Download */}
               <div className="px-4 pt-3 pb-4">
                 <div className="flex items-center gap-2 mb-2.5">
                   <div className={`w-5 h-5 rounded-full flex items-center justify-center text-white text-[10px] font-black flex-shrink-0 ${buildStatus.status === "ready" ? "btn-primary" : "bg-slate-300"}`}>2</div>
-                  <p className={`text-xs font-bold ${buildStatus.status === "ready" ? "text-slate-700" : "text-slate-400"}`}>
-                    {language === "es" ? "Descargar app actualizada (.zip)" : "Download updated app (.zip)"}
-                  </p>
+                  <p className={`text-xs font-bold ${buildStatus.status === "ready" ? "text-slate-700" : "text-slate-400"}`}>{language === "es" ? "Descargar app (.zip)" : "Download app (.zip)"}</p>
                 </div>
-                <motion.button
-                  whileHover={{ scale: buildStatus.status === "ready" ? 1.02 : 1 }}
-                  whileTap={{ scale: 0.97 }}
-                  onClick={handleDownloadPackage}
-                  disabled={downloadLoading || buildStatus.status === "building"}
-                  data-testid="desktop-download-btn"
+                <motion.button whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.97 }}
+                  onClick={handleDownloadPackage} disabled={downloadLoading || buildStatus.status === "building"} data-testid="desktop-download-btn"
                   className="w-full flex items-center justify-center gap-2 py-3 rounded-xl text-sm font-bold transition-all disabled:opacity-40"
-                  style={{
-                    background: buildStatus.status === "ready" ? "linear-gradient(135deg,var(--t-from),var(--t-to))" : "#e2e8f0",
-                    color: buildStatus.status === "ready" ? "white" : "#94a3b8",
-                    cursor: buildStatus.status === "ready" || buildStatus.status === "idle" ? "pointer" : "not-allowed",
-                  }}
-                >
-                  {downloadLoading
-                    ? <><Loader2 size={14} className="animate-spin" /> {s.desktopDownloading}</>
-                    : <><Package size={14} /> {s.desktopDownload}</>
-                  }
+                  style={{ background: buildStatus.status === "ready" ? "linear-gradient(135deg,var(--t-from),var(--t-to))" : "#e2e8f0", color: buildStatus.status === "ready" ? "white" : "#94a3b8" }}>
+                  {downloadLoading ? <><Loader2 size={14} className="animate-spin" /> {s.desktopDownloading}</> : <><Package size={14} /> {s.desktopDownload}</>}
                 </motion.button>
-                {buildStatus.status !== "ready" && buildStatus.status !== "idle" && (
-                  <p className="text-[10px] text-slate-400 text-center mt-1.5">
-                    {language === "es" ? "Primero actualiza la app (Paso 1)" : "First update the app (Step 1)"}
-                  </p>
-                )}
               </div>
             </div>
 
-            {/* Note */}
-            <p className="text-[11px] text-slate-400 leading-relaxed">
-              {s.desktopNote}
-            </p>
+            <p className="text-[11px] text-slate-400 leading-relaxed">{s.desktopNote}</p>
+          </div>
+        </Section>
+
+        {/* ── PUBLICAR EN LÍNEA ── */}
+        <Section icon={Globe} title={language === "es" ? "Publicar en Línea" : "Publish Online"}
+          desc={language === "es" ? "Despliega tu app en hosting externo para acceder desde cualquier lugar" : "Deploy to external hosting for anywhere access"}>
+          <div className="space-y-4">
+
+            {/* Platform cards */}
+            {[
+              {
+                id: "hostinger",
+                name: "Hostinger VPS",
+                icon: "🟠",
+                badge: "Recomendado",
+                badgeColor: "bg-orange-100 text-orange-700",
+                desc: language === "es" ? "VPS Linux con Docker — máximo control" : "Linux VPS with Docker — full control",
+                steps: [
+                  "Contrata plan VPS KVM1 o superior en hostinger.com",
+                  "Conecta por SSH: ssh root@tu-ip-servidor",
+                  "Instala Docker: curl -fsSL https://get.docker.com | sh",
+                  "Sube tu proyecto: scp -r ./cinema-app root@tu-ip:/opt/cinema",
+                  "Copia .env y edita las variables de entorno",
+                  "Ejecuta: docker-compose up -d",
+                  "Configura dominio en hPanel → DNS → A record → tu-ip",
+                  "¡Listo! Accede en https://tudominio.com",
+                ],
+              },
+              {
+                id: "railway",
+                name: "Railway.app",
+                icon: "🟣",
+                badge: "Más fácil",
+                badgeColor: "bg-purple-100 text-purple-700",
+                desc: language === "es" ? "Deploy con GitHub en 1 clic — gratis hasta $5/mes" : "GitHub 1-click deploy — free up to $5/mo",
+                steps: [
+                  "Crea cuenta en railway.app",
+                  "Nuevo proyecto → Deploy from GitHub",
+                  "Conecta tu repositorio de GitHub",
+                  "Railway detecta Python/Node automáticamente",
+                  "Ve a Variables → copia el contenido de .env.template",
+                  "Clic en Deploy → Railway despliega automáticamente",
+                  "Ajustes → Domain → Generate Domain (gratis *.up.railway.app)",
+                  "¡En 5 minutos tu app está en línea!",
+                ],
+                link: "https://railway.app",
+              },
+              {
+                id: "render",
+                name: "Render.com",
+                icon: "🔵",
+                badge: "Gratis",
+                badgeColor: "bg-blue-100 text-blue-700",
+                desc: language === "es" ? "Tier gratis para proyectos personales" : "Free tier for personal projects",
+                steps: [
+                  "Crea cuenta en render.com",
+                  "New → Web Service → conecta GitHub",
+                  "Para el backend: Build Command: pip install -r backend/requirements.txt",
+                  "Start Command: uvicorn backend.server:app --host 0.0.0.0 --port $PORT",
+                  "Para el frontend: Static Site → Build: cd frontend && npm run build",
+                  "Agrega variables de entorno (Environment tab)",
+                  "Render asigna URL *.onrender.com automáticamente",
+                  "Nota: en tier gratis el servicio 'duerme' después de 15 min inactividad",
+                ],
+                link: "https://render.com",
+              },
+              {
+                id: "digitalocean",
+                name: "DigitalOcean",
+                icon: "🔹",
+                badge: "$4/mes",
+                badgeColor: "bg-sky-100 text-sky-700",
+                desc: language === "es" ? "Droplet + App Platform — muy confiable" : "Droplet + App Platform — very reliable",
+                steps: [
+                  "Crea una cuenta en digitalocean.com ($200 crédito gratis para nuevos)",
+                  "App Platform → Create App → GitHub source",
+                  "Detecta automáticamente Python y Node.js",
+                  "Configura variables de entorno en Settings",
+                  "Asigna dominio personalizado o usa *.ondigitalocean.app",
+                  "Escala fácilmente con Managed MongoDB Database si necesitas",
+                ],
+                link: "https://digitalocean.com",
+              },
+            ].map((platform) => (
+              <div key={platform.id} className="border border-slate-200/60 rounded-2xl overflow-hidden bg-white/40">
+                <button className="w-full flex items-center gap-3 px-4 py-3.5 text-left hover:bg-white/60 transition-colors"
+                  data-testid={`platform-${platform.id}`}
+                  onClick={() => setExpandedPlatform(expandedPlatform === platform.id ? null : platform.id)}>
+                  <span className="text-xl">{platform.icon}</span>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <span className="text-sm font-black text-slate-800">{platform.name}</span>
+                      <span className={`text-[9px] font-black px-2 py-0.5 rounded-full ${platform.badgeColor}`}>{platform.badge}</span>
+                    </div>
+                    <span className="text-[11px] text-slate-400">{platform.desc}</span>
+                  </div>
+                  <ChevronDown size={14} className={`text-slate-400 transition-transform ${expandedPlatform === platform.id ? "rotate-180" : ""}`} />
+                </button>
+                <AnimatePresence>
+                  {expandedPlatform === platform.id && (
+                    <motion.div key="steps" initial={{ height: 0, opacity: 0 }} animate={{ height: "auto", opacity: 1 }} exit={{ height: 0, opacity: 0 }}
+                      className="border-t border-slate-200/60 px-4 py-3 bg-slate-50/40 overflow-hidden">
+                      <ol className="space-y-2">
+                        {platform.steps.map((step, i) => (
+                          <li key={i} className="flex items-start gap-2.5">
+                            <span className="w-5 h-5 rounded-full bg-slate-800 text-white text-[9px] font-black flex items-center justify-center shrink-0 mt-0.5">{i + 1}</span>
+                            <span className="text-xs text-slate-600 leading-relaxed">{step}</span>
+                          </li>
+                        ))}
+                      </ol>
+                      {platform.link && (
+                        <a href={platform.link} target="_blank" rel="noreferrer"
+                          className="mt-3 flex items-center gap-1.5 text-xs font-bold text-indigo-600 hover:text-indigo-800 transition-colors">
+                          <Globe size={11} /> Abrir {platform.name} →
+                        </a>
+                      )}
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+              </div>
+            ))}
+
+            {/* Download deployment files */}
+            <div className="bg-slate-50/60 rounded-2xl p-4 border border-slate-200/50 space-y-3">
+              <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Archivos de despliegue</p>
+              <div className="grid grid-cols-2 gap-2.5">
+                <motion.button whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.97 }}
+                  data-testid="download-env-btn"
+                  onClick={async () => {
+                    try {
+                      const API = process.env.REACT_APP_BACKEND_URL;
+                      const res = await fetch(`${API}/api/deployment/env-template`);
+                      const blob = await res.blob();
+                      const url = URL.createObjectURL(blob);
+                      const a = document.createElement("a"); a.href = url; a.download = ".env.template";
+                      document.body.appendChild(a); a.click(); document.body.removeChild(a);
+                      URL.revokeObjectURL(url);
+                      toast({ title: ".env.template descargado ✓" });
+                    } catch { toast({ title: "Error al descargar", variant: "destructive" }); }
+                  }}
+                  className="flex flex-col items-center gap-1.5 py-3 px-2 rounded-xl bg-white/70 border border-slate-200/70 hover:bg-white text-xs font-bold text-slate-700 transition-all">
+                  <Download size={14} className="text-emerald-500" />
+                  <span>.env Template</span>
+                  <span className="text-[9px] text-slate-400">Variables de entorno</span>
+                </motion.button>
+                <motion.button whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.97 }}
+                  data-testid="download-docker-btn"
+                  onClick={async () => {
+                    try {
+                      const API = process.env.REACT_APP_BACKEND_URL;
+                      const res = await fetch(`${API}/api/deployment/docker-compose`);
+                      const blob = await res.blob();
+                      const url = URL.createObjectURL(blob);
+                      const a = document.createElement("a"); a.href = url; a.download = "docker-compose.yml";
+                      document.body.appendChild(a); a.click(); document.body.removeChild(a);
+                      URL.revokeObjectURL(url);
+                      toast({ title: "docker-compose.yml descargado ✓" });
+                    } catch { toast({ title: "Error al descargar", variant: "destructive" }); }
+                  }}
+                  className="flex flex-col items-center gap-1.5 py-3 px-2 rounded-xl bg-white/70 border border-slate-200/70 hover:bg-white text-xs font-bold text-slate-700 transition-all">
+                  <Package size={14} className="text-blue-500" />
+                  <span>docker-compose</span>
+                  <span className="text-[9px] text-slate-400">Config de containers</span>
+                </motion.button>
+              </div>
+            </div>
+
+            {/* Health check */}
+            <div className="space-y-2">
+              <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Verificar despliegue</p>
+              <div className="flex gap-2">
+                <input type="url" value={deployUrl} onChange={e => { setDeployUrl(e.target.value); setHealthResult(null); }}
+                  placeholder="https://tudominio.com"
+                  data-testid="deploy-url-input"
+                  className="flex-1 bg-white/60 border border-slate-200/80 rounded-xl px-3 py-2.5 text-sm text-slate-800 placeholder-slate-300 focus:outline-none focus:ring-2 focus:ring-indigo-300" />
+                <motion.button whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.97 }}
+                  data-testid="health-check-btn"
+                  disabled={!deployUrl || healthLoading}
+                  onClick={async () => {
+                    setHealthLoading(true); setHealthResult(null);
+                    try {
+                      const API = process.env.REACT_APP_BACKEND_URL;
+                      const res = await fetch(`${API}/api/deployment/health-check?url=${encodeURIComponent(deployUrl)}`, { method: "POST" });
+                      const data = await res.json();
+                      setHealthResult(data);
+                    } catch { setHealthResult({ ok: false, error: "Error de conexión" }); }
+                    finally { setHealthLoading(false); }
+                  }}
+                  className="px-4 py-2.5 rounded-xl bg-indigo-500 text-white text-xs font-bold disabled:opacity-40 hover:bg-indigo-600 transition-colors whitespace-nowrap flex items-center gap-1.5">
+                  {healthLoading ? <Loader2 size={12} className="animate-spin" /> : <Wifi size={12} />}
+                  Verificar
+                </motion.button>
+              </div>
+              {healthResult && (
+                <motion.div initial={{ opacity: 0, y: -4 }} animate={{ opacity: 1, y: 0 }}
+                  className={`flex items-center gap-2.5 px-4 py-3 rounded-xl text-xs font-semibold ${healthResult.ok ? "bg-emerald-50 text-emerald-700 border border-emerald-200/60" : "bg-red-50 text-red-600 border border-red-200/60"}`}>
+                  {healthResult.ok ? <CheckCircle size={13} /> : <XCircle size={13} />}
+                  {healthResult.message || healthResult.error}
+                </motion.div>
+              )}
+            </div>
+
+            {/* MongoDB Atlas guide */}
+            <div className="bg-green-50/60 rounded-2xl p-4 border border-green-200/50 space-y-2.5">
+              <div className="flex items-center gap-2">
+                <Database size={14} className="text-green-600" />
+                <p className="text-xs font-black text-green-800">MongoDB Atlas (Base de datos en la nube — Gratis)</p>
+              </div>
+              <ol className="space-y-1.5">
+                {[
+                  "Ve a mongodb.com/cloud/atlas → crear cuenta gratis",
+                  "Create Cluster → M0 Free (512 MB gratis para siempre)",
+                  "Database Access → Add User (usuario + contraseña segura)",
+                  "Network Access → Add IP → 0.0.0.0/0 (acceso desde cualquier lugar)",
+                  "Connect → Drivers → copia la URI: mongodb+srv://user:pass@cluster...",
+                  "Pega la URI en tu .env como MONGO_URL=mongodb+srv://...",
+                ].map((step, i) => (
+                  <li key={i} className="flex items-start gap-2 text-[11px] text-green-700">
+                    <span className="font-black shrink-0">{i + 1}.</span>
+                    <span>{step}</span>
+                  </li>
+                ))}
+              </ol>
+            </div>
           </div>
         </Section>
 
