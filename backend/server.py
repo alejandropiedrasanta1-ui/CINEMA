@@ -1,5 +1,5 @@
 from fastapi import FastAPI, APIRouter, HTTPException, UploadFile, File
-from fastapi.responses import JSONResponse, Response
+from fastapi.responses import JSONResponse, Response, RedirectResponse
 from contextlib import asynccontextmanager
 from dotenv import load_dotenv
 import csv
@@ -17,8 +17,21 @@ from typing import List, Optional
 from datetime import datetime, timezone, timedelta
 from bson import ObjectId
 import resend as resend_lib
+import json
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from apscheduler.triggers.cron import CronTrigger
+from apscheduler.triggers.interval import IntervalTrigger
+
+# ── Google / Gmail ────────────────────────────────────────────
+from google_auth_oauthlib.flow import Flow
+from google.oauth2.credentials import Credentials
+from google.auth.transport.requests import Request as GoogleRequest
+from googleapiclient.discovery import build
+from email.mime.text import MIMEText
+from email.mime.multipart import MIMEMultipart
+
+# ── Web Push ──────────────────────────────────────────────────
+from pywebpush import webpush, WebPushException
 
 
 ROOT_DIR = Path(__file__).parent
@@ -26,6 +39,18 @@ load_dotenv(ROOT_DIR / '.env')
 
 CUSTOM_DB_FILE = ROOT_DIR / '.db_override'
 DB_NAME = os.environ['DB_NAME']
+
+# ── Google / VAPID config ─────────────────────────────────────
+GOOGLE_CLIENT_ID     = os.environ.get('GOOGLE_CLIENT_ID', '')
+GOOGLE_CLIENT_SECRET = os.environ.get('GOOGLE_CLIENT_SECRET', '')
+GOOGLE_REDIRECT_URI  = 'https://event-reserve-pro-5.preview.emergentagent.com/api/oauth/gmail/callback'
+GMAIL_SCOPES         = ['https://www.googleapis.com/auth/gmail.send', 'openid', 'https://www.googleapis.com/auth/userinfo.email']
+VAPID_PUBLIC_KEY     = os.environ.get('VAPID_PUBLIC_KEY', '')
+VAPID_PRIVATE_KEY    = os.environ.get('VAPID_PRIVATE_KEY', '')
+VAPID_EMAIL          = os.environ.get('VAPID_EMAIL', 'mailto:admin@cinema-productions.com')
+
+# In-memory dedup: avoid sending the same reminder twice in one day
+_sent_push_today: set = set()
 
 # Active MongoDB URL: prefer custom override file
 _mongo_url = CUSTOM_DB_FILE.read_text().strip() if CUSTOM_DB_FILE.exists() else os.environ['MONGO_URL']
@@ -45,6 +70,13 @@ async def lifespan(app_instance: FastAPI):
         check_and_send_reminders,
         CronTrigger(hour=8, minute=0),
         id="daily_reminders",
+        replace_existing=True
+    )
+    # Per-minute push + Gmail reminders
+    scheduler.add_job(
+        check_and_push_reminders,
+        IntervalTrigger(minutes=1),
+        id="push_reminders",
         replace_existing=True
     )
     scheduler.start()
@@ -214,6 +246,127 @@ async def check_and_send_reminders():
 
     except Exception as e:
         logger.error(f"Error in reminder job: {e}")
+
+
+# ─── Gmail Helper ─────────────────────────────────────────────
+async def _get_gmail_service():
+    """Return authenticated Gmail API service using stored refresh token."""
+    token_doc = await db.oauth_tokens.find_one({"provider": "gmail"}, {"_id": 0})
+    if not token_doc or not token_doc.get("refresh_token"):
+        raise Exception("Gmail not connected. Connect via Settings → Notificaciones.")
+    creds = Credentials(
+        token=token_doc.get("access_token"),
+        refresh_token=token_doc["refresh_token"],
+        client_id=GOOGLE_CLIENT_ID,
+        client_secret=GOOGLE_CLIENT_SECRET,
+        token_uri="https://oauth2.googleapis.com/token",
+        scopes=GMAIL_SCOPES,
+    )
+    if not creds.valid:
+        await asyncio.to_thread(creds.refresh, GoogleRequest())
+        await db.oauth_tokens.update_one(
+            {"provider": "gmail"},
+            {"$set": {"access_token": creds.token}},
+        )
+    return build("gmail", "v1", credentials=creds), token_doc.get("email", "me")
+
+
+async def _send_gmail(to: str, subject: str, html: str):
+    service, from_email = await _get_gmail_service()
+    msg = MIMEMultipart("alternative")
+    msg["Subject"] = subject
+    msg["From"] = from_email
+    msg["To"] = to
+    msg.attach(MIMEText(html, "html"))
+    raw = base64.urlsafe_b64encode(msg.as_bytes()).decode()
+    await asyncio.to_thread(
+        service.users().messages().send(userId="me", body={"raw": raw}).execute
+    )
+    logger.info(f"Gmail sent to {to}: {subject}")
+
+
+# ─── Web Push Helper ──────────────────────────────────────────
+async def _send_push_to_all(title: str, body: str, url: str = "/dashboard"):
+    subscriptions = await db.push_subscriptions.find({}).to_list(1000)
+    if not subscriptions:
+        return
+    expired = []
+    for sub in subscriptions:
+        try:
+            await asyncio.to_thread(
+                webpush,
+                subscription_info={"endpoint": sub["endpoint"], "keys": sub["keys"]},
+                data=json.dumps({"title": title, "body": body, "url": url}),
+                vapid_private_key=VAPID_PRIVATE_KEY,
+                vapid_claims={"sub": VAPID_EMAIL},
+            )
+        except WebPushException as e:
+            if e.response and e.response.status_code in (404, 410):
+                expired.append(sub["endpoint"])
+            logger.error(f"Push send error: {e}")
+    for ep in expired:
+        await db.push_subscriptions.delete_one({"endpoint": ep})
+    logger.info(f"Push sent to {len(subscriptions) - len(expired)} subscribers")
+
+
+# ─── Per-minute push + Gmail reminder check ───────────────────
+async def check_and_push_reminders():
+    global _sent_push_today
+    try:
+        settings_doc = await db.app_settings.find_one({}, {"_id": 0})
+        if not settings_doc or not settings_doc.get("reminders_enabled"):
+            return
+
+        reminder_time = settings_doc.get("reminder_time", "09:00")  # HH:MM
+        days          = int(settings_doc.get("reminder_days", 3))
+        now           = datetime.now(timezone.utc)
+        current_hhmm  = now.strftime("%H:%M")
+        today_str     = now.strftime("%Y-%m-%d")
+
+        if current_hhmm != reminder_time:
+            return
+
+        target_date = (now.date() + timedelta(days=days)).isoformat()
+        dedup_key   = f"{today_str}_{reminder_time}_{target_date}"
+        if dedup_key in _sent_push_today:
+            return
+        _sent_push_today.add(dedup_key)
+        # Clear old keys daily
+        if len(_sent_push_today) > 500:
+            _sent_push_today.clear()
+
+        cursor = db.reservations.find(
+            {"event_date": target_date, "status": {"$nin": ["Cancelado", "Completado"]}},
+            {"client_name": 1, "event_date": 1, "event_type": 1, "venue": 1, "_id": 0}
+        )
+        upcoming = await cursor.to_list(100)
+        if not upcoming:
+            return
+
+        title = f"Recordatorio: {len(upcoming)} evento(s) en {days} día(s)"
+        body  = ", ".join(r.get("client_name", "?") for r in upcoming[:3])
+        if len(upcoming) > 3:
+            body += f" y {len(upcoming)-3} más"
+
+        # Web Push
+        await _send_push_to_all(title, body, "/dashboard")
+
+        # Gmail (if connected)
+        try:
+            token_doc = await db.oauth_tokens.find_one({"provider": "gmail"}, {"_id": 0})
+            if token_doc and token_doc.get("refresh_token"):
+                html = _build_reminder_html(upcoming, days)
+                await _send_gmail(
+                    to=token_doc["email"],
+                    subject=title,
+                    html=html,
+                )
+        except Exception as gmail_err:
+            logger.warning(f"Gmail reminder skipped: {gmail_err}")
+
+        logger.info(f"Push+Gmail reminders sent for {target_date}")
+    except Exception as e:
+        logger.error(f"Error in push reminder job: {e}")
 
 
 # ─── Routes ──────────────────────────────────────────────
@@ -1094,7 +1247,154 @@ Cinema Productions - Sistema de Gestion de Reservas
 """
 
 
-# ─── Frontend Build State ────────────────────────────────
+# ─── Gmail OAuth2 Endpoints ───────────────────────────────────
+@api_router.get("/oauth/gmail/start")
+async def gmail_oauth_start():
+    """Return Google OAuth2 authorization URL."""
+    if not GOOGLE_CLIENT_ID or not GOOGLE_CLIENT_SECRET:
+        raise HTTPException(status_code=500, detail="Google credentials not configured")
+    flow = Flow.from_client_config(
+        {"web": {
+            "client_id": GOOGLE_CLIENT_ID,
+            "client_secret": GOOGLE_CLIENT_SECRET,
+            "auth_uri": "https://accounts.google.com/o/oauth2/auth",
+            "token_uri": "https://oauth2.googleapis.com/token",
+            "redirect_uris": [GOOGLE_REDIRECT_URI],
+        }},
+        scopes=GMAIL_SCOPES,
+        redirect_uri=GOOGLE_REDIRECT_URI,
+    )
+    auth_url, _ = flow.authorization_url(
+        access_type="offline",
+        prompt="consent",
+        include_granted_scopes="true",
+    )
+    return {"url": auth_url}
+
+
+@api_router.get("/oauth/gmail/callback")
+async def gmail_oauth_callback(code: str = None, error: str = None):
+    """Exchange auth code for tokens and store refresh_token."""
+    if error or not code:
+        return RedirectResponse(url=f"https://event-reserve-pro-5.preview.emergentagent.com/ajustes?gmail_error={error or 'cancelled'}")
+    try:
+        flow = Flow.from_client_config(
+            {"web": {
+                "client_id": GOOGLE_CLIENT_ID,
+                "client_secret": GOOGLE_CLIENT_SECRET,
+                "auth_uri": "https://accounts.google.com/o/oauth2/auth",
+                "token_uri": "https://oauth2.googleapis.com/token",
+                "redirect_uris": [GOOGLE_REDIRECT_URI],
+            }},
+            scopes=GMAIL_SCOPES,
+            redirect_uri=GOOGLE_REDIRECT_URI,
+        )
+        flow.fetch_token(code=code)
+        creds = flow.credentials
+        # Get user email
+        service = build("oauth2", "v2", credentials=creds)
+        user_info = await asyncio.to_thread(service.userinfo().get().execute)
+        user_email = user_info.get("email", "")
+        # Store tokens
+        await db.oauth_tokens.update_one(
+            {"provider": "gmail"},
+            {"$set": {
+                "provider": "gmail",
+                "email": user_email,
+                "access_token": creds.token,
+                "refresh_token": creds.refresh_token,
+                "connected_at": datetime.now(timezone.utc).isoformat(),
+            }},
+            upsert=True,
+        )
+        logger.info(f"Gmail connected: {user_email}")
+        return RedirectResponse(url="https://event-reserve-pro-5.preview.emergentagent.com/ajustes?gmail_ok=1")
+    except Exception as e:
+        logger.error(f"Gmail OAuth callback error: {e}")
+        return RedirectResponse(url=f"https://event-reserve-pro-5.preview.emergentagent.com/ajustes?gmail_error={str(e)[:60]}")
+
+
+@api_router.get("/oauth/gmail/status")
+async def gmail_status():
+    doc = await db.oauth_tokens.find_one({"provider": "gmail"}, {"_id": 0})
+    if doc and doc.get("refresh_token"):
+        return {"connected": True, "email": doc.get("email", ""), "connected_at": doc.get("connected_at")}
+    return {"connected": False, "email": "", "connected_at": None}
+
+
+@api_router.delete("/oauth/gmail/disconnect")
+async def gmail_disconnect():
+    await db.oauth_tokens.delete_one({"provider": "gmail"})
+    return {"ok": True}
+
+
+@api_router.post("/oauth/gmail/test")
+async def gmail_test():
+    """Send a test email to verify Gmail connection."""
+    doc = await db.oauth_tokens.find_one({"provider": "gmail"}, {"_id": 0})
+    if not doc or not doc.get("refresh_token"):
+        raise HTTPException(status_code=400, detail="Gmail no conectado")
+    try:
+        html = """
+        <div style='font-family:sans-serif;padding:20px'>
+          <h2 style='color:#6366f1'>Cinema Productions — Prueba de correo ✓</h2>
+          <p>Este es un correo de prueba enviado automáticamente desde tu app de reservas.</p>
+          <p>Si lo recibes, los recordatorios automáticos funcionarán correctamente.</p>
+        </div>"""
+        await _send_gmail(to=doc["email"], subject="✓ Prueba — Cinema Productions", html=html)
+        return {"ok": True, "message": f"Correo enviado a {doc['email']}"}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+# ─── Web Push Endpoints ───────────────────────────────────────
+@api_router.get("/push/vapid-key")
+async def get_vapid_key():
+    return {"publicKey": VAPID_PUBLIC_KEY}
+
+
+class PushSubscriptionModel(BaseModel):
+    endpoint: str
+    expirationTime: Optional[float] = None
+    keys: dict
+
+
+@api_router.post("/push/subscribe")
+async def push_subscribe(sub: PushSubscriptionModel):
+    await db.push_subscriptions.update_one(
+        {"endpoint": sub.endpoint},
+        {"$set": {
+            "endpoint": sub.endpoint,
+            "keys": sub.keys,
+            "subscribed_at": datetime.now(timezone.utc).isoformat(),
+        }},
+        upsert=True,
+    )
+    return {"ok": True}
+
+
+@api_router.delete("/push/unsubscribe")
+async def push_unsubscribe(endpoint: str):
+    await db.push_subscriptions.delete_one({"endpoint": endpoint})
+    return {"ok": True}
+
+
+@api_router.post("/push/test")
+async def push_test():
+    """Send a test push notification to all subscribers."""
+    try:
+        await _send_push_to_all(
+            title="Cinema Productions — Prueba ✓",
+            body="Las notificaciones de escritorio están funcionando.",
+            url="/dashboard",
+        )
+        count = await db.push_subscriptions.count_documents({})
+        return {"ok": True, "sent_to": count}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+
 _build_state = {"status": "idle", "message": "Listo para actualizar", "started_at": None, "finished_at": None}
 
 

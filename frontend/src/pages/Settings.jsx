@@ -66,7 +66,7 @@ export default function Settings() {
           preset, animations, radius, pdfTheme, changePreset, changeAnimations, changeRadius, changePdfTheme, formatCurrency,
           eventConfigs, updateEventTypeConfig, resetEventTypeConfig,
           logoUrl, pdfLogoUrl, logoSize, usePdfLogo, useCustomPdfLogo, updateLogoSettings } = useSettings();
-  const { start: startNotifications, notifyImmediate } = useNotifications();
+  const { requestPermission, showNotification } = useNotifications();
   const { toast } = useToast();
   const s = tr.settings;
 
@@ -306,21 +306,13 @@ export default function Settings() {
       return;
     }
     try {
-      const permission = await Notification.requestPermission();
-      setNotifPermission(permission);
-      if (permission === "granted") {
+      const result = await requestPermission();
+      setNotifPermission(result);
+      if (result === "granted") {
         localStorage.setItem("cp_notif_enabled", "true");
-        // Start the periodic reminder timer
         localStorage.setItem("cp_reminder_time", notif.reminder_time || "09:00");
         localStorage.setItem("cp_reminder_days", String(notif.reminder_days || 3));
-        startNotifications(true);
-        // Welcome notification
-        new Notification("Cinema Productions", {
-          body: language === "es" ? "¡Notificaciones activadas! Te avisaré de eventos próximos." : "Notifications enabled! I'll alert you about upcoming events.",
-          icon: "/logo.png",
-          tag: "cp-welcome",
-        });
-        toast({ title: language === "es" ? "Notificaciones de sistema activadas ✓" : "System notifications enabled ✓" });
+        toast({ title: language === "es" ? "Notificaciones de escritorio activadas ✓" : "Desktop notifications enabled ✓" });
       } else {
         toast({ title: language === "es" ? "Permiso denegado" : "Permission denied", variant: "destructive" });
       }
@@ -331,29 +323,29 @@ export default function Settings() {
 
   const handleTestSystemNotif = () => {
     if (Notification.permission !== "granted") return;
-    new Notification("Cinema Productions — Prueba", {
-      body: language === "es" ? "Las notificaciones de sistema están funcionando." : "System notifications are working.",
-      icon: "/logo.png",
-      tag: "cp-test-notif",
-    });
+    showNotification(
+      "Cinema Productions — Prueba ✓",
+      language === "es" ? "Las notificaciones de escritorio están funcionando." : "Desktop notifications are working.",
+    );
     toast({ title: language === "es" ? "Notificación de prueba enviada ✓" : "Test notification sent ✓" });
   };
 
   const handleNotifyImmediate = async () => {
     if (Notification.permission !== "granted") {
-      toast({ title: language === "es" ? "Primero activa las notificaciones del sistema" : "Enable system notifications first", variant: "destructive" });
+      toast({ title: language === "es" ? "Primero activa las notificaciones del escritorio" : "Enable desktop notifications first", variant: "destructive" });
       return;
     }
     setImmediateLoading(true);
     try {
-      const result = await notifyImmediate();
-      if (!result.ok) {
-        toast({ title: language === "es" ? "Error al obtener eventos" : "Error fetching events", variant: "destructive" });
-      } else if (result.count === 0) {
-        toast({ title: language === "es" ? "Sin eventos próximos pendientes" : "No upcoming events" });
+      const res = await fetch(`${process.env.REACT_APP_BACKEND_URL}/api/push/test`, { method: "POST" });
+      const data = await res.json();
+      if (data.ok) {
+        toast({ title: language === "es" ? `Push enviado a ${data.sent_to} dispositivo(s) ✓` : `Push sent to ${data.sent_to} device(s) ✓` });
       } else {
-        toast({ title: language === "es" ? `Notificación enviada — ${result.count} eventos próximos ✓` : `Notification sent — ${result.count} upcoming events ✓` });
+        toast({ title: "Error al enviar push", variant: "destructive" });
       }
+    } catch {
+      toast({ title: "Error al conectar con el servidor", variant: "destructive" });
     } finally {
       setImmediateLoading(false);
     }
@@ -409,6 +401,53 @@ export default function Settings() {
 
   // ── PDF Export ────────────────────────────────────────────────
   const [pdfLoading, setPdfLoading] = useState(false);
+
+  // ── Gmail OAuth ──────────────────────────────────────────────
+  const [gmailStatus, setGmailStatus] = useState({ connected: false, email: "", connected_at: null });
+  const [gmailLoading, setGmailLoading] = useState(false);
+
+  React.useEffect(() => {
+    fetch(`${process.env.REACT_APP_BACKEND_URL}/api/oauth/gmail/status`)
+      .then((r) => r.json()).then(setGmailStatus).catch(() => {});
+    const params = new URLSearchParams(window.location.search);
+    if (params.get("gmail_ok")) {
+      toast({ title: "Gmail conectado correctamente ✓" });
+      fetch(`${process.env.REACT_APP_BACKEND_URL}/api/oauth/gmail/status`).then((r) => r.json()).then(setGmailStatus);
+      window.history.replaceState({}, "", "/ajustes");
+    } else if (params.get("gmail_error")) {
+      toast({ title: `Error al conectar Gmail: ${params.get("gmail_error")}`, variant: "destructive" });
+      window.history.replaceState({}, "", "/ajustes");
+    }
+  }, []);
+
+  const handleGmailConnect = async () => {
+    setGmailLoading(true);
+    try {
+      const res = await fetch(`${process.env.REACT_APP_BACKEND_URL}/api/oauth/gmail/start`);
+      const { url } = await res.json();
+      window.location.href = url;
+    } catch {
+      toast({ title: "Error al iniciar conexión con Google", variant: "destructive" });
+      setGmailLoading(false);
+    }
+  };
+
+  const handleGmailDisconnect = async () => {
+    await fetch(`${process.env.REACT_APP_BACKEND_URL}/api/oauth/gmail/disconnect`, { method: "DELETE" });
+    setGmailStatus({ connected: false, email: "", connected_at: null });
+    toast({ title: "Gmail desconectado" });
+  };
+
+  const handleGmailTest = async () => {
+    try {
+      const res = await fetch(`${process.env.REACT_APP_BACKEND_URL}/api/oauth/gmail/test`, { method: "POST" });
+      const data = await res.json();
+      if (data.ok) toast({ title: data.message });
+      else throw new Error(data.detail || "Error");
+    } catch (e) {
+      toast({ title: e.message || "Error al enviar correo de prueba", variant: "destructive" });
+    }
+  };
 
   // ── Event Type Editor ────────────────────────────────────────
   const [activeEventType, setActiveEventType] = useState(null);
@@ -1389,6 +1428,68 @@ export default function Settings() {
                 {testResult.msg}
               </div>
             )}
+
+            {/* Gmail OAuth */}
+            <div className="border-t border-white/40 pt-4">
+              <p className="text-[11px] font-black text-slate-400 uppercase tracking-widest mb-3">
+                {language === "es" ? "Correos automáticos vía Gmail" : "Automatic emails via Gmail"}
+              </p>
+              {gmailStatus.connected ? (
+                <div className="space-y-2">
+                  <div className="flex items-center gap-3 p-3 rounded-2xl bg-emerald-50/80 border border-emerald-200/60">
+                    <div className="w-9 h-9 rounded-xl bg-emerald-100 flex items-center justify-center shrink-0">
+                      <CheckCircle size={16} className="text-emerald-600" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-xs font-black text-emerald-800">Gmail conectado</p>
+                      <p className="text-[10px] text-emerald-600 truncate">{gmailStatus.email}</p>
+                    </div>
+                    <div className="flex gap-2">
+                      <motion.button whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}
+                        onClick={handleGmailTest}
+                        data-testid="gmail-test-btn"
+                        className="px-3 py-1.5 rounded-xl bg-emerald-100 hover:bg-emerald-200 text-emerald-700 text-[10px] font-bold transition-colors">
+                        {language === "es" ? "Probar" : "Test"}
+                      </motion.button>
+                      <motion.button whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}
+                        onClick={handleGmailDisconnect}
+                        data-testid="gmail-disconnect-btn"
+                        className="px-3 py-1.5 rounded-xl bg-red-50 hover:bg-red-100 text-red-500 text-[10px] font-bold transition-colors">
+                        {language === "es" ? "Desconectar" : "Disconnect"}
+                      </motion.button>
+                    </div>
+                  </div>
+                  <p className="text-[10px] text-emerald-600 text-center">
+                    {language === "es"
+                      ? "Los recordatorios se enviarán automáticamente desde esta cuenta a la misma dirección."
+                      : "Reminders will be sent automatically from this account to the same address."}
+                  </p>
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  <p className="text-xs text-slate-500">
+                    {language === "es"
+                      ? "Conecta tu cuenta de Gmail una sola vez. Cuando llegue la hora de un recordatorio, el backend enviará un correo automáticamente sin que tengas que hacer nada."
+                      : "Connect your Gmail account once. When a reminder is due, the backend will send an email automatically."}
+                  </p>
+                  <motion.button
+                    whileHover={{ scale: 1.02 }}
+                    whileTap={{ scale: 0.97 }}
+                    onClick={handleGmailConnect}
+                    disabled={gmailLoading}
+                    data-testid="gmail-connect-btn"
+                    className="w-full flex items-center justify-center gap-2.5 py-3 rounded-2xl text-sm font-bold text-white disabled:opacity-60 transition-all"
+                    style={{ background: "linear-gradient(135deg,#4285f4,#0f9d58)" }}
+                  >
+                    {gmailLoading
+                      ? <Loader2 size={15} className="animate-spin" />
+                      : <Mail size={15} />
+                    }
+                    {language === "es" ? "Conectar con Google / Gmail" : "Connect with Google / Gmail"}
+                  </motion.button>
+                </div>
+              )}
+            </div>
 
             {/* Buttons */}
             <div className="flex gap-3 pt-1">
