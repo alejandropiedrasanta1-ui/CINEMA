@@ -246,6 +246,21 @@ export function SettingsProvider({ children }) {
     document.documentElement.dataset.radius = r;
   };
 
+  // ── Logo settings ─────────────────────────────────────────────
+  const [logoUrl,          setLogoUrl]          = useState(() => localStorage.getItem("cp_logo_url")    || null);
+  const [pdfLogoUrl,       setPdfLogoUrl]       = useState(() => localStorage.getItem("cp_pdf_logo_url") || null);
+  const [logoSize,         setLogoSize]         = useState(() => parseInt(localStorage.getItem("cp_logo_size") || "80", 10));
+  const [usePdfLogo,       setUsePdfLogo]       = useState(() => (localStorage.getItem("cp_use_pdf_logo") ?? "true") !== "false");
+  const [useCustomPdfLogo, setUseCustomPdfLogo] = useState(() => localStorage.getItem("cp_custom_pdf_logo") === "true");
+
+  const updateLogoSettings = (updates) => {
+    if ("url"           in updates) { setLogoUrl(updates.url);                   updates.url           ? localStorage.setItem("cp_logo_url",        updates.url)           : localStorage.removeItem("cp_logo_url"); }
+    if ("pdfUrl"        in updates) { setPdfLogoUrl(updates.pdfUrl);             updates.pdfUrl        ? localStorage.setItem("cp_pdf_logo_url",    updates.pdfUrl)        : localStorage.removeItem("cp_pdf_logo_url"); }
+    if ("size"          in updates) { setLogoSize(updates.size);                 localStorage.setItem("cp_logo_size",       String(updates.size)); }
+    if ("usePdf"        in updates) { setUsePdfLogo(updates.usePdf);             localStorage.setItem("cp_use_pdf_logo",    String(updates.usePdf)); }
+    if ("useCustomPdf"  in updates) { setUseCustomPdfLogo(updates.useCustomPdf); localStorage.setItem("cp_custom_pdf_logo", String(updates.useCustomPdf)); }
+  };
+
   const tr = T[language] || T.es;
 
   const formatCurrency = useCallback((n) => {
