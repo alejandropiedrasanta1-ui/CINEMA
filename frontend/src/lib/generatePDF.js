@@ -29,7 +29,7 @@ const STATUS_LABELS_PDF = {
   Pendiente: "PENDIENTE", Confirmado: "CONFIRMADO", Completado: "COMPLETADO", Cancelado: "CANCELADO",
 };
 
-export async function generateReservationPDF(reservation, formatCurrency) {
+export async function generateReservationPDF(reservation, formatCurrency, logoBase64 = undefined) {
   const doc = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" });
   const W = doc.internal.pageSize.getWidth();
   const H = doc.internal.pageSize.getHeight();
@@ -41,12 +41,11 @@ export async function generateReservationPDF(reservation, formatCurrency) {
   doc.setFillColor(15, 15, 25);
   doc.roundedRect(ml, 12, contentW, 38, 4, 4, "F");
 
-  // Logo in header
+  // Logo in header — logoBase64: undefined=load default, null=skip, string=use it
   try {
-    const logoBase64 = await loadImageAsBase64(window.location.origin + "/logo.png");
-    if (logoBase64) {
-      doc.addImage(logoBase64, "PNG", ml + 6, 16, 52, 30);
-    }
+    let imgData = logoBase64;
+    if (imgData === undefined) imgData = await loadImageAsBase64(window.location.origin + "/logo.png");
+    if (imgData) doc.addImage(imgData, "PNG", ml + 6, 16, 52, 30);
   } catch {}
 
   // Header right text
@@ -238,7 +237,7 @@ const ALL_STATUS_LIGHT = {
   Cancelado:  [254, 242, 242],
 };
 
-export async function generateAllReservationsPDF(reservations, formatCurrency) {
+export async function generateAllReservationsPDF(reservations, formatCurrency, logoBase64 = undefined) {
   const doc = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" });
   const W  = doc.internal.pageSize.getWidth();
   const H  = doc.internal.pageSize.getHeight();
@@ -264,8 +263,9 @@ export async function generateAllReservationsPDF(reservations, formatCurrency) {
 
   // Logo
   try {
-    const logoBase64 = await loadImageAsBase64(window.location.origin + "/logo.png");
-    if (logoBase64) doc.addImage(logoBase64, "PNG", ml, 7, 46, 26);
+    let imgData = logoBase64;
+    if (imgData === undefined) imgData = await loadImageAsBase64(window.location.origin + "/logo.png");
+    if (imgData) doc.addImage(imgData, "PNG", ml, 7, 46, 26);
   } catch {}
 
   // Title

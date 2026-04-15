@@ -150,7 +150,17 @@ Sistema de gestión de reservas para eventos (bodas, quinceañeras, fiestas soci
 - Los cambios se persisten en localStorage y se aplican en Dashboard, Calendario y Reservaciones
 - Botón "Restaurar" por tipo para regresar a defaults
 
-### Actualizar App Desktop (Abril 2026) ✅
+### Logo y Branding personalizado (Abril 2026) ✅
+- Sección "LOGO Y BRANDING" en Ajustes → Apariencia
+- Upload logo web (PNG/JPG, compresión automática via canvas) → aparece en sidebar y header móvil
+- Slider de tamaño 24-80px para el logo en sidebar
+- Toggle "Usar logo en PDFs" — aplica en comprobantes y reporte general
+- Toggle "Logo diferente para PDFs" + upload separado para documentos
+- Lógica: usePdfLogo=false → skip logo en PDF; =true sin custom → usa web logo; =true con custom → usa PDF logo
+- Persistencia en localStorage, reactivo vía SettingsContext
+- `generatePDF.js` actualizado: acepta `logoBase64` (undefined=default /logo.png, null=sin logo, string=usar)
+
+
 - Nuevo flujo 2 pasos en Ajustes → App de Escritorio
 - Paso 1: "Actualizar App" → llama `/api/download/package/rebuild` → build yarn en background
 - Polling cada 3s con barra de progreso animada

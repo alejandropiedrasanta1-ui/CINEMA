@@ -308,6 +308,7 @@ export function SettingsProvider({ children }) {
       preset, animations, radius,
       changePreset, changeAnimations, changeRadius,
       eventConfigs, updateEventTypeConfig, resetEventTypeConfig,
+      logoUrl, pdfLogoUrl, logoSize, usePdfLogo, useCustomPdfLogo, updateLogoSettings,
     }}>
       {children}
     </SettingsContext.Provider>

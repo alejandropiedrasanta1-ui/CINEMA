@@ -6,8 +6,9 @@ import { useSettings, PRESETS } from "@/context/SettingsContext";
 
 export default function Layout({ children }) {
   const [mobileOpen, setMobileOpen] = useState(false);
-  const { tr, preset } = useSettings();
+  const { tr, preset, logoUrl, logoSize } = useSettings();
   const presetLabel = PRESETS.find(p => p.id === preset)?.name || "Glass Aurora";
+  const sidebarLogoH = Math.min(Math.max(logoSize || 40, 24), 80);
 
   const navItems = [
     { path: "/dashboard",     label: tr.nav.dashboard,     icon: LayoutDashboard },
@@ -24,10 +25,10 @@ export default function Layout({ children }) {
         <div className="px-6 py-6 border-b border-white/40">
           <div className="flex items-center gap-2.5">
             <img
-              src="/logo.png"
+              src={logoUrl || "/logo.png"}
               alt="Cinema Productions"
-              className="h-8 w-auto rounded-xl"
-              style={{ filter: "brightness(0) invert(0)", maxWidth: "110px", objectFit: "contain" }}
+              className="w-auto rounded-xl object-contain"
+              style={{ height: `${sidebarLogoH}px`, maxWidth: "140px" }}
             />
           </div>
           <p className="text-[10px] text-slate-400 font-medium mt-1.5 pl-0.5">{tr.nav.tagline}</p>
@@ -70,7 +71,12 @@ export default function Layout({ children }) {
       <div className="md:hidden fixed top-0 left-0 right-0 z-30 glass border-b border-white/50">
         <div className="flex items-center justify-between px-5 py-4">
           <div className="flex items-center gap-2.5">
-            <img src="/logo.png" alt="Cinema Productions" className="h-7 w-auto rounded-lg" style={{ maxWidth: "90px", objectFit: "contain" }} />
+            <img
+              src={logoUrl || "/logo.png"}
+              alt="Cinema Productions"
+              className="w-auto rounded-lg object-contain"
+              style={{ height: "28px", maxWidth: "90px" }}
+            />
           </div>
           <button onClick={() => setMobileOpen(!mobileOpen)} data-testid="mobile-menu-toggle" className="p-2 rounded-2xl text-slate-600 hover:bg-white/50 transition-all">
             {mobileOpen ? <X size={20} /> : <Menu size={20} />}

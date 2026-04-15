@@ -1,11 +1,14 @@
-import { useEffect, useState } from "react";
+import React, { useEffect, useState } from "react";
 import { motion } from "framer-motion";
 import {
   Download, Globe, DollarSign, Palette, FileText,
   Bell, BellRing, Database, CheckCircle, XCircle, RefreshCw,
   Wifi, WifiOff, MessageCircle, Mail, Loader2, Monitor,
   Package, AlertCircle, Sparkles, Zap, Layers, Clock, Pencil, RotateCcw,
+  Upload, ImageIcon, Trash2,
 } from "lucide-react";
+import { Slider } from "@/components/ui/slider";
+import { Switch } from "@/components/ui/switch";
 import { useSettings, THEMES, CURRENCIES, PRESETS } from "@/context/SettingsContext";
 import { getEventConfig, AVAILABLE_ICONS, AVAILABLE_COLORS, EVENT_TYPES, ICON_MAP } from "@/lib/eventConfig";
 import { useToast } from "@/hooks/use-toast";
@@ -61,7 +64,8 @@ function buildWhatsappLink(phone, events) {
 export default function Settings() {
   const { language, currency, theme, tr, changeLanguage, changeCurrency, changeTheme,
           preset, animations, radius, changePreset, changeAnimations, changeRadius, formatCurrency,
-          eventConfigs, updateEventTypeConfig, resetEventTypeConfig } = useSettings();
+          eventConfigs, updateEventTypeConfig, resetEventTypeConfig,
+          logoUrl, pdfLogoUrl, logoSize, usePdfLogo, useCustomPdfLogo, updateLogoSettings } = useSettings();
   const { start: startNotifications, notifyImmediate } = useNotifications();
   const { toast } = useToast();
   const s = tr.settings;
@@ -355,6 +359,54 @@ export default function Settings() {
     }
   };
 
+  // ── Logo Branding ────────────────────────────────────────────
+  const logoInputRef    = React.useRef();
+  const pdfLogoInputRef = React.useRef();
+
+  const compressImage = (file, maxW = 500, maxH = 250, quality = 0.8) =>
+    new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        const img = new Image();
+        img.onload = () => {
+          const ratio = Math.min(maxW / img.width, maxH / img.height, 1);
+          const canvas = document.createElement("canvas");
+          canvas.width  = img.width  * ratio;
+          canvas.height = img.height * ratio;
+          canvas.getContext("2d").drawImage(img, 0, 0, canvas.width, canvas.height);
+          resolve(canvas.toDataURL("image/png", quality));
+        };
+        img.onerror = reject;
+        img.src = e.target.result;
+      };
+      reader.onerror = reject;
+      reader.readAsDataURL(file);
+    });
+
+  const handleLogoUpload = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    try {
+      const b64 = await compressImage(file);
+      updateLogoSettings({ url: b64 });
+    } catch {
+      toast({ title: "Error al cargar imagen", variant: "destructive" });
+    }
+    e.target.value = "";
+  };
+
+  const handlePdfLogoUpload = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    try {
+      const b64 = await compressImage(file);
+      updateLogoSettings({ pdfUrl: b64 });
+    } catch {
+      toast({ title: "Error al cargar imagen", variant: "destructive" });
+    }
+    e.target.value = "";
+  };
+
   // ── PDF Export ────────────────────────────────────────────────
   const [pdfLoading, setPdfLoading] = useState(false);
 
@@ -369,7 +421,10 @@ export default function Settings() {
         toast({ title: language === "es" ? "No hay reservas para exportar" : "No reservations to export", variant: "destructive" });
         return;
       }
-      await generateAllReservationsPDF(reservations, formatCurrency);
+      const effectiveLogo = usePdfLogo
+        ? (useCustomPdfLogo && pdfLogoUrl ? pdfLogoUrl : logoUrl || undefined)
+        : null;
+      await generateAllReservationsPDF(reservations, formatCurrency, effectiveLogo);
       toast({ title: language === "es" ? `PDF generado — ${reservations.length} reservas ✓` : `PDF generated — ${reservations.length} reservations ✓` });
     } catch (err) {
       toast({ title: err.message || "Error al generar PDF", variant: "destructive" });
@@ -825,6 +880,150 @@ export default function Settings() {
                   </motion.div>
                 );
               })()}
+            </div>
+
+            <div className="border-t border-white/40" />
+
+            {/* 6 ── LOGO & BRANDING ────────────────────────────── */}
+            <div>
+              <p className="text-[11px] font-black text-slate-400 uppercase tracking-widest mb-3">
+                {language === "es" ? "Logo y Branding" : "Logo & Branding"}
+              </p>
+
+              {/* Web logo */}
+              <div className="space-y-3">
+                <p className="text-xs font-bold text-slate-600">
+                  {language === "es" ? "Logo de la app (sidebar)" : "App logo (sidebar)"}
+                </p>
+
+                {logoUrl ? (
+                  <div className="flex items-center gap-3 p-3 bg-white/60 rounded-2xl border border-white/60">
+                    <img src={logoUrl} alt="Logo" className="h-12 w-auto object-contain max-w-[120px] rounded-xl" />
+                    <div className="flex-1 min-w-0">
+                      <p className="text-xs font-semibold text-slate-700">Logo cargado</p>
+                      <p className="text-[10px] text-slate-400 mt-0.5">Aparece en el sidebar y encabezado móvil</p>
+                    </div>
+                    <div className="flex gap-2">
+                      <motion.button whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}
+                        onClick={() => logoInputRef.current?.click()}
+                        data-testid="logo-change-btn"
+                        className="p-2 rounded-xl bg-slate-100 hover:bg-slate-200 transition-colors">
+                        <Upload size={13} className="text-slate-600" />
+                      </motion.button>
+                      <motion.button whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}
+                        onClick={() => updateLogoSettings({ url: null })}
+                        data-testid="logo-remove-btn"
+                        className="p-2 rounded-xl bg-red-50 hover:bg-red-100 transition-colors">
+                        <Trash2 size={13} className="text-red-500" />
+                      </motion.button>
+                    </div>
+                  </div>
+                ) : (
+                  <motion.button whileHover={{ y: -1 }} whileTap={{ scale: 0.98 }}
+                    onClick={() => logoInputRef.current?.click()}
+                    data-testid="logo-upload-btn"
+                    className="w-full flex flex-col items-center gap-2 py-6 rounded-2xl border-2 border-dashed border-slate-200 bg-white/40 hover:bg-white/60 hover:border-slate-300 transition-all">
+                    <div className="w-10 h-10 rounded-2xl bg-slate-100 flex items-center justify-center">
+                      <ImageIcon size={18} className="text-slate-400" />
+                    </div>
+                    <div className="text-center">
+                      <p className="text-xs font-bold text-slate-600">{language === "es" ? "Subir logo" : "Upload logo"}</p>
+                      <p className="text-[10px] text-slate-400 mt-0.5">PNG, JPG — se comprime automáticamente</p>
+                    </div>
+                  </motion.button>
+                )}
+                <input ref={logoInputRef} type="file" accept="image/*" className="hidden" onChange={handleLogoUpload} data-testid="logo-file-input" />
+
+                {/* Size slider (only if logo is set) */}
+                {logoUrl && (
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between">
+                      <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">
+                        {language === "es" ? "Tamaño en sidebar" : "Sidebar size"}
+                      </p>
+                      <span className="text-xs font-bold text-slate-600">{logoSize}px</span>
+                    </div>
+                    <Slider
+                      min={24} max={80} step={4}
+                      value={[Math.min(logoSize, 80)]}
+                      onValueChange={([val]) => updateLogoSettings({ size: val })}
+                      data-testid="logo-size-slider"
+                      className="w-full"
+                    />
+                    <div className="flex justify-between text-[9px] text-slate-400">
+                      <span>24px</span><span>80px</span>
+                    </div>
+                  </div>
+                )}
+
+                {/* PDF logo toggles */}
+                <div className="border-t border-white/40 pt-3 space-y-3">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-xs font-bold text-slate-700">{language === "es" ? "Usar logo en PDFs" : "Use logo in PDFs"}</p>
+                      <p className="text-[10px] text-slate-400">{language === "es" ? "Aparece en el encabezado de cada PDF" : "Appears in the header of each PDF"}</p>
+                    </div>
+                    <Switch
+                      checked={usePdfLogo}
+                      onCheckedChange={(val) => updateLogoSettings({ usePdf: val })}
+                      data-testid="use-pdf-logo-toggle"
+                    />
+                  </div>
+
+                  {usePdfLogo && (
+                    <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }} exit={{ opacity: 0, height: 0 }} className="space-y-3 pl-1 border-l-2 border-slate-200 ml-1">
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <p className="text-xs font-bold text-slate-700">{language === "es" ? "Logo diferente para PDFs" : "Different logo for PDFs"}</p>
+                          <p className="text-[10px] text-slate-400">{language === "es" ? "Usa una imagen distinta en los archivos" : "Use a different image for documents"}</p>
+                        </div>
+                        <Switch
+                          checked={useCustomPdfLogo}
+                          onCheckedChange={(val) => updateLogoSettings({ useCustomPdf: val })}
+                          data-testid="use-custom-pdf-logo-toggle"
+                        />
+                      </div>
+
+                      {useCustomPdfLogo && (
+                        <div className="space-y-2">
+                          <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Logo para PDFs</p>
+                          {pdfLogoUrl ? (
+                            <div className="flex items-center gap-3 p-3 bg-white/60 rounded-xl border border-white/60">
+                              <img src={pdfLogoUrl} alt="PDF Logo" className="h-10 w-auto object-contain max-w-[100px] rounded-lg" />
+                              <div className="flex-1 min-w-0">
+                                <p className="text-[10px] font-semibold text-slate-600">Logo PDF cargado</p>
+                              </div>
+                              <div className="flex gap-2">
+                                <motion.button whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}
+                                  onClick={() => pdfLogoInputRef.current?.click()}
+                                  data-testid="pdf-logo-change-btn"
+                                  className="p-2 rounded-xl bg-slate-100 hover:bg-slate-200 transition-colors">
+                                  <Upload size={12} className="text-slate-600" />
+                                </motion.button>
+                                <motion.button whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}
+                                  onClick={() => updateLogoSettings({ pdfUrl: null })}
+                                  data-testid="pdf-logo-remove-btn"
+                                  className="p-2 rounded-xl bg-red-50 hover:bg-red-100 transition-colors">
+                                  <Trash2 size={12} className="text-red-500" />
+                                </motion.button>
+                              </div>
+                            </div>
+                          ) : (
+                            <motion.button whileHover={{ y: -1 }} whileTap={{ scale: 0.98 }}
+                              onClick={() => pdfLogoInputRef.current?.click()}
+                              data-testid="pdf-logo-upload-btn"
+                              className="w-full flex items-center justify-center gap-2 py-4 rounded-xl border-2 border-dashed border-slate-200 bg-white/40 hover:bg-white/60 transition-all text-xs text-slate-500 font-semibold">
+                              <Upload size={13} />
+                              {language === "es" ? "Subir logo para PDFs" : "Upload PDF logo"}
+                            </motion.button>
+                          )}
+                          <input ref={pdfLogoInputRef} type="file" accept="image/*" className="hidden" onChange={handlePdfLogoUpload} data-testid="pdf-logo-file-input" />
+                        </div>
+                      )}
+                    </motion.div>
+                  )}
+                </div>
+              </div>
             </div>
 
           </div>

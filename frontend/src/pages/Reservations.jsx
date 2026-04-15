@@ -25,13 +25,19 @@ export default function Reservations() {
   const [showForm, setShowForm] = useState(false);
   const navigate = useNavigate();
   const { toast } = useToast();
-  const { tr, formatCurrency } = useSettings();
+  const { tr, formatCurrency, logoUrl, pdfLogoUrl, usePdfLogo, useCustomPdfLogo } = useSettings();
   const l = tr.list;
+
+  const getEffectivePdfLogo = () => {
+    if (!usePdfLogo) return null;
+    if (useCustomPdfLogo && pdfLogoUrl) return pdfLogoUrl;
+    return logoUrl || undefined;
+  };
 
   const handleDownloadPDF = async (r, e) => {
     e.stopPropagation();
     try {
-      await generateReservationPDF(r, formatCurrency);
+      await generateReservationPDF(r, formatCurrency, getEffectivePdfLogo());
       toast({ title: "PDF generado exitosamente" });
     } catch {
       toast({ title: "Error al generar PDF", variant: "destructive" });
