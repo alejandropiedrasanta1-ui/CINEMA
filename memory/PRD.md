@@ -66,7 +66,16 @@ Sistema de gestión de reservas para eventos (bodas, quinceañeras, fiestas soci
 - Sub-totales en TeamSection: "Pagado al equipo" y "Pendiente equipo"
 - Panel en página Socios: 4 cards → Total Eventos, Costo Equipo, Pagado Equipo, Ingreso Real
 
-### Recordatorios y Notificaciones (Iteración 8 - Abril 2026) ✅
+### Rediseño Visual con Iconos (Iteración 9 - Abril 2026) ✅
+- Creado `/frontend/src/lib/eventConfig.js` — configuración centralizada: icono Lucide + colores por tipo de evento
+- Dashboard: "Tipos de Evento" con tarjetas visuales (icono, contador animado, barra de progreso, %)
+- Eliminado el gráfico de estado del Dashboard (solo distribución por tipo)
+- Calendario: leyenda con iconos Lucide + chips con iconos en análisis mensual + pills en celdas con icono
+- Reservaciones: columna Tipo usa iconos Lucide (no emojis)
+- Sidebar Layout: hover con animación de desplazamiento
+- CSS nuevas clases: shimmer-sweep, fade-up, pulse-glow animations
+- Iconos: Heart=Boda, Crown=Quinceañera, PartyPopper=Fiesta Social, Briefcase=Evento Corporativo, Monitor=Conferencia, CalendarDays=Otro
+
 - Sección "Recordatorios" en Ajustes:
   - Toggle activar/desactivar recordatorios automáticos
   - Slider de días de anticipación (1-30 días, default: 3)
