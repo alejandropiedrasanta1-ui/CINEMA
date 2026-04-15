@@ -251,7 +251,20 @@ Sistema de gestión de reservas para eventos (bodas, quinceañeras, fiestas soci
 - Endpoint mejorado: busca eventos en ventana N días, intenta Resend → Push en cascada
 - **Email verificado: llegó a alejandropiedrasanta1@gmail.com correctamente ✓**
 
+### Fix crítico Settings.jsx (Abril 2026) ✅
+- Corregido bug `motion is not defined` en Settings.jsx: faltaba `import { motion } from "framer-motion"`
+- Página /ajustes cargaba en blanco con error en consola — ahora funciona correctamente
+
+### DatabasePage + Testing completo (Iteración 17 - Abril 2026) ✅
+- Página `/base-de-datos` rediseñada con glassmorphism UI
+- Testeado al 100%: backup download, CSV export, JSON export, PDF export, backup history
+- Restaurar desde archivo .json funciona con auto-backup previo
+- Botones Telegram/ntfy muestran error apropiado cuando no están configurados
+- Todas las APIs: `/api/backup/download`, `/api/export/reservations`, `/api/backup/create`, `/api/backup/history` retornan 200
+
 ### P1 (Próximo sprint)
+- [ ] Configurar Telegram Bot (usuario necesita: token @BotFather + Chat ID)
+- [ ] Configurar ntfy.sh (usuario necesita: elegir nombre de tema + instalar app)
 - [ ] WhatsApp automático vía Twilio (actualmente es link manual wa.me)
 - [ ] Imprimir comprobante directamente desde el detalle
 
