@@ -172,6 +172,18 @@ class NotificationSettingsModel(BaseModel):
     telegram_chat_id: Optional[str] = None
     ntfy_enabled: bool = False
     ntfy_topic: Optional[str] = None
+    # ── Business config ────────────────────────────────────────
+    company_name: Optional[str] = None
+    company_address: Optional[str] = None
+    company_phone: Optional[str] = None
+    company_website: Optional[str] = None
+    company_tax_id: Optional[str] = None
+    timezone: Optional[str] = "America/Guatemala"
+    default_advance_pct: Optional[int] = 30
+    business_hours_start: Optional[str] = "08:00"
+    business_hours_end: Optional[str] = "22:00"
+    backup_retention: Optional[int] = 10
+    auto_cleanup_months: Optional[int] = None  # None = disabled
 
 
 class DBConnectRequest(BaseModel):

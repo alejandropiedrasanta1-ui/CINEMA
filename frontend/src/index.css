@@ -331,3 +331,110 @@ body { background-color: var(--body-bg) !important; }
 [data-animations="false"] * { transition-duration: 60ms !important; }
 
 
+/* ═══════════════════════════════════════════
+   DARK MODE
+═══════════════════════════════════════════ */
+[data-dark="true"] {
+  --body-bg: #0c0e14 !important;
+  --background: 222 47% 7%;
+  --foreground: 210 40% 93%;
+  --card: 222 47% 10%;
+  --card-foreground: 210 40% 93%;
+  --popover: 222 47% 10%;
+  --popover-foreground: 210 40% 93%;
+  --secondary: 217 32% 16%;
+  --secondary-foreground: 210 40% 93%;
+  --muted: 217 32% 16%;
+  --muted-foreground: 215 20% 65%;
+  --border: 217 32% 20%;
+  --input: 217 32% 18%;
+}
+[data-dark="true"] body { background-color: #0c0e14 !important; color: #e2e8f0; }
+
+/* Glass surfaces */
+[data-dark="true"] .glass {
+  background: rgba(20, 22, 38, 0.72) !important;
+  border-color: rgba(255,255,255,0.07) !important;
+  box-shadow: 0 8px 32px rgba(0,0,0,0.35) !important;
+}
+[data-dark="true"] .glass-strong {
+  background: rgba(24, 26, 44, 0.88) !important;
+  border-color: rgba(255,255,255,0.09) !important;
+  box-shadow: 0 16px 48px rgba(0,0,0,0.40) !important;
+}
+[data-dark="true"] .glass-modal {
+  background: rgba(20, 22, 36, 0.97) !important;
+  border-color: rgba(255,255,255,0.10) !important;
+}
+[data-dark="true"] .glass-sidebar {
+  background: rgba(13, 14, 24, 0.94) !important;
+  border-right-color: rgba(255,255,255,0.05) !important;
+  box-shadow: 4px 0 24px rgba(0,0,0,0.4) !important;
+}
+
+/* Text overrides */
+[data-dark="true"] .text-slate-900 { color: #f1f5f9 !important; }
+[data-dark="true"] .text-slate-800 { color: #e2e8f0 !important; }
+[data-dark="true"] .text-slate-700 { color: #cbd5e1 !important; }
+[data-dark="true"] .text-slate-600 { color: #94a3b8 !important; }
+[data-dark="true"] .text-slate-500 { color: #64748b !important; }
+[data-dark="true"] .text-slate-400 { color: #475569 !important; }
+
+/* Background overrides */
+[data-dark="true"] .bg-white    { background-color: #1a1c2e !important; }
+[data-dark="true"] .bg-white\/60,
+[data-dark="true"] .bg-white\/70,
+[data-dark="true"] .bg-white\/80 { background-color: rgba(26,28,46,0.80) !important; }
+[data-dark="true"] .bg-white\/50,
+[data-dark="true"] .bg-white\/40 { background-color: rgba(26,28,46,0.50) !important; }
+[data-dark="true"] .bg-slate-50  { background-color: #13141f !important; }
+[data-dark="true"] .bg-slate-100 { background-color: #1a1c2e !important; }
+[data-dark="true"] .bg-slate-200 { background-color: #222438 !important; }
+
+/* Border overrides */
+[data-dark="true"] .border-slate-200,
+[data-dark="true"] .border-slate-100 { border-color: rgba(100,116,139,0.22) !important; }
+[data-dark="true"] .border-white\/40,
+[data-dark="true"] .border-white\/60 { border-color: rgba(255,255,255,0.07) !important; }
+
+/* Input fields */
+[data-dark="true"] input:not([type="radio"]):not([type="checkbox"]),
+[data-dark="true"] textarea,
+[data-dark="true"] select {
+  background-color: rgba(20,22,38,0.85) !important;
+  color: #e2e8f0 !important;
+  border-color: rgba(100,116,139,0.30) !important;
+}
+[data-dark="true"] input::placeholder,
+[data-dark="true"] textarea::placeholder { color: #475569 !important; }
+
+/* Gradient text in dark */
+[data-dark="true"] .gradient-text {
+  background: linear-gradient(135deg, #818cf8 0%, #a78bfa 50%, #f472b6 100%) !important;
+  -webkit-background-clip: text !important;
+  -webkit-text-fill-color: transparent !important;
+  background-clip: text !important;
+}
+
+/* Nav link dark */
+[data-dark="true"] .text-slate-600.hover\:bg-white\/50:not(.nav-active) { color: #94a3b8 !important; }
+[data-dark="true"] .hover\:bg-white\/50:hover { background-color: rgba(255,255,255,0.06) !important; }
+
+/* ═══════════════════════════════════════════
+   FONT SCALE
+═══════════════════════════════════════════ */
+[data-fs="compact"] { zoom: 0.88; }
+[data-fs="large"]   { zoom: 1.10; }
+
+/* ═══════════════════════════════════════════
+   BACKGROUND INTENSITY
+═══════════════════════════════════════════ */
+[data-bg="off"]    .blob { opacity: 0 !important; }
+[data-bg="subtle"] .blob { opacity: 0.15 !important; filter: blur(120px) !important; }
+[data-bg="vivid"]  .blob { opacity: 0.55 !important; filter: blur(80px)  !important; }
+
+/* ═══════════════════════════════════════════
+   SIDEBAR COMPACT MODE
+═══════════════════════════════════════════ */
+.sidebar-compact-label { transition: opacity 0.2s, width 0.2s; }
+.sidebar-compact-logo  { transition: all 0.2s; }

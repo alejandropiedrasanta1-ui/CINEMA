@@ -221,6 +221,13 @@ export function SettingsProvider({ children }) {
   const [radius, setRadius] = useState(() => localStorage.getItem("radius") || "rounded");
   const [pdfTheme, setPdfTheme] = useState(() => localStorage.getItem("pdf_theme") || "oscuro");
 
+  // ── New appearance options ──────────────────────────────────────────────
+  const [darkMode,       setDarkMode]       = useState(() => localStorage.getItem("dark_mode") === "true");
+  const [fontScale,      setFontScale]      = useState(() => localStorage.getItem("font_scale") || "normal");
+  const [bgIntensity,    setBgIntensity]    = useState(() => localStorage.getItem("bg_intensity") || "normal");
+  const [sidebarCompact, setSidebarCompact] = useState(() => localStorage.getItem("sidebar_compact") === "true");
+  const [dateFormat,     setDateFormat]     = useState(() => localStorage.getItem("date_format") || "DD/MM/YYYY");
+
   const changePdfTheme = (t) => { setPdfTheme(t); localStorage.setItem("pdf_theme", t); };
 
   useEffect(() => {
@@ -228,13 +235,17 @@ export function SettingsProvider({ children }) {
     document.documentElement.dataset.preset = preset;
     document.documentElement.dataset.animations = String(animations);
     document.documentElement.dataset.radius = radius;
+    // Apply new appearance settings
+    document.documentElement.dataset.dark = String(darkMode);
+    document.documentElement.dataset.fs   = fontScale === "normal" ? "" : fontScale;
+    document.documentElement.dataset.bg   = bgIntensity;
     // Aplica overrides guardados en localStorage al inicio
     setEventConfigOverrides(eventConfigs);
   }, []);
 
   const changeLanguage = (lang) => { setLanguage(lang); localStorage.setItem("lang", lang); };
-  const changeCurrency = (cur) => { setCurrency(cur); localStorage.setItem("currency", cur); };
-  const changeTheme = (t) => { setTheme(t); localStorage.setItem("theme", t); applyThemeVars(t); };
+  const changeCurrency = (cur)  => { setCurrency(cur);  localStorage.setItem("currency", cur); };
+  const changeTheme    = (t)    => { setTheme(t);        localStorage.setItem("theme", t); applyThemeVars(t); };
 
   const changePreset = (p) => {
     setPreset(p);
@@ -252,6 +263,34 @@ export function SettingsProvider({ children }) {
     setRadius(r);
     localStorage.setItem("radius", r);
     document.documentElement.dataset.radius = r;
+  };
+
+  const changeDarkMode = (val) => {
+    setDarkMode(val);
+    localStorage.setItem("dark_mode", String(val));
+    document.documentElement.dataset.dark = String(val);
+  };
+
+  const changeFontScale = (val) => {
+    setFontScale(val);
+    localStorage.setItem("font_scale", val);
+    document.documentElement.dataset.fs = val === "normal" ? "" : val;
+  };
+
+  const changeBgIntensity = (val) => {
+    setBgIntensity(val);
+    localStorage.setItem("bg_intensity", val);
+    document.documentElement.dataset.bg = val;
+  };
+
+  const changeSidebarCompact = (val) => {
+    setSidebarCompact(val);
+    localStorage.setItem("sidebar_compact", String(val));
+  };
+
+  const changeDateFormat = (val) => {
+    setDateFormat(val);
+    localStorage.setItem("date_format", val);
   };
 
   // ── Event type custom configs ──────────────────────────────
@@ -310,6 +349,13 @@ export function SettingsProvider({ children }) {
       changeLanguage, changeCurrency, changeTheme,
       preset, animations, radius, pdfTheme,
       changePreset, changeAnimations, changeRadius, changePdfTheme,
+      // New appearance
+      darkMode, changeDarkMode,
+      fontScale, changeFontScale,
+      bgIntensity, changeBgIntensity,
+      sidebarCompact, changeSidebarCompact,
+      dateFormat, changeDateFormat,
+      // Event & logo
       eventConfigs, updateEventTypeConfig, resetEventTypeConfig,
       logoUrl, pdfLogoUrl, logoSize, usePdfLogo, useCustomPdfLogo, updateLogoSettings,
     }}>

@@ -6,9 +6,10 @@ import { useSettings, PRESETS } from "@/context/SettingsContext";
 
 export default function Layout({ children }) {
   const [mobileOpen, setMobileOpen] = useState(false);
-  const { tr, preset, logoUrl, logoSize } = useSettings();
+  const { tr, preset, logoUrl, logoSize, sidebarCompact } = useSettings();
   const presetLabel = PRESETS.find(p => p.id === preset)?.name || "Glass Aurora";
   const sidebarLogoH = Math.min(Math.max(logoSize || 40, 24), 80);
+  const compact = sidebarCompact;
 
   const navItems = [
     { path: "/dashboard",      label: tr.nav.dashboard,     icon: LayoutDashboard },
@@ -22,28 +23,43 @@ export default function Layout({ children }) {
   return (
     <div className="flex min-h-screen" style={{ position: "relative", zIndex: 1 }}>
       {/* Desktop Sidebar */}
-      <aside className="hidden md:flex flex-col w-60 min-h-screen glass-sidebar fixed left-0 top-0 z-20">
-        <div className="px-6 py-6 border-b border-white/40">
-          <div className="flex items-center gap-2.5">
-            <img
-              src={logoUrl || "/logo.png"}
-              alt="Cinema Productions"
-              className="w-auto rounded-xl object-contain"
-              style={{ height: `${sidebarLogoH}px`, maxWidth: "140px" }}
-            />
-          </div>
-          <p className="text-[10px] text-slate-400 font-medium mt-1.5 pl-0.5">{tr.nav.tagline}</p>
+      <aside
+        className="hidden md:flex flex-col min-h-screen glass-sidebar fixed left-0 top-0 z-20 transition-all duration-300"
+        style={{ width: compact ? "72px" : "240px" }}
+      >
+        {/* Logo area */}
+        <div className={`border-b border-white/40 transition-all duration-300 ${compact ? "px-3 py-5 flex justify-center" : "px-6 py-6"}`}>
+          {compact ? (
+            <div className="w-9 h-9 rounded-xl btn-primary flex items-center justify-center text-white font-black text-base">
+              C
+            </div>
+          ) : (
+            <>
+              <div className="flex items-center gap-2.5">
+                <img
+                  src={logoUrl || "/logo.png"}
+                  alt="Cinema Productions"
+                  className="w-auto rounded-xl object-contain"
+                  style={{ height: `${sidebarLogoH}px`, maxWidth: "140px" }}
+                />
+              </div>
+              <p className="text-[10px] text-slate-400 font-medium mt-1.5 pl-0.5">{tr.nav.tagline}</p>
+            </>
+          )}
         </div>
 
-        <nav className="flex-1 px-3 py-5 space-y-1">
+        <nav className={`flex-1 py-5 space-y-1 transition-all duration-300 ${compact ? "px-2" : "px-3"}`}>
           {navItems.map(({ path, label, icon: Icon }) => (
             <NavLink
               key={path}
               to={path}
               data-testid={`nav-${path.replace("/", "")}`}
+              title={compact ? label : undefined}
               className={({ isActive }) =>
-                `flex items-center gap-3 px-4 py-2.5 rounded-2xl text-sm font-semibold transition-all duration-300 ${
-                  isActive ? "nav-active" : "text-slate-600 hover:bg-white/50 hover:text-slate-900 hover:translate-x-0.5"
+                `flex items-center gap-3 py-2.5 rounded-2xl text-sm font-semibold transition-all duration-300 ${
+                  compact ? "px-0 justify-center" : "px-4"
+                } ${
+                  isActive ? "nav-active" : "text-slate-600 hover:bg-white/50 hover:text-slate-900"
                 }`
               }
             >
@@ -54,18 +70,20 @@ export default function Layout({ children }) {
                     transition={{ duration: 0.2 }}
                     className="flex-shrink-0"
                   >
-                    <Icon size={16} strokeWidth={isActive ? 2.2 : 1.5} />
+                    <Icon size={compact ? 18 : 16} strokeWidth={isActive ? 2.2 : 1.5} />
                   </motion.span>
-                  {label}
+                  {!compact && <span className="sidebar-compact-label">{label}</span>}
                 </>
               )}
             </NavLink>
           ))}
         </nav>
 
-        <div className="px-6 py-4 border-t border-white/40">
-          <p className="text-[10px] text-slate-400 font-medium">v1.0 · {presetLabel}</p>
-        </div>
+        {!compact && (
+          <div className="px-6 py-4 border-t border-white/40">
+            <p className="text-[10px] text-slate-400 font-medium">v1.0 · {presetLabel}</p>
+          </div>
+        )}
       </aside>
 
       {/* Mobile Header */}
@@ -102,7 +120,10 @@ export default function Layout({ children }) {
         )}
       </AnimatePresence>
 
-      <main className="flex-1 md:ml-60 min-h-screen">
+      <main
+        className="flex-1 min-h-screen transition-all duration-300"
+        style={{ marginLeft: compact ? "72px" : "240px" }}
+      >
         <div className="pt-16 md:pt-0 min-h-screen">{children}</div>
       </main>
     </div>

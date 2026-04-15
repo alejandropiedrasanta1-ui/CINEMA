@@ -1,6 +1,6 @@
 {
   "_meta": {
-    "created_at": "2026-04-15T19:31:00.986668+00:00",
+    "created_at": "2026-04-15T20:00:25.085826+00:00",
     "label": "auto_pre_cleanup"
   },
   "reservations": [
@@ -60,6 +60,46 @@
       "created_at": "2026-04-15T19:27:43.635051+00:00",
       "imported_from_csv": true,
       "id": "69dfe6b133b263d248ebbab6"
+    },
+    {
+      "client_name": "TEST_Juan Prueba",
+      "client_phone": null,
+      "client_email": null,
+      "event_type": "Boda",
+      "event_date": "2026-05-01",
+      "event_time": null,
+      "venue": null,
+      "guests_count": null,
+      "total_amount": 5000.0,
+      "advance_paid": 1000.0,
+      "status": "Pendiente",
+      "notes": null,
+      "receipts": [],
+      "locations": [],
+      "assigned_partners": [],
+      "created_at": "2026-04-15T19:33:05.187314+00:00",
+      "imported_from_csv": true,
+      "id": "69dfe7f1d8166a50d7773744"
+    },
+    {
+      "client_name": "TEST_Maria CSV",
+      "client_phone": null,
+      "client_email": null,
+      "event_type": "Quinceañera",
+      "event_date": "2026-06-15",
+      "event_time": null,
+      "venue": null,
+      "guests_count": null,
+      "total_amount": 3000.0,
+      "advance_paid": 500.0,
+      "status": "Pendiente",
+      "notes": null,
+      "receipts": [],
+      "locations": [],
+      "assigned_partners": [],
+      "created_at": "2026-04-15T19:33:05.502152+00:00",
+      "imported_from_csv": true,
+      "id": "69dfe7f1d8166a50d7773745"
     }
   ],
   "socios": [],

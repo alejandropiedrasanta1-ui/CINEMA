@@ -6,7 +6,7 @@ import {
   Bell, BellRing, Database, CheckCircle, XCircle, RefreshCw,
   Wifi, WifiOff, MessageCircle, Mail, Loader2, Monitor,
   Package, AlertCircle, Sparkles, Zap, Layers, Clock, Pencil, RotateCcw,
-  Upload, ImageIcon, Trash2, Save, ChevronDown,
+  Upload, ImageIcon, Trash2, Save, ChevronDown, ShieldCheck, Building2,
 } from "lucide-react";
 import { useSettings, THEMES, CURRENCIES, PRESETS } from "@/context/SettingsContext";
 import { getEventConfig, getEventTypeName, AVAILABLE_ICONS, AVAILABLE_COLORS, EVENT_TYPES, ICON_MAP } from "@/lib/eventConfig";
@@ -65,13 +65,15 @@ function buildWhatsappLink(phone, events) {
 export default function Settings() {
   const { language, currency, theme, tr, changeLanguage, changeCurrency, changeTheme,
           preset, animations, radius, pdfTheme, changePreset, changeAnimations, changeRadius, changePdfTheme, formatCurrency,
+          darkMode, changeDarkMode, fontScale, changeFontScale,
+          bgIntensity, changeBgIntensity, sidebarCompact, changeSidebarCompact, dateFormat, changeDateFormat,
           eventConfigs, updateEventTypeConfig, resetEventTypeConfig,
           logoUrl, pdfLogoUrl, logoSize, usePdfLogo, useCustomPdfLogo, updateLogoSettings } = useSettings();
   const { requestPermission, showNotification, startPolling } = useNotifications();
   const { toast } = useToast();
   const s = tr.settings;
 
-  // Notification settings state
+  // Notification + Business settings state
   const [notif, setNotif] = useState({
     reminders_enabled: false,
     reminder_periods: [3],
@@ -86,6 +88,18 @@ export default function Settings() {
     telegram_chat_id: "",
     ntfy_enabled: false,
     ntfy_topic: "",
+    // Business config
+    company_name: "",
+    company_address: "",
+    company_phone: "",
+    company_website: "",
+    company_tax_id: "",
+    timezone: "America/Guatemala",
+    default_advance_pct: 30,
+    business_hours_start: "08:00",
+    business_hours_end: "22:00",
+    backup_retention: 10,
+    auto_cleanup_months: "",
   });
   const [notifLoading, setNotifLoading] = useState(false);
   const [testLoading, setTestLoading] = useState(false);
@@ -132,6 +146,18 @@ export default function Settings() {
           telegram_chat_id: data.telegram_chat_id ?? "",
           ntfy_enabled: data.ntfy_enabled ?? false,
           ntfy_topic: data.ntfy_topic ?? "",
+          // Business config
+          company_name: data.company_name ?? "",
+          company_address: data.company_address ?? "",
+          company_phone: data.company_phone ?? "",
+          company_website: data.company_website ?? "",
+          company_tax_id: data.company_tax_id ?? "",
+          timezone: data.timezone ?? "America/Guatemala",
+          default_advance_pct: data.default_advance_pct ?? 30,
+          business_hours_start: data.business_hours_start ?? "08:00",
+          business_hours_end: data.business_hours_end ?? "22:00",
+          backup_retention: data.backup_retention ?? 10,
+          auto_cleanup_months: data.auto_cleanup_months ?? "",
         }));
       }
     }).catch(() => {});
@@ -295,6 +321,10 @@ export default function Settings() {
       // If key looks like masked dots, don't send it (keep existing)
       if (payload.resend_api_key && payload.resend_api_key.includes("•")) {
         delete payload.resend_api_key;
+      }
+      // Convert empty string to null for optional integer fields
+      if (payload.auto_cleanup_months === "" || payload.auto_cleanup_months === undefined) {
+        payload.auto_cleanup_months = null;
       }
       await updateAppSettings(payload);
       // Persist reminder settings to localStorage so the hook can read them
@@ -837,7 +867,112 @@ export default function Settings() {
 
             <div className="border-t border-white/40" />
 
-            {/* 5 ── EVENT TYPE ICONS & COLORS ──────────────────── */}
+            {/* 5 ── DARK MODE + FONT + BG + SIDEBAR ────────────── */}
+            <div className="space-y-5">
+              <p className="text-[11px] font-black text-slate-400 uppercase tracking-widest">
+                {language === "es" ? "Avanzado" : "Advanced"}
+              </p>
+
+              {/* Dark Mode */}
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-black text-slate-800">
+                    {language === "es" ? "Modo Oscuro" : "Dark Mode"}
+                  </p>
+                  <p className="text-[11px] text-slate-400 mt-0.5">
+                    {language === "es" ? "Cambia todo el fondo a oscuro" : "Dark background everywhere"}
+                  </p>
+                </div>
+                <button onClick={() => { changeDarkMode(!darkMode); toast({ title: darkMode ? "Modo claro activado" : "Modo oscuro activado ✓" }); }}
+                  data-testid="dark-mode-toggle"
+                  className={`w-12 h-6 rounded-full transition-all duration-300 relative ${darkMode ? "btn-primary" : "bg-slate-200"}`}>
+                  <span className={`absolute top-0.5 w-5 h-5 bg-white rounded-full shadow-sm transition-all duration-300 ${darkMode ? "left-[26px]" : "left-0.5"}`} />
+                </button>
+              </div>
+
+              {/* Font Scale */}
+              <div>
+                <p className="text-xs font-black text-slate-600 mb-2.5">
+                  {language === "es" ? "Tamaño de texto" : "Text Size"}
+                </p>
+                <div className="flex gap-2">
+                  {[
+                    { id: "compact", label: language === "es" ? "Compacto" : "Compact", desc: "88%" },
+                    { id: "normal",  label: language === "es" ? "Normal"   : "Normal",  desc: "100%" },
+                    { id: "large",   label: language === "es" ? "Grande"   : "Large",   desc: "110%" },
+                  ].map(f => (
+                    <motion.button key={f.id} whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.97 }}
+                      data-testid={`font-${f.id}`}
+                      onClick={() => { changeFontScale(f.id); toast({ title: `Texto: ${f.label}` }); }}
+                      className={`flex-1 flex flex-col items-center py-2.5 px-2 rounded-2xl border-2 transition-all ${fontScale === f.id ? "border-[var(--t-from)] bg-white/80" : "border-slate-200/70 bg-white/40 hover:bg-white/60"}`}>
+                      <span className="text-xs font-black" style={{ color: fontScale === f.id ? "var(--t-from)" : "#64748b" }}>{f.label}</span>
+                      <span className="text-[9px] text-slate-400 mt-0.5">{f.desc}</span>
+                    </motion.button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Background Intensity */}
+              <div>
+                <p className="text-xs font-black text-slate-600 mb-2.5">
+                  {language === "es" ? "Intensidad de fondo" : "Background Intensity"}
+                </p>
+                <div className="flex gap-2">
+                  {[
+                    { id: "off",    label: language === "es" ? "Apagado" : "Off",    emoji: "○" },
+                    { id: "subtle", label: language === "es" ? "Suave"   : "Subtle", emoji: "◑" },
+                    { id: "normal", label: language === "es" ? "Normal"  : "Normal", emoji: "●" },
+                    { id: "vivid",  label: language === "es" ? "Vivido"  : "Vivid",  emoji: "⬤" },
+                  ].map(b => (
+                    <motion.button key={b.id} whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.97 }}
+                      data-testid={`bg-${b.id}`}
+                      onClick={() => changeBgIntensity(b.id)}
+                      className={`flex-1 flex flex-col items-center py-2.5 rounded-2xl border-2 transition-all ${bgIntensity === b.id ? "border-[var(--t-from)] bg-white/80" : "border-slate-200/70 bg-white/40 hover:bg-white/60"}`}>
+                      <span className="text-sm">{b.emoji}</span>
+                      <span className="text-[9px] font-bold text-slate-500 mt-1">{b.label}</span>
+                    </motion.button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Sidebar Compact */}
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-black text-slate-800">
+                    {language === "es" ? "Barra lateral compacta" : "Compact Sidebar"}
+                  </p>
+                  <p className="text-[11px] text-slate-400 mt-0.5">
+                    {language === "es" ? "Solo muestra iconos, sin etiquetas" : "Icons only, no labels"}
+                  </p>
+                </div>
+                <button onClick={() => { changeSidebarCompact(!sidebarCompact); toast({ title: sidebarCompact ? "Barra lateral expandida" : "Barra lateral compacta ✓" }); }}
+                  data-testid="sidebar-compact-toggle"
+                  className={`w-12 h-6 rounded-full transition-all duration-300 relative ${sidebarCompact ? "btn-primary" : "bg-slate-200"}`}>
+                  <span className={`absolute top-0.5 w-5 h-5 bg-white rounded-full shadow-sm transition-all duration-300 ${sidebarCompact ? "left-[26px]" : "left-0.5"}`} />
+                </button>
+              </div>
+
+              {/* Date Format */}
+              <div>
+                <p className="text-xs font-black text-slate-600 mb-2.5">
+                  {language === "es" ? "Formato de fecha" : "Date Format"}
+                </p>
+                <div className="flex gap-2 flex-wrap">
+                  {["DD/MM/YYYY", "MM/DD/YYYY", "YYYY-MM-DD"].map(fmt => (
+                    <motion.button key={fmt} whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.97 }}
+                      data-testid={`date-fmt-${fmt.replace(/\//g, "")}`}
+                      onClick={() => { changeDateFormat(fmt); toast({ title: `Formato: ${fmt}` }); }}
+                      className={`px-4 py-2 rounded-2xl border-2 text-xs font-bold transition-all ${dateFormat === fmt ? "border-[var(--t-from)] text-[var(--t-from)] bg-white/80" : "border-slate-200/70 text-slate-500 bg-white/40 hover:bg-white/60"}`}>
+                      {fmt}
+                    </motion.button>
+                  ))}
+                </div>
+              </div>
+            </div>
+
+            <div className="border-t border-white/40" />
+
+            {/* 6 ── EVENT TYPE ICONS & COLORS ──────────────────── */}
             <div>
               <p className="text-[11px] font-black text-slate-400 uppercase tracking-widest mb-3">
                 {language === "es" ? "Iconos y Colores por Tipo de Evento" : "Event Type Icons & Colors"}
@@ -1580,6 +1715,124 @@ export default function Settings() {
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
           </svg>
         </Link>
+
+        {/* ── CONFIGURACIÓN DEL NEGOCIO ── */}
+        <Section icon={ShieldCheck} title={language === "es" ? "Configuración del Negocio" : "Business Configuration"}
+          desc={language === "es" ? "Datos de empresa, horarios, anticipo por defecto" : "Company data, hours, default advance"}>
+          <div className="space-y-4">
+
+            {/* Company details */}
+            <div className="grid grid-cols-2 gap-3">
+              {[
+                { key: "company_name",    label: language === "es" ? "Nombre de empresa" : "Company name",     type: "text",  placeholder: "Cinema Productions" },
+                { key: "company_phone",   label: language === "es" ? "Teléfono empresa"  : "Business phone",   type: "tel",   placeholder: "+502 1234-5678" },
+                { key: "company_address", label: language === "es" ? "Dirección"          : "Address",          type: "text",  placeholder: "Ciudad de Guatemala, GT" },
+                { key: "company_website", label: language === "es" ? "Sitio web"          : "Website",          type: "url",   placeholder: "https://cinema.gt" },
+                { key: "company_tax_id",  label: language === "es" ? "NIT / RFC / ID Fiscal" : "Tax ID",        type: "text",  placeholder: "12345678-9" },
+              ].map(({ key, label, type, placeholder }) => (
+                <div key={key} className={key === "company_address" ? "col-span-2" : ""}>
+                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-wide mb-1 block">{label}</label>
+                  <input type={type} value={notif[key] || ""}
+                    onChange={e => setNotif(prev => ({ ...prev, [key]: e.target.value }))}
+                    placeholder={placeholder} data-testid={`biz-${key}`}
+                    className="w-full bg-white/60 border border-slate-200/80 rounded-xl px-3 py-2.5 text-sm text-slate-800 placeholder-slate-300 focus:outline-none focus:ring-2 focus:ring-[var(--t-from)]/30" />
+                </div>
+              ))}
+            </div>
+
+            <div className="border-t border-white/40 pt-3 grid grid-cols-2 gap-3">
+              {/* Timezone */}
+              <div>
+                <label className="text-[10px] font-black text-slate-400 uppercase tracking-wide mb-1 block">
+                  {language === "es" ? "Zona horaria" : "Timezone"}
+                </label>
+                <select value={notif.timezone || "America/Guatemala"}
+                  onChange={e => setNotif(prev => ({ ...prev, timezone: e.target.value }))}
+                  data-testid="biz-timezone"
+                  className="w-full bg-white/60 border border-slate-200/80 rounded-xl px-3 py-2.5 text-sm text-slate-800 focus:outline-none focus:ring-2 focus:ring-[var(--t-from)]/30">
+                  {[
+                    { v: "America/Guatemala",  l: "Guatemala (UTC-6)" },
+                    { v: "America/Mexico_City",l: "México Centro (UTC-6)" },
+                    { v: "America/Bogota",     l: "Colombia (UTC-5)" },
+                    { v: "America/Lima",       l: "Perú (UTC-5)" },
+                    { v: "America/Santiago",   l: "Chile (UTC-4/-3)" },
+                    { v: "America/Buenos_Aires",l: "Argentina (UTC-3)" },
+                    { v: "America/New_York",   l: "New York (UTC-5/-4)" },
+                    { v: "Europe/Madrid",      l: "España (UTC+1/+2)" },
+                  ].map(tz => <option key={tz.v} value={tz.v}>{tz.l}</option>)}
+                </select>
+              </div>
+
+              {/* Default advance % */}
+              <div>
+                <label className="text-[10px] font-black text-slate-400 uppercase tracking-wide mb-1 block">
+                  {language === "es" ? "Anticipo por defecto (%)" : "Default Advance (%)"}
+                </label>
+                <div className="relative">
+                  <input type="number" min="0" max="100"
+                    value={notif.default_advance_pct ?? 30}
+                    onChange={e => setNotif(prev => ({ ...prev, default_advance_pct: parseInt(e.target.value) || 0 }))}
+                    data-testid="biz-advance-pct"
+                    className="w-full bg-white/60 border border-slate-200/80 rounded-xl px-3 py-2.5 text-sm text-slate-800 focus:outline-none focus:ring-2 focus:ring-[var(--t-from)]/30 pr-10" />
+                  <span className="absolute right-3 top-2.5 text-slate-400 text-sm font-bold">%</span>
+                </div>
+              </div>
+            </div>
+
+            {/* Business hours */}
+            <div>
+              <p className="text-[10px] font-black text-slate-400 uppercase tracking-wide mb-2">
+                {language === "es" ? "Horario de atención" : "Business Hours"}
+              </p>
+              <div className="flex items-center gap-3">
+                <input type="time" value={notif.business_hours_start || "08:00"}
+                  onChange={e => setNotif(prev => ({ ...prev, business_hours_start: e.target.value }))}
+                  data-testid="biz-hours-start"
+                  className="flex-1 bg-white/60 border border-slate-200/80 rounded-xl px-3 py-2.5 text-sm text-slate-800 focus:outline-none focus:ring-2 focus:ring-[var(--t-from)]/30" />
+                <span className="text-slate-400 font-bold text-sm">→</span>
+                <input type="time" value={notif.business_hours_end || "22:00"}
+                  onChange={e => setNotif(prev => ({ ...prev, business_hours_end: e.target.value }))}
+                  data-testid="biz-hours-end"
+                  className="flex-1 bg-white/60 border border-slate-200/80 rounded-xl px-3 py-2.5 text-sm text-slate-800 focus:outline-none focus:ring-2 focus:ring-[var(--t-from)]/30" />
+              </div>
+            </div>
+
+            {/* Backup & cleanup settings */}
+            <div className="border-t border-white/40 pt-3 grid grid-cols-2 gap-3">
+              <div>
+                <label className="text-[10px] font-black text-slate-400 uppercase tracking-wide mb-1 block">
+                  {language === "es" ? "Respaldos a conservar" : "Backups to keep"}
+                </label>
+                <select value={notif.backup_retention ?? 10}
+                  onChange={e => setNotif(prev => ({ ...prev, backup_retention: parseInt(e.target.value) }))}
+                  data-testid="biz-backup-retention"
+                  className="w-full bg-white/60 border border-slate-200/80 rounded-xl px-3 py-2.5 text-sm text-slate-800 focus:outline-none focus:ring-2 focus:ring-[var(--t-from)]/30">
+                  {[5, 10, 20, 50, 100].map(n => <option key={n} value={n}>{n} {language === "es" ? "respaldos" : "backups"}</option>)}
+                  <option value={9999}>{language === "es" ? "Ilimitado" : "Unlimited"}</option>
+                </select>
+              </div>
+              <div>
+                <label className="text-[10px] font-black text-slate-400 uppercase tracking-wide mb-1 block">
+                  {language === "es" ? "Auto-limpiar canceladas (meses)" : "Auto-clean cancelled (months)"}
+                </label>
+                <select value={notif.auto_cleanup_months || ""}
+                  onChange={e => setNotif(prev => ({ ...prev, auto_cleanup_months: e.target.value ? parseInt(e.target.value) : null }))}
+                  data-testid="biz-auto-cleanup"
+                  className="w-full bg-white/60 border border-slate-200/80 rounded-xl px-3 py-2.5 text-sm text-slate-800 focus:outline-none focus:ring-2 focus:ring-[var(--t-from)]/30">
+                  <option value="">{language === "es" ? "Desactivado" : "Disabled"}</option>
+                  {[1, 3, 6, 12].map(m => <option key={m} value={m}>{m} {language === "es" ? "mes(es)" : "month(s)"}</option>)}
+                </select>
+              </div>
+            </div>
+
+            <motion.button whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}
+              onClick={handleSaveNotif} disabled={notifLoading} data-testid="biz-save-btn"
+              className="w-full flex items-center justify-center gap-2 py-3 rounded-2xl btn-primary text-white text-sm font-bold disabled:opacity-60">
+              {notifLoading ? <Loader2 size={14} className="animate-spin" /> : <CheckCircle size={14} />}
+              {language === "es" ? "Guardar configuración del negocio" : "Save business configuration"}
+            </motion.button>
+          </div>
+        </Section>
 
         {/* Desktop App */}
         <Section icon={Monitor} title={s.desktopTitle} desc={s.desktopDesc}
