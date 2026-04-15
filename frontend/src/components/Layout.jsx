@@ -2,11 +2,12 @@ import { NavLink } from "react-router-dom";
 import { LayoutDashboard, CalendarDays, List, Menu, X, SlidersHorizontal, Users } from "lucide-react";
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { useSettings } from "@/context/SettingsContext";
+import { useSettings, PRESETS } from "@/context/SettingsContext";
 
 export default function Layout({ children }) {
   const [mobileOpen, setMobileOpen] = useState(false);
-  const { tr } = useSettings();
+  const { tr, preset } = useSettings();
+  const presetLabel = PRESETS.find(p => p.id === preset)?.name || "Glass Aurora";
 
   const navItems = [
     { path: "/dashboard",     label: tr.nav.dashboard,     icon: LayoutDashboard },
@@ -61,7 +62,7 @@ export default function Layout({ children }) {
         </nav>
 
         <div className="px-6 py-4 border-t border-white/40">
-          <p className="text-[10px] text-slate-400 font-medium">v1.0 · Liquid Glass</p>
+          <p className="text-[10px] text-slate-400 font-medium">v1.0 · {presetLabel}</p>
         </div>
       </aside>
 

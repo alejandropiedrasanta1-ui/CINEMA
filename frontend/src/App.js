@@ -1,7 +1,7 @@
 import "@/App.css";
 import { BrowserRouter, Routes, Route, Navigate, useLocation } from "react-router-dom";
-import { AnimatePresence, motion } from "framer-motion";
-import { SettingsProvider } from "@/context/SettingsContext";
+import { AnimatePresence, motion, MotionConfig } from "framer-motion";
+import { SettingsProvider, useSettings } from "@/context/SettingsContext";
 import Layout from "@/components/Layout";
 import Dashboard from "@/pages/Dashboard";
 import Reservations from "@/pages/Reservations";
@@ -38,19 +38,20 @@ function AnimatedRoutes() {
   );
 }
 
-function App() {
+// Inner component — has access to SettingsContext
+function AppInner() {
+  const { animations } = useSettings();
   const { start } = useNotifications();
 
   useEffect(() => {
-    // Auto-start notifications if permission already granted
-    if ('Notification' in window && Notification.permission === 'granted') {
-      const saved = localStorage.getItem('cp_notif_enabled');
-      if (saved !== 'false') start(true);
+    if ("Notification" in window && Notification.permission === "granted") {
+      const saved = localStorage.getItem("cp_notif_enabled");
+      if (saved !== "false") start(true);
     }
   }, [start]);
 
   return (
-    <SettingsProvider>
+    <MotionConfig reducedMotion={animations ? "never" : "always"}>
       <div className="App">
         <div className="mesh-bg" aria-hidden="true">
           <div className="blob blob-1" />
@@ -65,6 +66,14 @@ function App() {
         </BrowserRouter>
         <Toaster />
       </div>
+    </MotionConfig>
+  );
+}
+
+function App() {
+  return (
+    <SettingsProvider>
+      <AppInner />
     </SettingsProvider>
   );
 }

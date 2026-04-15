@@ -9,6 +9,27 @@ export const THEMES = {
   slate:    { id: "slate",    name: "Pizarra",   from: "#334155", to: "#1e293b", shadow: "rgba(51,65,85,0.22)",    blobs: ["#cbd5e1","#e2e8f0","#94a3b8","#f1f5f9"] },
 };
 
+export const PRESETS = [
+  {
+    id: "aurora",
+    name: "Glass Aurora",
+    desc: "Glassmorphismo con blobs animados",
+    descEn: "Glassmorphism with animated blobs",
+  },
+  {
+    id: "crystal",
+    name: "Crystal",
+    desc: "Nítido, opaco y profesional",
+    descEn: "Sharp, opaque and professional",
+  },
+  {
+    id: "minimal",
+    name: "Minimal",
+    desc: "Limpio y sin distracciones",
+    descEn: "Clean and distraction-free",
+  },
+];
+
 export const CURRENCIES = [
   { code: "GTQ", symbol: "Q",  name: "Quetzal Guatemalteco", locale: "es-GT" },
   { code: "MXN", symbol: "$",  name: "Peso Mexicano",        locale: "es-MX" },
@@ -192,12 +213,38 @@ export function SettingsProvider({ children }) {
   const [language, setLanguage] = useState(() => localStorage.getItem("lang") || "es");
   const [currency, setCurrency] = useState(() => localStorage.getItem("currency") || "GTQ");
   const [theme, setTheme] = useState(() => localStorage.getItem("theme") || "indigo");
+  const [preset, setPreset] = useState(() => localStorage.getItem("preset") || "aurora");
+  const [animations, setAnimations] = useState(() => (localStorage.getItem("animations") ?? "true") !== "false");
+  const [radius, setRadius] = useState(() => localStorage.getItem("radius") || "rounded");
 
-  useEffect(() => { applyThemeVars(theme); }, []);
+  useEffect(() => {
+    applyThemeVars(theme);
+    document.documentElement.dataset.preset = preset;
+    document.documentElement.dataset.animations = String(animations);
+    document.documentElement.dataset.radius = radius;
+  }, []);
 
   const changeLanguage = (lang) => { setLanguage(lang); localStorage.setItem("lang", lang); };
   const changeCurrency = (cur) => { setCurrency(cur); localStorage.setItem("currency", cur); };
   const changeTheme = (t) => { setTheme(t); localStorage.setItem("theme", t); applyThemeVars(t); };
+
+  const changePreset = (p) => {
+    setPreset(p);
+    localStorage.setItem("preset", p);
+    document.documentElement.dataset.preset = p;
+  };
+
+  const changeAnimations = (val) => {
+    setAnimations(val);
+    localStorage.setItem("animations", String(val));
+    document.documentElement.dataset.animations = String(val);
+  };
+
+  const changeRadius = (r) => {
+    setRadius(r);
+    localStorage.setItem("radius", r);
+    document.documentElement.dataset.radius = r;
+  };
 
   const tr = T[language] || T.es;
 
@@ -207,7 +254,12 @@ export function SettingsProvider({ children }) {
   }, [currency]);
 
   return (
-    <SettingsContext.Provider value={{ language, currency, theme, tr, formatCurrency, changeLanguage, changeCurrency, changeTheme }}>
+    <SettingsContext.Provider value={{
+      language, currency, theme, tr, formatCurrency,
+      changeLanguage, changeCurrency, changeTheme,
+      preset, animations, radius,
+      changePreset, changeAnimations, changeRadius,
+    }}>
       {children}
     </SettingsContext.Provider>
   );

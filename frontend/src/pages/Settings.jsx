@@ -4,9 +4,9 @@ import {
   Download, Globe, DollarSign, Palette, FileText,
   Bell, Database, CheckCircle, XCircle, RefreshCw,
   Wifi, WifiOff, MessageCircle, Mail, Loader2, Monitor,
-  Package, AlertCircle
+  Package, AlertCircle, Sparkles, Zap, Layers
 } from "lucide-react";
-import { useSettings, THEMES, CURRENCIES } from "@/context/SettingsContext";
+import { useSettings, THEMES, CURRENCIES, PRESETS } from "@/context/SettingsContext";
 import { useToast } from "@/hooks/use-toast";
 import { api, getAppSettings, updateAppSettings, getDbStats, testDbConnection, switchDatabase, resetDatabase, sendTestReminder } from "@/lib/api";
 
@@ -56,7 +56,8 @@ function buildWhatsappLink(phone, events) {
 }
 
 export default function Settings() {
-  const { language, currency, theme, tr, changeLanguage, changeCurrency, changeTheme } = useSettings();
+  const { language, currency, theme, tr, changeLanguage, changeCurrency, changeTheme,
+          preset, animations, radius, changePreset, changeAnimations, changeRadius } = useSettings();
   const { toast } = useToast();
   const s = tr.settings;
 
@@ -280,22 +281,241 @@ export default function Settings() {
           </div>
         </Section>
 
-        {/* Colors */}
-        <Section icon={Palette} title={s.colorsTitle} desc={s.colorsDesc}>
-          <div className="grid grid-cols-6 gap-3">
-            {Object.values(THEMES).map(t => (
-              <motion.button key={t.id} whileHover={{ scale: 1.12, y: -2 }} whileTap={{ scale: 0.92 }}
-                onClick={() => changeTheme(t.id)} data-testid={`theme-${t.id}`}
-                className="flex flex-col items-center gap-2" title={t.name}>
-                <div className="w-11 h-11 rounded-full transition-all duration-300"
+        {/* ── APARIENCIA (Colors + Presets + Animations + Radius) ── */}
+        <Section icon={Palette} title={language === "es" ? "Apariencia" : "Appearance"} desc={language === "es" ? "Personaliza colores, diseño y efectos visuales" : "Customize colors, design and visual effects"}>
+          <div className="space-y-7">
+
+            {/* 1 ── COLOR ACCENT ───────────────────────────────── */}
+            <div>
+              <p className="text-[11px] font-black text-slate-400 uppercase tracking-widest mb-3">
+                {language === "es" ? "Color de Acento" : "Accent Color"}
+              </p>
+              <div className="grid grid-cols-6 gap-3">
+                {Object.values(THEMES).map(t => (
+                  <motion.button key={t.id} whileHover={{ scale: 1.14, y: -2 }} whileTap={{ scale: 0.9 }}
+                    onClick={() => changeTheme(t.id)} data-testid={`theme-${t.id}`}
+                    className="flex flex-col items-center gap-2" title={t.name}>
+                    <div className="w-11 h-11 rounded-full transition-all duration-300"
+                      style={{
+                        background: `linear-gradient(135deg, ${t.from}, ${t.to})`,
+                        boxShadow: theme === t.id
+                          ? `0 0 0 3px white, 0 0 0 5px ${t.from}, 0 8px 20px ${t.shadow}`
+                          : `0 4px 12px ${t.shadow}`,
+                        transform: theme === t.id ? "scale(1.15)" : "scale(1)",
+                      }} />
+                    <span className="text-[10px] font-bold text-slate-500">{t.name}</span>
+                  </motion.button>
+                ))}
+              </div>
+            </div>
+
+            <div className="border-t border-white/40" />
+
+            {/* 2 ── DESIGN PRESET ──────────────────────────────── */}
+            <div>
+              <p className="text-[11px] font-black text-slate-400 uppercase tracking-widest mb-3">
+                {language === "es" ? "Diseño de la Aplicación" : "App Design"}
+              </p>
+              <div className="grid grid-cols-3 gap-3">
+
+                {/* AURORA */}
+                <motion.button
+                  whileHover={{ y: -4, scale: 1.02 }}
+                  whileTap={{ scale: 0.97 }}
+                  onClick={() => changePreset("aurora")}
+                  data-testid="preset-aurora"
+                  className="relative flex flex-col rounded-2xl overflow-hidden text-left transition-all"
                   style={{
-                    background: `linear-gradient(135deg, ${t.from}, ${t.to})`,
-                    boxShadow: theme === t.id ? `0 0 0 3px white, 0 0 0 5px ${t.from}, 0 8px 20px ${t.shadow}` : `0 4px 12px ${t.shadow}`,
-                    transform: theme === t.id ? "scale(1.15)" : "scale(1)",
-                  }} />
-                <span className="text-[10px] font-bold text-slate-500">{t.name}</span>
-              </motion.button>
-            ))}
+                    border: preset === "aurora" ? "2px solid var(--t-from)" : "2px solid rgba(226,232,240,0.8)",
+                    boxShadow: preset === "aurora" ? `0 0 0 3px var(--t-from)22, 0 8px 24px rgba(0,0,0,0.08)` : "0 2px 8px rgba(0,0,0,0.05)",
+                  }}
+                >
+                  {/* Mini preview */}
+                  <div className="relative h-24 w-full overflow-hidden"
+                    style={{ background: "linear-gradient(135deg,#eff0ff 0%,#fce7f3 50%,#e0f2fe 100%)" }}>
+                    <div className="absolute top-1 left-2" style={{ width:28,height:28,borderRadius:"50%",background:"rgba(167,139,250,0.55)",filter:"blur(9px)" }} />
+                    <div className="absolute bottom-2 right-3" style={{ width:22,height:22,borderRadius:"50%",background:"rgba(249,168,212,0.55)",filter:"blur(7px)" }} />
+                    <div className="absolute top-3 right-7" style={{ width:16,height:16,borderRadius:"50%",background:"rgba(125,211,252,0.5)",filter:"blur(6px)" }} />
+                    {/* Glass card */}
+                    <div className="absolute" style={{ inset:"10px 12px 8px 12px",borderRadius:10,background:"rgba(255,255,255,0.4)",backdropFilter:"blur(10px)",border:"1px solid rgba(255,255,255,0.7)" }}>
+                      <div style={{ height:4,width:"65%",background:"rgba(99,102,241,0.35)",borderRadius:4,margin:"8px 8px 5px 8px" }} />
+                      <div style={{ height:3,width:"45%",background:"rgba(99,102,241,0.18)",borderRadius:4,margin:"0 8px 7px 8px" }} />
+                      <div style={{ display:"flex",gap:4,margin:"0 8px" }}>
+                        <div style={{ height:13,flex:1,background:"rgba(167,139,250,0.22)",borderRadius:6 }} />
+                        <div style={{ height:13,flex:1,background:"rgba(249,168,212,0.22)",borderRadius:6 }} />
+                      </div>
+                    </div>
+                    {preset === "aurora" && (
+                      <div className="absolute top-1.5 right-1.5 w-5 h-5 rounded-full btn-primary flex items-center justify-center shadow-sm">
+                        <CheckCircle size={10} className="text-white" />
+                      </div>
+                    )}
+                  </div>
+                  <div className="p-2.5 bg-white/70">
+                    <p className="text-[11px] font-black text-slate-800">Glass Aurora</p>
+                    <p className="text-[9px] text-slate-400 font-medium mt-0.5">
+                      {language === "es" ? "Glassmorphismo + blobs" : "Glassmorphism + blobs"}
+                    </p>
+                  </div>
+                </motion.button>
+
+                {/* CRYSTAL */}
+                <motion.button
+                  whileHover={{ y: -4, scale: 1.02 }}
+                  whileTap={{ scale: 0.97 }}
+                  onClick={() => changePreset("crystal")}
+                  data-testid="preset-crystal"
+                  className="relative flex flex-col rounded-2xl overflow-hidden text-left transition-all"
+                  style={{
+                    border: preset === "crystal" ? "2px solid var(--t-from)" : "2px solid rgba(226,232,240,0.8)",
+                    boxShadow: preset === "crystal" ? `0 0 0 3px var(--t-from)22, 0 8px 24px rgba(0,0,0,0.08)` : "0 2px 8px rgba(0,0,0,0.05)",
+                  }}
+                >
+                  <div className="relative h-24 w-full overflow-hidden" style={{ background:"#eef2f7" }}>
+                    <div className="absolute -top-2 -left-2" style={{ width:50,height:50,borderRadius:"50%",background:"rgba(167,139,250,0.07)",filter:"blur(14px)" }} />
+                    {/* Opaque glass card */}
+                    <div className="absolute" style={{ inset:"10px 12px 8px 12px",borderRadius:10,background:"rgba(255,255,255,0.9)",backdropFilter:"blur(6px)",border:"1px solid rgba(215,222,232,1)",boxShadow:"0 4px 12px rgba(0,0,0,0.08)" }}>
+                      <div style={{ height:4,width:"65%",background:"#e2e8f0",borderRadius:4,margin:"8px 8px 5px 8px" }} />
+                      <div style={{ height:3,width:"45%",background:"#f1f5f9",borderRadius:4,margin:"0 8px 7px 8px" }} />
+                      <div style={{ display:"flex",gap:4,margin:"0 8px" }}>
+                        <div style={{ height:13,flex:1,background:"#f8fafc",borderRadius:6,border:"1px solid #e2e8f0" }} />
+                        <div style={{ height:13,flex:1,background:"#f8fafc",borderRadius:6,border:"1px solid #e2e8f0" }} />
+                      </div>
+                    </div>
+                    {preset === "crystal" && (
+                      <div className="absolute top-1.5 right-1.5 w-5 h-5 rounded-full btn-primary flex items-center justify-center shadow-sm">
+                        <CheckCircle size={10} className="text-white" />
+                      </div>
+                    )}
+                  </div>
+                  <div className="p-2.5 bg-white/70">
+                    <p className="text-[11px] font-black text-slate-800">Crystal</p>
+                    <p className="text-[9px] text-slate-400 font-medium mt-0.5">
+                      {language === "es" ? "Cristal nítido y opaco" : "Sharp opaque glass"}
+                    </p>
+                  </div>
+                </motion.button>
+
+                {/* MINIMAL */}
+                <motion.button
+                  whileHover={{ y: -4, scale: 1.02 }}
+                  whileTap={{ scale: 0.97 }}
+                  onClick={() => changePreset("minimal")}
+                  data-testid="preset-minimal"
+                  className="relative flex flex-col rounded-2xl overflow-hidden text-left transition-all"
+                  style={{
+                    border: preset === "minimal" ? "2px solid var(--t-from)" : "2px solid rgba(226,232,240,0.8)",
+                    boxShadow: preset === "minimal" ? `0 0 0 3px var(--t-from)22, 0 8px 24px rgba(0,0,0,0.08)` : "0 2px 8px rgba(0,0,0,0.05)",
+                  }}
+                >
+                  <div className="relative h-24 w-full overflow-hidden" style={{ background:"#f1f5f9" }}>
+                    {/* Solid white card */}
+                    <div className="absolute" style={{ inset:"10px 12px 8px 12px",borderRadius:6,background:"#ffffff",border:"1px solid #e2e8f0",boxShadow:"0 2px 8px rgba(0,0,0,0.07)" }}>
+                      <div style={{ height:3,width:"100%",background:"linear-gradient(90deg,var(--t-from),var(--t-to))",borderRadius:"6px 6px 0 0" }} />
+                      <div style={{ height:3,width:"65%",background:"#cbd5e1",borderRadius:4,margin:"6px 8px 4px 8px" }} />
+                      <div style={{ height:3,width:"45%",background:"#e2e8f0",borderRadius:4,margin:"0 8px 7px 8px" }} />
+                      <div style={{ display:"flex",gap:4,margin:"0 8px" }}>
+                        <div style={{ height:13,flex:1,background:"#f8fafc",borderRadius:3,border:"1px solid #e2e8f0" }} />
+                        <div style={{ height:13,flex:1,background:"#f8fafc",borderRadius:3,border:"1px solid #e2e8f0" }} />
+                      </div>
+                    </div>
+                    {preset === "minimal" && (
+                      <div className="absolute top-1.5 right-1.5 w-5 h-5 rounded-full btn-primary flex items-center justify-center shadow-sm">
+                        <CheckCircle size={10} className="text-white" />
+                      </div>
+                    )}
+                  </div>
+                  <div className="p-2.5 bg-white/70">
+                    <p className="text-[11px] font-black text-slate-800">Minimal</p>
+                    <p className="text-[9px] text-slate-400 font-medium mt-0.5">
+                      {language === "es" ? "Limpio, sin distracciones" : "Clean, no distractions"}
+                    </p>
+                  </div>
+                </motion.button>
+              </div>
+            </div>
+
+            <div className="border-t border-white/40" />
+
+            {/* 3 ── ANIMATIONS TOGGLE ──────────────────────────── */}
+            <div>
+              <p className="text-[11px] font-black text-slate-400 uppercase tracking-widest mb-3">
+                {language === "es" ? "Animaciones" : "Animations"}
+              </p>
+              <motion.div
+                whileHover={{ scale: 1.005 }}
+                className="flex items-center justify-between bg-white/50 rounded-2xl px-5 py-3.5 cursor-pointer"
+                onClick={() => changeAnimations(!animations)}
+                data-testid="animations-toggle-row"
+              >
+                <div className="flex items-center gap-3">
+                  <div className="w-9 h-9 rounded-xl flex items-center justify-center"
+                    style={{ background: animations ? "var(--t-from)18" : "#f1f5f9" }}>
+                    <Zap size={15} style={{ color: animations ? "var(--t-from)" : "#94a3b8" }} />
+                  </div>
+                  <div>
+                    <p className="text-sm font-semibold text-slate-700">
+                      {language === "es" ? "Efectos y transiciones" : "Effects & transitions"}
+                    </p>
+                    <p className="text-xs text-slate-400 mt-0.5">
+                      {language === "es"
+                        ? animations ? "Activadas — animaciones fluidas en toda la app" : "Desactivadas — modo rápido y minimalista"
+                        : animations ? "Enabled — smooth animations throughout" : "Disabled — fast minimal mode"}
+                    </p>
+                  </div>
+                </div>
+                <button
+                  data-testid="animations-toggle"
+                  className={`w-12 h-6 rounded-full transition-all duration-300 relative flex-shrink-0 ${animations ? "btn-primary" : "bg-slate-200"}`}
+                  onClick={(e) => { e.stopPropagation(); changeAnimations(!animations); }}
+                >
+                  <span className={`absolute top-0.5 w-5 h-5 bg-white rounded-full shadow-sm transition-all duration-300 ${animations ? "left-[26px]" : "left-0.5"}`} />
+                </button>
+              </motion.div>
+            </div>
+
+            <div className="border-t border-white/40" />
+
+            {/* 4 ── BORDER RADIUS ──────────────────────────────── */}
+            <div>
+              <p className="text-[11px] font-black text-slate-400 uppercase tracking-widest mb-3">
+                {language === "es" ? "Estilo de Bordes" : "Border Style"}
+              </p>
+              <div className="grid grid-cols-3 gap-3">
+                {[
+                  { id: "rounded", label: language === "es" ? "Suaves" : "Soft", hint: language === "es" ? "Redondeados" : "Rounded", rx: 14 },
+                  { id: "medium",  label: language === "es" ? "Medios" : "Medium", hint: language === "es" ? "Intermedios" : "Balanced", rx: 6 },
+                  { id: "sharp",   label: language === "es" ? "Rectos" : "Sharp", hint: language === "es" ? "Angulares" : "Angular", rx: 2 },
+                ].map(r => (
+                  <motion.button
+                    key={r.id}
+                    whileHover={{ y: -2, scale: 1.03 }}
+                    whileTap={{ scale: 0.97 }}
+                    onClick={() => changeRadius(r.id)}
+                    data-testid={`radius-${r.id}`}
+                    className="flex flex-col items-center gap-2.5 py-4 px-3 rounded-2xl transition-all"
+                    style={{
+                      background: radius === r.id ? "var(--t-from)12" : "rgba(255,255,255,0.5)",
+                      border: radius === r.id ? "2px solid var(--t-from)" : "2px solid rgba(226,232,240,0.7)",
+                    }}
+                  >
+                    <div
+                      className="w-10 h-8 border-2 transition-all"
+                      style={{
+                        borderRadius: r.rx,
+                        borderColor: radius === r.id ? "var(--t-from)" : "#cbd5e1",
+                        background: radius === r.id ? "var(--t-from)18" : "#f8fafc",
+                      }}
+                    />
+                    <div className="text-center">
+                      <p className="text-xs font-black" style={{ color: radius === r.id ? "var(--t-from)" : "#64748b" }}>{r.label}</p>
+                      <p className="text-[9px] font-medium text-slate-400 mt-0.5">{r.hint}</p>
+                    </div>
+                  </motion.button>
+                ))}
+              </div>
+            </div>
+
           </div>
         </Section>
 
