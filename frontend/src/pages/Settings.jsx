@@ -814,7 +814,7 @@ export default function Settings() {
                           style={{ background: cfg.fg + "1c" }}>
                           <cfg.icon size={15} style={{ color: cfg.fg }} />
                         </div>
-                        <p className="text-sm font-black text-slate-800">{activeEventType}</p>
+                        <p className="text-sm font-black text-slate-800">{typeNameEdit || activeEventType}</p>
                       </div>
                       {eventConfigs[activeEventType] && (
                         <motion.button

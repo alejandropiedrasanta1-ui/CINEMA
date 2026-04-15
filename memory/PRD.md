@@ -150,7 +150,14 @@ Sistema de gestión de reservas para eventos (bodas, quinceañeras, fiestas soci
 - Los cambios se persisten en localStorage y se aplican en Dashboard, Calendario y Reservaciones
 - Botón "Restaurar" por tipo para regresar a defaults
 
-### Logo y Branding personalizado (Abril 2026) ✅
+### Diseños PDF + Borrar Datos + Nombres de Tipos (Abril 2026) ✅
+- **Base de Datos**: botón "Borrar todos los datos" con confirmación inline (elimina reservas + socios, conserva ajustes)
+- **3 diseños PDF** (Oscuro/Claro/Elegante) seleccionables en Apariencia → persisten en localStorage → se aplican a PDF individual y reporte general
+- **Nombres editables** de tipos de evento: input en el editor inline, actualización en tiempo real, persiste en localStorage
+- `getEventTypeName(type)` usado en ReservationForm dropdown, lista de Reservaciones y filtro
+- `generatePDF.js` refactorizado con sistema de temas (PDF_THEMES) para ambas funciones
+
+
 - Sección "LOGO Y BRANDING" en Ajustes → Apariencia
 - Upload logo web (PNG/JPG, compresión automática via canvas) → aparece en sidebar y header móvil
 - Slider de tamaño 24-80px para el logo en sidebar
