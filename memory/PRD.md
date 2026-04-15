@@ -221,7 +221,11 @@ Sistema de gestión de reservas para eventos (bodas, quinceañeras, fiestas soci
 - Fix bug: `startNotifications` → `startPolling` en Settings.jsx
 - Fix: `getEventTypeName` importado correctamente en Settings.jsx
 
-### Sistema de Respaldos de Base de Datos (Abril 2026) ✅
+### Nueva página "Base de Datos" en sidebar (Abril 2026) ✅
+- Ruta `/base-de-datos` creada como página independiente
+- Ítem "Base de Datos" en sidebar debajo de "Socios"
+- Contenido movido de Settings: sección Base de Datos + sección Exportar Datos
+- Settings muestra card de enlace a la nueva página
 - **Descargar a mi PC**: GET /api/backup/download — JSON completo (reservas + socios + settings)
 - **Guardar en servidor**: POST /api/backup/create — guarda en /app/backend/backups/, máx 15 archivos
 - **Historial en servidor**: GET /api/backup/history — lista con fecha/tamaño, botones descarga/eliminar

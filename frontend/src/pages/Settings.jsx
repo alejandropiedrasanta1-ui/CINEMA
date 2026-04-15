@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { motion } from "framer-motion";
+import { Link } from "react-router-dom";
 import {
   Download, Globe, DollarSign, Palette, FileText,
   Bell, BellRing, Database, CheckCircle, XCircle, RefreshCw,
@@ -135,7 +135,6 @@ export default function Settings() {
       }
     }).catch(() => {});
     loadDbStats();
-    loadBackupHistory();
   }, []);
 
   // Build status polling
@@ -1562,227 +1561,24 @@ export default function Settings() {
           </div>
         </Section>
 
-        {/* Database */}
-        <Section icon={Database} title={s.dbTitle} desc={s.dbDesc}
-          badge={
-            dbStats ? (
-              <span className={`flex items-center gap-1 text-[10px] font-black px-2.5 py-1 rounded-full ${dbStats.is_custom ? "bg-amber-100 text-amber-700" : "bg-emerald-100 text-emerald-700"}`}>
-                {dbStats.is_custom ? <WifiOff size={10} /> : <Wifi size={10} />}
-                {dbStats.is_custom ? s.dbCustomLabel : s.dbDefaultLabel}
-              </span>
-            ) : null
-          }>
-          <div className="space-y-5">
-
-            {/* ── Stats ── */}
-            {dbLoading ? (
-              <div className="flex justify-center py-6"><Loader2 size={22} className="animate-spin text-slate-400" /></div>
-            ) : dbStats ? (
-              <>
-                <div className="grid grid-cols-3 gap-2">
-                  <StatCard label={s.dbCollections} value={dbStats.collections} />
-                  <StatCard label={s.dbObjects} value={dbStats.objects?.toLocaleString()} />
-                  <StatCard label={s.dbTotal} value={dbStats.total_size} />
-                </div>
-                <div className="bg-white/50 rounded-2xl px-4 py-3 flex items-center justify-between gap-3">
-                  <div className="flex-1 min-w-0">
-                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">{s.dbCurrentConn}</p>
-                    <p className="text-xs font-mono text-slate-600 break-all truncate">{dbStats.current_url}</p>
-                  </div>
-                  <button onClick={loadDbStats} data-testid="db-refresh-btn" className="text-slate-400 hover:text-slate-600 transition-colors shrink-0">
-                    <RefreshCw size={13} />
-                  </button>
-                </div>
-              </>
-            ) : (
-              <p className="text-xs text-slate-400 text-center py-4">No se pudieron cargar las estadísticas</p>
-            )}
-
-            {/* ── RESPALDOS ── */}
-            <div className="space-y-3">
-              <p className="text-[11px] font-black text-slate-500 uppercase tracking-widest">Respaldos de base de datos</p>
-
-              {/* Quick actions */}
-              <div className="grid grid-cols-2 gap-2">
-                <motion.button whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.97 }}
-                  onClick={handleDownloadBackup}
-                  data-testid="backup-download-btn"
-                  className="flex items-center justify-center gap-2 py-3 rounded-2xl btn-primary text-white text-xs font-bold">
-                  <Download size={13} />
-                  Descargar a mi PC
-                </motion.button>
-                <motion.button whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.97 }}
-                  onClick={handleCreateServerBackup} disabled={backupCreating}
-                  data-testid="backup-server-btn"
-                  className="flex items-center justify-center gap-2 py-3 rounded-2xl glass border-white/60 text-slate-700 text-xs font-bold hover:bg-white/60 disabled:opacity-60">
-                  {backupCreating ? <Loader2 size={13} className="animate-spin" /> : <Save size={13} />}
-                  Guardar en servidor
-                </motion.button>
-              </div>
-
-              {/* Restore */}
-              <div className="bg-amber-50/60 rounded-2xl p-3 border border-amber-200/40">
-                <div className="flex items-center gap-2 mb-2">
-                  <Upload size={13} className="text-amber-600" />
-                  <p className="text-xs font-black text-amber-800">Restaurar desde archivo</p>
-                  <span className="text-[10px] text-amber-500 ml-auto">Auto-respaldo antes de restaurar</span>
-                </div>
-                <div className="flex gap-2">
-                  <input ref={restoreInputRef} type="file" accept=".json"
-                    onChange={handleRestoreFile} className="hidden" id="restore-file-input"
-                    data-testid="restore-file-input" />
-                  <label htmlFor="restore-file-input"
-                    className={`flex-1 flex items-center justify-center gap-2 py-2 rounded-xl text-xs font-bold cursor-pointer transition-all ${restoreLoading ? "bg-amber-100 text-amber-400" : "bg-amber-100 hover:bg-amber-200 text-amber-700"}`}>
-                    {restoreLoading ? <Loader2 size={12} className="animate-spin" /> : <Upload size={12} />}
-                    {restoreLoading ? "Restaurando..." : "Seleccionar archivo .json"}
-                  </label>
-                </div>
-                {restoreResult && (
-                  <div className={`flex items-center gap-2 text-xs font-semibold mt-2 px-2 py-1 rounded-lg ${restoreResult.ok ? "bg-emerald-50 text-emerald-700" : "bg-red-50 text-red-600"}`}>
-                    {restoreResult.ok ? <CheckCircle size={12} /> : <XCircle size={12} />}
-                    {restoreResult.msg}
-                  </div>
-                )}
-              </div>
-
-              {/* Backup history */}
-              {backupHistory.length > 0 && (
-                <div className="space-y-1.5">
-                  <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">
-                    Historial — {backupHistory.length} respaldo(s) en servidor
-                  </p>
-                  <div className="space-y-1 max-h-48 overflow-y-auto">
-                    {backupHistory.map(b => (
-                      <div key={b.filename} className="flex items-center gap-2 bg-white/50 rounded-xl px-3 py-2">
-                        <div className={`w-5 h-5 rounded-lg flex items-center justify-center shrink-0 ${b.label === "auto" ? "bg-slate-100" : "bg-indigo-100"}`}>
-                          <Database size={10} className={b.label === "auto" ? "text-slate-400" : "text-indigo-500"} />
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <p className="text-[10px] font-bold text-slate-700 truncate">{b.filename}</p>
-                          <p className="text-[9px] text-slate-400">{b.size} · {new Date(b.created_at).toLocaleString("es-GT")}</p>
-                        </div>
-                        <a href={downloadBackupFileUrl(b.filename)} download
-                          data-testid={`backup-dl-${b.filename}`}
-                          className="w-6 h-6 rounded-lg bg-indigo-50 hover:bg-indigo-100 flex items-center justify-center transition-colors">
-                          <Download size={10} className="text-indigo-600" />
-                        </a>
-                        <button onClick={() => handleDeleteBackup(b.filename)}
-                          data-testid={`backup-del-${b.filename}`}
-                          className="w-6 h-6 rounded-lg bg-red-50 hover:bg-red-100 flex items-center justify-center transition-colors">
-                          <Trash2 size={10} className="text-red-400" />
-                        </button>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              {/* MongoDB Atlas guide */}
-              <details className="bg-blue-50/60 rounded-2xl border border-blue-100/60">
-                <summary className="flex items-center gap-2 px-4 py-3 cursor-pointer text-xs font-black text-blue-800 list-none">
-                  <Database size={13} className="text-blue-500" />
-                  Conectar base de datos en la nube (gratis) — MongoDB Atlas
-                  <ChevronDown size={12} className="text-blue-400 ml-auto" />
-                </summary>
-                <div className="px-4 pb-4 text-[10px] text-blue-700 space-y-1.5">
-                  <p className="font-black text-xs">3 pasos para tener tu BD en la nube gratis (512 MB):</p>
-                  <p>1. Ve a <a href="https://www.mongodb.com/cloud/atlas/register" target="_blank" rel="noreferrer" className="underline font-bold">mongodb.com/cloud/atlas</a> → crea cuenta gratis</p>
-                  <p>2. Crea un cluster → "Free Tier (M0 Sandbox)" → elige la región más cercana</p>
-                  <p>3. Database Access → crea usuario/contraseña → Network Access → agrega 0.0.0.0/0</p>
-                  <p>4. Connect → "Connect your application" → copia la URI → pégala abajo en "Cambiar conexión"</p>
-                  <p className="bg-white/60 px-2 py-1 rounded font-mono">mongodb+srv://usuario:contraseña@cluster.mongodb.net/cinema</p>
-                  <p className="text-blue-500">Con esto tendrás una copia exacta de tus datos en la nube, accesible desde cualquier PC.</p>
-                </div>
-              </details>
-            </div>
-
-            {/* ── Cambiar conexión MongoDB ── */}
-            <div className="space-y-3 border-t border-slate-100 pt-4">
-              <p className="text-[11px] font-black text-slate-500 uppercase tracking-widest">Cambiar conexión MongoDB</p>
-              <input type="text" value={newDbUrl}
-                onChange={e => { setNewDbUrl(e.target.value); setDbTestResult(null); }}
-                placeholder="mongodb://usuario:contraseña@host:27017"
-                data-testid="db-url-input"
-                className="w-full bg-white/60 border border-white/80 rounded-xl px-4 py-2.5 text-sm font-mono text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-300" />
-              {dbTestResult && (
-                <div className={`flex items-center gap-2 text-xs font-semibold px-3 py-2 rounded-xl ${dbTestResult.ok ? "bg-emerald-50 text-emerald-700" : "bg-red-50 text-red-600"}`}>
-                  {dbTestResult.ok ? <CheckCircle size={14} /> : <XCircle size={14} />}
-                  {dbTestResult.msg}
-                </div>
-              )}
-              <div className="flex gap-2 flex-wrap">
-                <motion.button whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.97 }}
-                  onClick={handleDbTest} disabled={!newDbUrl.trim() || dbTesting}
-                  data-testid="db-test-btn"
-                  className="flex items-center gap-1.5 px-4 py-2.5 rounded-2xl glass border-white/60 text-slate-700 text-xs font-bold hover:bg-white/50 transition-all disabled:opacity-40">
-                  {dbTesting ? <Loader2 size={13} className="animate-spin" /> : <Wifi size={13} />}
-                  {s.dbTest}
-                </motion.button>
-                <motion.button whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.97 }}
-                  onClick={handleDbConnect} disabled={!newDbUrl.trim() || dbConnecting}
-                  data-testid="db-connect-btn"
-                  className="flex items-center gap-1.5 px-4 py-2.5 rounded-2xl btn-primary text-white text-xs font-bold disabled:opacity-40">
-                  {dbConnecting ? <Loader2 size={13} className="animate-spin" /> : <Database size={13} />}
-                  {s.dbConnect}
-                </motion.button>
-                {dbStats?.is_custom && (
-                  <motion.button whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.97 }}
-                    onClick={handleDbReset} disabled={dbResetting}
-                    data-testid="db-reset-btn"
-                    className="flex items-center gap-1.5 px-4 py-2.5 rounded-2xl bg-red-50 text-red-600 text-xs font-bold hover:bg-red-100 transition-all disabled:opacity-40">
-                    {dbResetting ? <Loader2 size={13} className="animate-spin" /> : <RefreshCw size={13} />}
-                    {s.dbReset}
-                  </motion.button>
-                )}
-              </div>
-            </div>
-
-            {/* ── BORRAR TODOS LOS DATOS ── */}
-            <div className="border-t border-red-100/60 pt-4">
-              {!showClearConfirm ? (
-                <motion.button whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.97 }}
-                  onClick={() => setShowClearConfirm(true)}
-                  data-testid="clear-all-data-btn"
-                  className="w-full flex items-center justify-center gap-2 py-3 rounded-2xl text-sm font-bold text-red-600 transition-all"
-                  style={{ background: "#fef2f2", border: "1.5px dashed #fca5a5" }}>
-                  <Trash2 size={14} />
-                  {language === "es" ? "Borrar todos los datos" : "Delete all data"}
-                </motion.button>
-              ) : (
-                <motion.div initial={{ opacity: 0, y: -6 }} animate={{ opacity: 1, y: 0 }}
-                  className="rounded-2xl overflow-hidden" style={{ border: "1.5px solid #fca5a5", background: "#fff5f5" }}>
-                  <div className="px-4 py-3 flex items-start gap-3">
-                    <AlertCircle size={16} className="text-red-500 mt-0.5 shrink-0" />
-                    <div>
-                      <p className="text-sm font-black text-red-700">
-                        {language === "es" ? "¿Borrar todos los datos?" : "Delete all data?"}
-                      </p>
-                      <p className="text-xs text-red-500 mt-1">
-                        Se eliminarán TODAS las reservas y socios. Un respaldo automático se creará primero.
-                      </p>
-                    </div>
-                  </div>
-                  <div className="flex gap-2 px-4 pb-4">
-                    <motion.button whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.97 }}
-                      onClick={handleClearAll} disabled={clearLoading}
-                      data-testid="clear-all-confirm-btn"
-                      className="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl text-xs font-bold text-white bg-red-500 hover:bg-red-600 transition-all disabled:opacity-60">
-                      {clearLoading ? <Loader2 size={12} className="animate-spin" /> : <Trash2 size={12} />}
-                      {language === "es" ? "Sí, borrar todo" : "Yes, delete all"}
-                    </motion.button>
-                    <motion.button whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.97 }}
-                      onClick={() => setShowClearConfirm(false)}
-                      data-testid="clear-all-cancel-btn"
-                      className="flex-1 py-2.5 rounded-xl text-xs font-bold text-slate-600 bg-white hover:bg-slate-50 transition-all">
-                      {language === "es" ? "Cancelar" : "Cancel"}
-                    </motion.button>
-                  </div>
-                </motion.div>
-              )}
-            </div>
-
+        {/* Database — moved to dedicated page */}
+        <Link to="/base-de-datos"
+          className="flex items-center gap-4 glass rounded-3xl p-5 hover:bg-white/40 transition-all group no-underline">
+          <div className="w-10 h-10 rounded-xl btn-primary flex items-center justify-center text-white shrink-0">
+            <Database size={18} />
           </div>
-        </Section>
+          <div className="flex-1 min-w-0">
+            <p className="text-sm font-black text-slate-900" style={{ fontFamily: "Cabinet Grotesk, sans-serif" }}>
+              {language === "es" ? "Base de Datos y Exportar" : "Database & Export"}
+            </p>
+            <p className="text-xs text-slate-400 font-medium mt-0.5">
+              {language === "es" ? "Respaldos, exportar CSV/JSON/PDF, conexión MongoDB" : "Backups, export CSV/JSON/PDF, MongoDB connection"}
+            </p>
+          </div>
+          <svg xmlns="http://www.w3.org/2000/svg" className="w-4 h-4 text-slate-400 group-hover:text-slate-600 transition-colors" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+          </svg>
+        </Link>
 
         {/* Desktop App */}
         <Section icon={Monitor} title={s.desktopTitle} desc={s.desktopDesc}
@@ -1918,61 +1714,6 @@ export default function Settings() {
           </div>
         </Section>
 
-        {/* Export */}
-        <Section icon={FileText} title={s.exportTitle} desc={s.exportDesc}>
-          <div className="space-y-3">
-
-            {/* CSV + JSON row */}
-            <div className="flex gap-3">
-              <motion.button whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.97 }}
-                onClick={() => handleExport("csv")} data-testid="export-csv-btn"
-                className="flex items-center gap-2.5 px-6 py-3 rounded-2xl btn-primary text-white text-sm font-bold flex-1 justify-center">
-                <Download size={15} /> {s.downloadCSV}
-              </motion.button>
-              <motion.button whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.97 }}
-                onClick={() => handleExport("json")} data-testid="export-json-btn"
-                className="flex items-center gap-2.5 px-6 py-3 rounded-2xl glass border-white/60 text-slate-700 text-sm font-bold flex-1 justify-center hover:bg-white/50 transition-all">
-                <Download size={15} /> {s.downloadJSON}
-              </motion.button>
-            </div>
-
-            {/* PDF Export — full-width visual report */}
-            <div className="rounded-2xl overflow-hidden" style={{ border: "1px solid rgba(220,38,38,0.2)", background: "rgba(254,242,242,0.5)" }}>
-              <div className="px-4 py-3 flex items-center gap-3">
-                <div className="w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0" style={{ background: "rgba(220,38,38,0.1)" }}>
-                  <FileText size={15} style={{ color: "#dc2626" }} />
-                </div>
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm font-bold text-slate-800">
-                    {language === "es" ? "Reporte Visual PDF" : "PDF Visual Report"}
-                  </p>
-                  <p className="text-xs text-slate-400">
-                    {language === "es"
-                      ? "Todas las reservas agrupadas por estado con detalles y montos"
-                      : "All reservations grouped by status with details and amounts"}
-                  </p>
-                </div>
-              </div>
-              <div className="px-4 pb-4">
-                <motion.button
-                  whileHover={{ scale: 1.02, boxShadow: "0 8px 24px rgba(220,38,38,0.28)" }}
-                  whileTap={{ scale: 0.97 }}
-                  onClick={handleExportPDF}
-                  disabled={pdfLoading}
-                  data-testid="export-pdf-btn"
-                  className="w-full flex items-center justify-center gap-2.5 py-3.5 rounded-xl text-sm font-bold text-white disabled:opacity-60 transition-all"
-                  style={{ background: "linear-gradient(135deg, #dc2626, #b91c1c)" }}
-                >
-                  {pdfLoading
-                    ? <><Loader2 size={15} className="animate-spin" /> {language === "es" ? "Generando PDF..." : "Generating PDF..."}</>
-                    : <><FileText size={15} /> {language === "es" ? "Exportar reporte PDF — todas las reservas" : "Export PDF report — all reservations"}</>
-                  }
-                </motion.button>
-              </div>
-            </div>
-
-          </div>
-        </Section>
 
       </motion.div>
     </div>

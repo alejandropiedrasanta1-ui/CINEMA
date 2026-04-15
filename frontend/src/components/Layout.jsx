@@ -1,5 +1,5 @@
 import { NavLink } from "react-router-dom";
-import { LayoutDashboard, CalendarDays, List, Menu, X, SlidersHorizontal, Users } from "lucide-react";
+import { LayoutDashboard, CalendarDays, List, Menu, X, SlidersHorizontal, Users, Database } from "lucide-react";
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useSettings, PRESETS } from "@/context/SettingsContext";
@@ -11,11 +11,12 @@ export default function Layout({ children }) {
   const sidebarLogoH = Math.min(Math.max(logoSize || 40, 24), 80);
 
   const navItems = [
-    { path: "/dashboard",     label: tr.nav.dashboard,     icon: LayoutDashboard },
-    { path: "/reservaciones", label: tr.nav.reservations,  icon: List },
-    { path: "/calendario",    label: tr.nav.calendar,      icon: CalendarDays },
-    { path: "/socios",        label: tr.nav.socios || "Socios", icon: Users },
-    { path: "/ajustes",       label: tr.nav.settings,      icon: SlidersHorizontal },
+    { path: "/dashboard",      label: tr.nav.dashboard,     icon: LayoutDashboard },
+    { path: "/reservaciones",  label: tr.nav.reservations,  icon: List },
+    { path: "/calendario",     label: tr.nav.calendar,      icon: CalendarDays },
+    { path: "/socios",         label: tr.nav.socios || "Socios", icon: Users },
+    { path: "/base-de-datos",  label: "Base de Datos",      icon: Database },
+    { path: "/ajustes",        label: tr.nav.settings,      icon: SlidersHorizontal },
   ];
 
   return (

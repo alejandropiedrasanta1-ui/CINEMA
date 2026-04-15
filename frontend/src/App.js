@@ -9,6 +9,7 @@ import ReservationDetail from "@/pages/ReservationDetail";
 import CalendarView from "@/pages/CalendarView";
 import Settings from "@/pages/Settings";
 import Socios from "@/pages/Socios";
+import DatabasePage from "@/pages/DatabasePage";
 import { Toaster } from "@/components/ui/toaster";
 import { useEffect } from "react";
 import { useNotifications } from "@/hooks/useNotifications";
@@ -32,6 +33,7 @@ function AnimatedRoutes() {
           <Route path="/calendario" element={<CalendarView />} />
           <Route path="/ajustes" element={<Settings />} />
           <Route path="/socios" element={<Socios />} />
+          <Route path="/base-de-datos" element={<DatabasePage />} />
         </Routes>
       </motion.div>
     </AnimatePresence>
