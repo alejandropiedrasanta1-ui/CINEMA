@@ -251,22 +251,29 @@ Sistema de gestión de reservas para eventos (bodas, quinceañeras, fiestas soci
 - Endpoint mejorado: busca eventos en ventana N días, intenta Resend → Push en cascada
 - **Email verificado: llegó a alejandropiedrasanta1@gmail.com correctamente ✓**
 
-### DatabasePage — Nuevas funciones (Abril 2026) ✅
-- Respaldo automático al PC: toggle ON/OFF, frecuencia (30min/1h/2h/6h/12h/24h), carpeta Descargas o carpeta fija (File System API Chrome/Edge), countdown en vivo, conteo de backups por sesión
-- Exportar Excel (.xlsx): nuevo formato con headers coloreados, columnas auto-width, saldo calculado — via openpyxl backend
-- Importar desde CSV: upload .csv, mapeo automático de columnas (ES/EN), preview de errores, +2 importaciones de prueba en DB
-- Conexiones guardadas (presets): guarda múltiples MongoDB URLs con nombre/color en localStorage, conectar/eliminar con un clic
-- Limpieza de BD: preview de conteos (canceladas, completadas > 6 meses), auto-backup previo a limpieza
-- Hooks: useAutoBackup.js creado con IndexedDB para persistir FileSystem handle entre sesiones
+### Apariencia avanzada + Config del negocio (Abril 2026) ✅
+- **Modo Oscuro**: toggle en Ajustes → Apariencia → Avanzado. CSS [data-dark="true"] overrides en glassmorphism, sidebar, inputs, textos. Persiste en localStorage.
+- **Tamaño de texto**: chips Compacto (88%) / Normal / Grande (110%) vía CSS zoom data-attribute
+- **Intensidad de fondo**: chips Apagado / Suave / Normal / Vivido - controla opacidad blobs
+- **Barra lateral compacta**: toggle reduce sidebar de 240px→72px mostrando solo iconos
+- **Formato de fecha**: chips DD/MM/YYYY / MM/DD/YYYY / YYYY-MM-DD
+- **Configuración del Negocio**: campos empresa, teléfono, dirección, sitio web, NIT, timezone, anticipo%, horario, backup retention, auto-cleanup → guardados en MongoDB app_settings
+
+### P0 (Completado)
+- [x] DatabasePage rediseñada y funcional
+- [x] Auto-backup al PC (Descargas + Carpeta fija FileSystem API)
+- [x] Export Excel (.xlsx), CSV import, Conexiones guardadas, Limpieza BD
+- [x] Modo oscuro + opciones avanzadas de apariencia
+- [x] Config del negocio (empresa, horario, anticipo%, timezone, backup retention)
 
 ### P1 (Próximo sprint)
-- [ ] Configurar Telegram Bot (usuario necesita: token @BotFather + Chat ID)
-- [ ] Configurar ntfy.sh (usuario necesita: elegir nombre de tema + instalar app)
+- [ ] Configurar Telegram Bot (usuario configura manualmente en Ajustes → Recordatorios)
+- [ ] Configurar ntfy.sh (usuario configura manualmente en Ajustes → Recordatorios)
 - [ ] WhatsApp automático vía Twilio
-- [ ] Imprimir comprobante directamente desde detalle de reserva
+- [ ] Imprimir comprobante desde detalle de reserva
 
 ### P2
-- [ ] Portal para clientes (ver su reserva con link único)
-- [ ] Galería de fotos del evento (subir fotos post-evento)
+- [ ] Portal para clientes (link único por reserva)
+- [ ] Galería de fotos del evento
 - [ ] Reporte mensual de ingresos en PDF
-- [ ] Integración de pagos online (Stripe / Wompi para Guatemala)
+- [ ] Integración de pagos Stripe / Wompi Guatemala
