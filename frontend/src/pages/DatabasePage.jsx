@@ -583,6 +583,16 @@ export default function DatabasePage() {
                 </div>
               ) : dbStats ? (
                 <div className="space-y-4">
+                  {/* Connection error banner */}
+                  {dbStats.connection_error && (
+                    <div className="flex items-start gap-3 bg-red-50 border border-red-200 rounded-2xl px-4 py-3">
+                      <WifiOff size={14} className="text-red-500 mt-0.5 shrink-0" />
+                      <div>
+                        <p className="text-xs font-bold text-red-700">Sin conexión a MongoDB Atlas</p>
+                        <p className="text-[10px] text-red-500 mt-0.5">Verifica tu internet y que el URL sea correcto, luego usa "Cambiar conexión" para reconectar.</p>
+                      </div>
+                    </div>
+                  )}
                   <div className="grid grid-cols-3 gap-3">
                     {[
                       { label: s.dbCollections || "Colecciones", value: dbStats.collections, color: "bg-indigo-50 text-indigo-700", accent: "bg-indigo-500" },
@@ -828,9 +838,17 @@ export default function DatabasePage() {
               </div>
             </div>
             <div className="p-5 space-y-3">
+              {/* Quick fill for Atlas connection if stats shows connection_error */}
+              {dbStats?.connection_error && (
+                <motion.button whileHover={{ scale: 1.01 }} whileTap={{ scale: 0.98 }}
+                  onClick={() => setNewDbUrl(dbStats.current_url?.includes("***") ? "" : (dbStats.current_url || ""))}
+                  className="w-full flex items-center gap-2 px-4 py-2.5 rounded-xl bg-amber-50 border border-amber-200 text-amber-700 text-xs font-bold hover:bg-amber-100 transition-all">
+                  <Wifi size={12} /> Reintentar conexión con URL actual
+                </motion.button>
+              )}
               <input type="text" value={newDbUrl}
                 onChange={e => { setNewDbUrl(e.target.value); setDbTestResult(null); }}
-                placeholder="mongodb://usuario:contraseña@host:27017"
+                placeholder="mongodb+srv://usuario:contraseña@cluster.mongodb.net"
                 data-testid="db-url-input"
                 className="w-full bg-white/60 border border-slate-200/80 rounded-xl px-4 py-3 text-sm font-mono text-slate-800 placeholder-slate-300 focus:outline-none focus:ring-2 focus:ring-sky-300 focus:border-transparent" />
               {dbTestResult && (

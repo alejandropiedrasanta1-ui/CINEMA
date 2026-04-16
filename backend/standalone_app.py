@@ -52,9 +52,15 @@ if _using_embedded:
     _mongo_client = AsyncMongoMockClient()
     logger.warning("Usando base de datos embebida (cinema_data.json)")
 else:
-    from motor.motor_asyncio import AsyncIOMotorClient as _MotorClient
-    _mongo_client = _MotorClient(_effective_mongo_url)
-    logger.warning(f"Conectado a MongoDB: {_effective_mongo_url[:40]}...")
+    try:
+        from motor.motor_asyncio import AsyncIOMotorClient as _MotorClient
+        _mongo_client = _MotorClient(_effective_mongo_url, serverSelectionTimeoutMS=8000)
+        logger.warning(f"Motor inicializado para: {_effective_mongo_url[:50]}...")
+    except Exception as _e:
+        logger.error(f"Error al inicializar motor: {_e} — usando modo embebido")
+        from mongomock_motor import AsyncMongoMockClient
+        _mongo_client = AsyncMongoMockClient()
+        _using_embedded = True
 
 db = _mongo_client[DB_NAME]
 client = _mongo_client  # alias
@@ -137,7 +143,26 @@ async def _auto_save_loop():
 
 @asynccontextmanager
 async def lifespan(app_instance: FastAPI):
+    global db, client, _using_embedded
     _task = None
+
+    # ── Verify MongoDB connection or fall back to embedded ──────────────────
+    if not _using_embedded:
+        try:
+            await asyncio.wait_for(db.command("ping"), timeout=9.0)
+            logger.warning("MongoDB Atlas: conexión verificada OK")
+        except Exception as _conn_err:
+            logger.error(
+                f"MongoDB no accesible ({_conn_err}). "
+                "Revisa tu conexión a internet o el archivo .env. "
+                "Activando modo embebido temporal."
+            )
+            from mongomock_motor import AsyncMongoMockClient
+            _fb = AsyncMongoMockClient()
+            db = _fb[DB_NAME]
+            client = _fb
+            _using_embedded = True
+
     if _using_embedded:
         await _load_embedded_data()
         _task = asyncio.create_task(_auto_save_loop())
@@ -637,7 +662,26 @@ async def get_db_stats():
             "is_custom": is_custom,
         }
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Error al obtener estadísticas: {e}")
+        # Atlas not reachable — return safe fallback so UI doesn't crash
+        is_custom = CUSTOM_DB_FILE.exists()
+        current_url = CUSTOM_DB_FILE.read_text().strip() if is_custom else _effective_mongo_url
+        display_url = current_url
+        if "@" in current_url:
+            proto_end = current_url.find("://") + 3
+            at_pos = current_url.rfind("@")
+            display_url = current_url[:proto_end] + "***:***@" + current_url[at_pos + 1:]
+        return {
+            "db_name": DB_NAME,
+            "collections": 0,
+            "objects": 0,
+            "data_size": "—",
+            "storage_size": "—",
+            "index_size": "—",
+            "total_size": "—",
+            "current_url": display_url,
+            "is_custom": is_custom,
+            "connection_error": str(e),
+        }
 
 
 @api_router.post("/settings/database/test")
