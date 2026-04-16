@@ -1006,62 +1006,6 @@ export default function AppearancePage() {
         </Section>
 
         {/* ═══════════════════════════════════════════════════════════════
-            12. ACCESIBILIDAD Y SISTEMA  ★ NUEVO
-        ═══════════════════════════════════════════════════════════════ */}
-        <Section icon={Shield} isNew title={es ? "Accesibilidad y Sistema" : "Accessibility & System"} desc={es ? "Movimiento reducido, contraste y daltonismo" : "Reduced motion, contrast and color blindness"}>
-          <div className="space-y-5">
-
-            <OptionRow label={es ? "Movimiento reducido" : "Reduced Motion"} testPrefix="reduced-motion"
-              current={as.reducedMotion || "auto"} onChange={v => cs("reducedMotion", v)} cols={3}
-              options={[
-                { id:"auto",      label:es?"Auto (sistema)":"Auto",      hint:es?"Sigue el sistema":"Follows system" },
-                { id:"force-off", label:es?"Sin movimiento":"No Motion",  hint:es?"Máxima accesibilidad":"Max accessibility" },
-                { id:"force-on",  label:es?"Siempre":"Always On",        hint:es?"Ignorar preferencia":"Ignore preference" },
-              ]} />
-
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-black text-slate-800">{es ? "Modo de alto contraste" : "High Contrast Mode"}</p>
-                <p className="text-[11px] text-slate-400 mt-0.5">{es ? "Mejora legibilidad" : "Improves readability"}</p>
-              </div>
-              <Toggle value={(as.highContrast || "off") === "on"} onChange={v => cs("highContrast", v ? "on" : "off")} testId="high-contrast-toggle" />
-            </div>
-
-            <OptionRow label={es ? "Modo de daltonismo" : "Color Blind Mode"} testPrefix="color-blind"
-              current={as.colorBlindMode || "none"} onChange={v => cs("colorBlindMode", v)} cols={4}
-              options={[
-                { id:"none",         label:es?"Normal":"Normal"          },
-                { id:"protanopia",   label:"Protanopia",   hint:es?"Sin rojo":"No red"     },
-                { id:"deuteranopia", label:"Deuteranopia", hint:es?"Sin verde":"No green"  },
-                { id:"tritanopia",   label:"Tritanopia",   hint:es?"Sin azul":"No blue"    },
-              ]} />
-
-            <OptionRow label={es ? "Visibilidad del foco" : "Focus Visibility"} testPrefix="focus-vis"
-              current={as.focusVisibility || "auto"} onChange={v => cs("focusVisibility", v)} cols={3}
-              options={[
-                { id:"auto",   label:es?"Auto":"Auto",         hint:es?"Solo teclado":"Keyboard only" },
-                { id:"always", label:es?"Siempre":"Always",    hint:es?"Siempre visible":"Always shown" },
-                { id:"never",  label:es?"Nunca":"Never",       hint:es?"Sin indicador":"No indicator" },
-              ]} />
-
-            <motion.button whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.97 }}
-              data-testid="reset-all-appearance"
-              onClick={() => {
-                if (!window.confirm(es ? "¿Restablecer toda la apariencia al estado original?" : "Reset all appearance settings?")) return;
-                localStorage.removeItem("advanced_style");
-                ["glass_blur","layout_density","page_transition","icon_size","sidebar_style","bg_image","custom_accent","custom_bg","font_family","card_style","anim_speed","shadow_depth","page_width","btn_corner","scrollbar","saturation","hover_effect","bg_intensity","font_scale","date_format","dark_mode","animations","radius","pdf_theme","preset","theme"].forEach(k => localStorage.removeItem(k));
-                toast({ title: es ? "Apariencia restablecida ✓ — Recarga la página" : "Appearance reset ✓ — Reload the page" });
-                setTimeout(() => window.location.reload(), 1200);
-              }}
-              className="w-full flex items-center justify-center gap-2 py-2.5 rounded-2xl border-2 border-red-200 text-red-500 text-xs font-bold bg-red-50/50 hover:bg-red-50 transition-colors">
-              <RotateCcw size={13} />
-              {es ? "Restablecer toda la apariencia" : "Reset all appearance settings"}
-            </motion.button>
-
-          </div>
-        </Section>
-
-        {/* ═══════════════════════════════════════════════════════════════
             13. TIPOS DE EVENTO
         ═══════════════════════════════════════════════════════════════ */}
         <Section icon={Pencil} title={es ? "Tipos de Evento" : "Event Types"} desc={es ? "Personaliza icono y color por tipo" : "Customize icon and color per type"}>
