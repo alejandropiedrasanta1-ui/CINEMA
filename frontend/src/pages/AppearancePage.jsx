@@ -509,7 +509,7 @@ export default function AppearancePage() {
         {/* ═══════════════════════════════════════════════════════════════
             6. INTERFAZ Y ESPACIO
         ═══════════════════════════════════════════════════════════════ */}
-        <Section icon={AlignJustify} title={es ? "Interfaz y Espacio" : "Interface & Space"} desc={es ? "Sidebar, ancho, densidad, fechas" : "Sidebar, width, density, dates"}>
+        <Section icon={AlignJustify} title={es ? "Interfaz y Espacio" : "Interface & Space"} desc={es ? "Sidebar, densidad, tamaños, efectos visuales" : "Sidebar, density, sizes, visual effects"}>
           <div className="space-y-5">
 
             <OptionRow label={es ? "Densidad del contenido" : "Content Density"} testPrefix="density" current={layoutDensity} onChange={v => { changeLayoutDensity(v); toast({ title: `Densidad: ${v}` }); }} cols={3}
@@ -546,6 +546,76 @@ export default function AppearancePage() {
             <OptionRow label={es ? "Barra de desplazamiento" : "Scrollbar"} testPrefix="scrollbar" current={scrollbar} onChange={changeScrollbar} cols={3}
               options={[{id:"default",label:es?"Normal":"Default"},{id:"thin",label:es?"Fina":"Thin"},{id:"none",label:es?"Oculta":"Hidden"}]} />
 
+            {/* ── NUEVAS OPCIONES ─────────────────────── */}
+
+            <StyleSlider label={es ? "Opacidad del vidrio (tarjetas)" : "Glass Card Opacity"} value={as.glassOpacity ?? 45} min={10} max={90} step={5} onChange={v => changeAdvancedStyle("glassOpacity", v)} unit="%" testId="glass-opacity-slider" />
+
+            <StyleSlider label={es ? "Desenfoque del vidrio" : "Glass Blur"} value={glassBlur} min={0} max={40} step={2} onChange={changeGlassBlur} unit="px" testId="glass-blur-slider" />
+
+            <StyleSlider label={es ? "Profundidad de sombra" : "Shadow Depth"} value={shadowDepth} min={0} max={5} step={1} onChange={changeShadowDepth} unit="" testId="shadow-depth-slider" />
+
+            <OptionRow label={es ? "Estilo de divisores" : "Divider Style"} testPrefix="divider-style"
+              current={as.dividerStyle || "subtle"} onChange={v => cs("dividerStyle", v)} cols={4}
+              options={[
+                { id:"none",    label:es?"Sin línea":"None",   preview: <div className="w-10 h-4 flex items-center"><div className="w-full h-px" /></div> },
+                { id:"subtle",  label:es?"Sutil":"Subtle",     preview: <div className="w-10 h-4 flex items-center"><div className="w-full h-px bg-slate-200" /></div> },
+                { id:"solid",   label:es?"Sólido":"Solid",     preview: <div className="w-10 h-4 flex items-center"><div className="w-full h-0.5 bg-slate-400" /></div> },
+                { id:"dashed",  label:es?"Punteado":"Dashed",  preview: <div className="w-10 h-4 flex items-center"><div className="w-full border-t border-dashed border-slate-400" /></div> },
+              ]} />
+
+            <OptionRow label={es ? "Estilo de filas en tabla" : "Table Row Style"} testPrefix="table-row"
+              current={as.tableRowStyle || "hover"} onChange={v => cs("tableRowStyle", v)} cols={4}
+              options={[
+                { id:"hover",    label:es?"Hover":"Hover",        preview: <div className="w-10 h-5 rounded-lg bg-slate-50 border border-transparent hover:bg-indigo-50" /> },
+                { id:"striped",  label:es?"Rayado":"Striped",     preview: <div className="w-10 space-y-0.5"><div className="h-1.5 rounded bg-slate-200" /><div className="h-1.5 rounded bg-slate-50" /><div className="h-1.5 rounded bg-slate-200" /></div> },
+                { id:"bordered", label:es?"Bordes":"Bordered",    preview: <div className="w-10 space-y-0.5"><div className="h-1.5 rounded border border-slate-200 bg-white" /><div className="h-1.5 rounded border border-slate-200 bg-white" /></div> },
+                { id:"minimal",  label:es?"Mínimo":"Minimal",     preview: <div className="w-10 space-y-0.5"><div className="h-1.5 border-b border-slate-100 bg-transparent" /><div className="h-1.5 border-b border-slate-100 bg-transparent" /></div> },
+              ]} />
+
+            <OptionRow label={es ? "Efecto hover en tarjetas" : "Card Hover Effect"} testPrefix="card-hover"
+              current={as.cardHover || "lift"} onChange={v => cs("cardHover", v)} cols={4}
+              options={[
+                { id:"none",     label:es?"Ninguno":"None",      preview: <div className="w-10 h-5 rounded-xl glass" /> },
+                { id:"lift",     label:es?"Elevar":"Lift",       preview: <div className="w-10 h-5 rounded-xl glass shadow-md" /> },
+                { id:"glow",     label:"Glow",                   preview: <div className="w-10 h-5 rounded-xl glass" style={{boxShadow:"0 0 10px var(--t-from)44"}} /> },
+                { id:"border",   label:es?"Borde":"Border",      preview: <div className="w-10 h-5 rounded-xl glass border-2 border-[var(--t-from)]/40" /> },
+              ]} />
+
+            <OptionRow label={es ? "Estilo de badges/etiquetas" : "Badge Style"} testPrefix="badge-style"
+              current={as.badgeStyle || "pill"} onChange={v => cs("badgeStyle", v)} cols={4}
+              options={[
+                { id:"pill",     label:es?"Píldora":"Pill",      preview: <div className="px-2 py-0.5 rounded-full text-[8px] font-bold bg-indigo-100 text-indigo-700">Tag</div> },
+                { id:"rounded",  label:es?"Redondeado":"Rounded",preview: <div className="px-2 py-0.5 rounded-lg text-[8px] font-bold bg-indigo-100 text-indigo-700">Tag</div> },
+                { id:"sharp",    label:es?"Cuadrado":"Sharp",    preview: <div className="px-2 py-0.5 rounded text-[8px] font-bold bg-indigo-100 text-indigo-700">Tag</div> },
+                { id:"outline",  label:es?"Contorno":"Outline",  preview: <div className="px-2 py-0.5 rounded-full text-[8px] font-bold border-2 border-indigo-400 text-indigo-700">Tag</div> },
+              ]} />
+
+            <OptionRow label={es ? "Posición del logo en sidebar" : "Logo Position in Sidebar"} testPrefix="logo-pos"
+              current={as.logoPosition || "top"} onChange={v => cs("logoPosition", v)} cols={3}
+              options={[
+                { id:"top",    label:es?"Arriba":"Top",          preview: <div className="w-10 h-7 rounded bg-slate-100 flex flex-col items-center pt-0.5 gap-0.5"><div className="w-4 h-1.5 rounded bg-slate-400" /><div className="w-full flex-1 bg-slate-50 rounded-b" /></div> },
+                { id:"center", label:es?"Centro":"Center",       preview: <div className="w-10 h-7 rounded bg-slate-100 flex flex-col items-center justify-center gap-0.5"><div className="w-4 h-1.5 rounded bg-slate-400" /></div> },
+                { id:"hidden", label:es?"Ocultar":"Hidden",      preview: <div className="w-10 h-7 rounded bg-slate-100 flex flex-col items-center justify-start pt-1 gap-0.5">{[1,2,3].map(i=><div key={i} className="w-7 h-0.5 bg-slate-300 rounded" />)}</div> },
+              ]} />
+
+            <OptionRow label={es ? "Animación de carga de página" : "Page Load Animation"} testPrefix="page-load-anim"
+              current={as.pageLoadAnim || "fade"} onChange={v => cs("pageLoadAnim", v)} cols={4}
+              options={[
+                { id:"none",    label:es?"Ninguna":"None"  },
+                { id:"fade",    label:"Fade"               },
+                { id:"slide",   label:"Slide"              },
+                { id:"zoom",    label:"Zoom"               },
+              ]} />
+
+            <OptionRow label={es ? "Indicador de carga (spinner)" : "Loading Spinner Style"} testPrefix="spinner-style"
+              current={as.spinnerStyle || "ring"} onChange={v => cs("spinnerStyle", v)} cols={4}
+              options={[
+                { id:"ring",    label:"Ring",     preview: <div className="w-4 h-4 rounded-full border-2 border-slate-300 border-t-indigo-500 animate-spin" /> },
+                { id:"dots",    label:"Dots",     preview: <div className="flex gap-0.5">{[0,1,2].map(i=><div key={i} className="w-1.5 h-1.5 rounded-full bg-indigo-500 animate-bounce" style={{animationDelay:`${i*0.1}s`}} />)}</div> },
+                { id:"bar",     label:"Bar",      preview: <div className="w-10 h-1 bg-slate-200 rounded overflow-hidden"><div className="h-full w-1/2 btn-primary rounded animate-pulse" /></div> },
+                { id:"pulse",   label:"Pulse",    preview: <div className="w-4 h-4 rounded-full btn-primary animate-ping opacity-75" /> },
+              ]} />
+
             <div>
               <p className="text-xs font-black text-slate-600 mb-2.5">{es ? "Formato de fecha" : "Date Format"}</p>
               <div className="flex gap-2 flex-wrap">
@@ -563,54 +633,7 @@ export default function AppearancePage() {
         </Section>
 
         {/* ═══════════════════════════════════════════════════════════════
-            7. EFECTOS DE FONDO AVANZADOS  ★ NUEVO
-        ═══════════════════════════════════════════════════════════════ */}
-        <Section icon={Sparkles} isNew title={es ? "Efectos de Fondo Avanzados" : "Advanced Background Effects"} desc={es ? "Texturas, patrones, viñeta y opacidad del vidrio" : "Textures, patterns, vignette and glass opacity"}>
-          <div className="space-y-5">
-
-            <StyleSlider label={es ? "Textura de grano (noise)" : "Grain Texture"} value={as.noiseTexture || 0} min={0} max={80} step={5} onChange={v => changeAdvancedStyle("noiseTexture", v)} unit="%" testId="noise-slider" isNew />
-
-            <StyleSlider label={es ? "Opacidad del vidrio (tarjetas)" : "Glass Card Opacity"} value={as.glassOpacity ?? 45} min={10} max={90} step={5} onChange={v => changeAdvancedStyle("glassOpacity", v)} unit="%" testId="glass-opacity-slider" isNew />
-
-            <StyleSlider label={es ? "Opacidad del borde de vidrio" : "Glass Border Opacity"} value={as.glassBorder ?? 65} min={10} max={100} step={5} onChange={v => changeAdvancedStyle("glassBorder", v)} unit="%" testId="glass-border-slider" isNew />
-
-            <OptionRow label={es ? "Patrón de fondo" : "Background Pattern"} testPrefix="bg-pattern"
-              current={as.bgPattern || "none"} onChange={v => cs("bgPattern", v)} cols={3}
-              options={[
-                { id:"none",      label:es?"Ninguno":"None",     preview: <div className="w-10 h-6 bg-slate-100 rounded" /> },
-                { id:"dots",      label:"Dots",                  preview: <div className="w-10 h-6 bg-slate-100 rounded" style={{backgroundImage:"radial-gradient(circle,#94a3b8 1px,transparent 1px)",backgroundSize:"6px 6px"}} /> },
-                { id:"grid",      label:"Grid",                  preview: <div className="w-10 h-6 bg-slate-100 rounded" style={{backgroundImage:"linear-gradient(#cbd5e1 1px,transparent 1px),linear-gradient(90deg,#cbd5e1 1px,transparent 1px)",backgroundSize:"8px 8px"}} /> },
-                { id:"lines",     label:es?"Líneas":"Lines",     preview: <div className="w-10 h-6 bg-slate-100 rounded" style={{backgroundImage:"repeating-linear-gradient(0deg,#cbd5e1,#cbd5e1 1px,transparent 1px,transparent 8px)"}} /> },
-                { id:"triangles", label:es?"Triángulos":"Tris",  preview: <div className="w-10 h-6 bg-slate-100 rounded overflow-hidden">{[1,2,3,4].map(i=><div key={i} className="absolute border-b-8 border-b-slate-300 border-l-4 border-r-4 border-l-transparent border-r-transparent" style={{left:`${(i-1)*30}%`,top:0}} />)}</div> },
-                { id:"cross",     label:"Cross",                 preview: <div className="w-10 h-6 bg-slate-100 rounded" style={{backgroundImage:"linear-gradient(#cbd5e1 1px,transparent 1px),linear-gradient(90deg,#cbd5e1 1px,transparent 1px)",backgroundSize:"10px 10px",backgroundPosition:"-5px -5px"}} /> },
-              ]} />
-
-            <OptionRow label={es ? "Efecto viñeta (bordes oscuros)" : "Vignette Effect"} testPrefix="vignette"
-              current={as.vignette || "none"} onChange={v => cs("vignette", v)} cols={3}
-              options={[
-                { id:"none",   label:es?"Ninguno":"None",   preview: <div className="w-12 h-7 bg-slate-100 rounded" /> },
-                { id:"subtle", label:es?"Suave":"Subtle",   preview: <div className="w-12 h-7 rounded" style={{background:"radial-gradient(ellipse at center,transparent 50%,rgba(0,0,0,0.2) 100%),#f1f5f9"}} /> },
-                { id:"strong", label:es?"Fuerte":"Strong",  preview: <div className="w-12 h-7 rounded" style={{background:"radial-gradient(ellipse at center,transparent 30%,rgba(0,0,0,0.45) 100%),#f1f5f9"}} /> },
-              ]} />
-
-            <OptionRow label={es ? "Número de blobs (decoración)" : "Background Blob Count"} testPrefix="blob-count"
-              current={String(as.blobCount ?? 4)} onChange={v => cs("blobCount", parseInt(v))} cols={4}
-              options={[
-                { id:"0", label:es?"Ninguno":"None"   },
-                { id:"2", label:"Dos / 2"             },
-                { id:"4", label:es?"Normal":"Normal"  },
-                { id:"6", label:"Seis / 6"            },
-              ]} />
-
-            <OptionRow label={es ? "Velocidad de blobs" : "Blob Animation Speed"} testPrefix="blob-anim"
-              current={as.blobAnim || "normal"} onChange={v => cs("blobAnim", v)} cols={4}
-              options={[{id:"static",label:es?"Estático":"Static"},{id:"slow",label:es?"Lento":"Slow"},{id:"normal",label:es?"Normal":"Normal"},{id:"fast",label:es?"Rápido":"Fast"}]} />
-
-          </div>
-        </Section>
-
-        {/* ═══════════════════════════════════════════════════════════════
-            8. TIPOGRAFÍA AVANZADA  ★ NUEVO
+            7. TIPOGRAFÍA AVANZADA  ★ NUEVO
         ═══════════════════════════════════════════════════════════════ */}
         <Section icon={FileText} isNew title={es ? "Tipografía Avanzada" : "Advanced Typography"} desc={es ? "Peso, mayúsculas, sombra de texto, alineación" : "Weight, case, text shadow, alignment"}>
           <div className="space-y-5">
