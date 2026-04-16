@@ -1101,9 +1101,32 @@ app.add_middleware(
 
 _LOCAL_INJECT = '<script>window.__API_BASE_URL__="http://localhost:8001";</script>'
 
+# Scripts externos que hay que eliminar para evitar pantalla en blanco offline
+_EXTERNAL_SCRIPTS_TO_REMOVE = [
+    '<script src="https://assets.emergent.sh/scripts/emergent-main.js"></script>',
+    # PostHog analytics (hace llamadas externas que cuelgan offline)
+]
+
 
 def _inject_local_url(html: str) -> str:
-    """Inject the local API URL so any build (old or new) works offline."""
+    """
+    1. Inyecta la URL local de la API.
+    2. Elimina scripts externos que causan pantalla en blanco sin internet.
+    """
+    # Eliminar scripts externos
+    for script in _EXTERNAL_SCRIPTS_TO_REMOVE:
+        html = html.replace(script, "<!-- removed for offline use -->")
+
+    # Eliminar script de posthog (bloquea la carga sin internet)
+    import re as _re
+    html = _re.sub(
+        r'<script[^>]*>\s*!function\(e,t\)\{var r,s,o,i;t\.__SV.*?posthog\.init\([^)]+\)\s*</script>',
+        '<!-- analytics removed for offline use -->',
+        html,
+        flags=_re.DOTALL,
+    )
+
+    # Inyectar URL local
     return html.replace("</head>", _LOCAL_INJECT + "</head>", 1)
 
 
