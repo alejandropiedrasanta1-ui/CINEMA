@@ -1174,36 +1174,6 @@ export default function Settings() {
           </div>
         </Section>
 
-        {/* ── ATAJOS DE TECLADO ─────────────────────── */}
-        <Section icon={Zap} title={language === "es" ? "Atajos de Teclado" : "Keyboard Shortcuts"} desc={language === "es" ? "Referencia de atajos disponibles en la app" : "Available keyboard shortcuts"}>
-          <div className="space-y-2.5">
-            {[
-              { keys: ["Ctrl","N"],          action: language === "es" ? "Nueva reserva"         : "New reservation"     },
-              { keys: ["Ctrl","F"],          action: language === "es" ? "Buscar reservas"        : "Search"              },
-              { keys: ["Ctrl","E"],          action: language === "es" ? "Exportar datos"         : "Export data"         },
-              { keys: ["Alt","1"],           action: language === "es" ? "Ir a Dashboard"         : "Dashboard"           },
-              { keys: ["Alt","2"],           action: language === "es" ? "Ir a Reservaciones"     : "Reservations"        },
-              { keys: ["Alt","3"],           action: language === "es" ? "Ir a Calendario"        : "Calendar"            },
-              { keys: ["Alt","S"],           action: language === "es" ? "Ir a Ajustes"           : "Settings"            },
-              { keys: ["Esc"],               action: language === "es" ? "Cerrar modal/cancelar"  : "Close modal"         },
-              { keys: ["Ctrl","Shift","D"],  action: language === "es" ? "Modo oscuro"            : "Toggle dark mode"    },
-            ].map((s, i) => (
-              <div key={i} className="flex items-center justify-between py-2 px-3 rounded-xl bg-white/50 hover:bg-white/70 transition-colors">
-                <span className="text-xs text-slate-600 font-medium">{s.action}</span>
-                <div className="flex items-center gap-1">
-                  {s.keys.map((k, j) => (
-                    <React.Fragment key={j}>
-                      <kbd className="px-2 py-0.5 rounded-md bg-slate-100 border border-slate-200 text-[10px] font-mono font-bold text-slate-700 shadow-sm">{k}</kbd>
-                      {j < s.keys.length - 1 && <span className="text-[9px] text-slate-400">+</span>}
-                    </React.Fragment>
-                  ))}
-                </div>
-              </div>
-            ))}
-          </div>
-        </Section>
-
-
 
       </motion.div>
     </div>
