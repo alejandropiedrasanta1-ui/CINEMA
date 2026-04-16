@@ -2,10 +2,10 @@ import React, { useEffect, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Link } from "react-router-dom";
 import {
-  Globe, DollarSign,
-  Bell, BellRing, Database, CheckCircle, XCircle,
-  MessageCircle, Mail, Loader2, Monitor,
-  Zap, Clock,
+  Download, Globe, DollarSign,
+  Bell, BellRing, Database, CheckCircle, XCircle, RefreshCw,
+  Wifi, WifiOff, MessageCircle, Mail, Loader2, Monitor,
+  Package, AlertCircle, Zap, Clock, ChevronDown,
 } from "lucide-react";
 import { useSettings, CURRENCIES } from "@/context/SettingsContext";
 import { useToast } from "@/hooks/use-toast";
@@ -100,6 +100,12 @@ export default function Settings() {
   const [downloadLoading, setDownloadLoading] = useState(false);
   const [buildStatus, setBuildStatus] = useState({ status: "idle", message: "" });
   const [buildPolling, setBuildPolling] = useState(false);
+
+  // Deployment / hosting state
+  const [deployUrl,        setDeployUrl]        = useState("");
+  const [healthLoading,    setHealthLoading]     = useState(false);
+  const [healthResult,     setHealthResult]      = useState(null);
+  const [expandedPlatform, setExpandedPlatform]  = useState(null);
 
   // DB state
   const [dbStats, setDbStats] = useState(null);
@@ -883,6 +889,290 @@ export default function Settings() {
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
           </svg>
         </Link>
+
+        {/* ── APP DE ESCRITORIO ────────────────────── */}
+        <Section icon={Monitor} title={s.desktopTitle} desc={s.desktopDesc}
+          badge={
+            <span className="text-[10px] font-black px-2.5 py-1 rounded-full bg-indigo-100 text-indigo-700">
+              {s.desktopBadge}
+            </span>
+          }>
+          <div className="space-y-5">
+            <div className="grid grid-cols-2 gap-2">
+              {[s.desktopFeature1, s.desktopFeature2, s.desktopFeature3, s.desktopFeature4].map((f, i) => (
+                <div key={i} className="flex items-start gap-2 bg-white/50 rounded-xl p-3">
+                  <CheckCircle size={13} className="text-emerald-500 mt-0.5 shrink-0" />
+                  <span className="text-xs text-slate-600 font-medium">{f}</span>
+                </div>
+              ))}
+            </div>
+
+            <div className="flex items-center gap-2 bg-amber-50/80 border border-amber-200/60 rounded-xl px-4 py-3">
+              <AlertCircle size={14} className="text-amber-500 shrink-0" />
+              <p className="text-xs text-amber-700 font-semibold">
+                {s.desktopReq} —{" "}
+                <a href="https://www.python.org/downloads/" target="_blank" rel="noreferrer" className="underline hover:text-amber-900">
+                  {s.desktopReqLink}
+                </a>
+                {" "}(marcar "Add Python to PATH")
+              </p>
+            </div>
+
+            <div className="rounded-2xl overflow-hidden border border-indigo-100/80 bg-gradient-to-br from-indigo-50/60 to-white/60">
+              <div className="px-4 pt-4 pb-3 border-b border-indigo-100/60">
+                <div className="flex items-center gap-2 mb-2.5">
+                  <div className="w-5 h-5 rounded-full btn-primary flex items-center justify-center text-white text-[10px] font-black flex-shrink-0">1</div>
+                  <p className="text-xs font-bold text-slate-700">{language === "es" ? "Actualizar app con últimos cambios" : "Update app"}</p>
+                </div>
+                {buildStatus.status !== "idle" && (
+                  <div className={`flex items-start gap-2 rounded-xl px-3 py-2.5 mb-3 text-xs font-medium ${buildStatus.status === "building" ? "bg-indigo-50 text-indigo-700 border border-indigo-200/60" : buildStatus.status === "ready" ? "bg-emerald-50 text-emerald-700 border border-emerald-200/60" : "bg-red-50 text-red-600 border border-red-200/60"}`}>
+                    {buildStatus.status === "building" ? <Loader2 size={13} className="animate-spin flex-shrink-0 mt-0.5" /> : buildStatus.status === "ready" ? <CheckCircle size={13} className="flex-shrink-0 mt-0.5" /> : <XCircle size={13} className="flex-shrink-0 mt-0.5" />}
+                    <span>{buildStatus.message}</span>
+                  </div>
+                )}
+                <motion.button whileHover={{ scale: buildStatus.status === "building" ? 1 : 1.02 }} whileTap={{ scale: 0.97 }}
+                  onClick={handleRebuild} disabled={buildStatus.status === "building"} data-testid="desktop-rebuild-btn"
+                  className="w-full flex items-center justify-center gap-2 py-3 rounded-xl text-sm font-bold text-white transition-all disabled:opacity-60"
+                  style={{ background: buildStatus.status === "ready" ? "linear-gradient(135deg,#10b981,#059669)" : "linear-gradient(135deg,var(--t-from),var(--t-to))" }}>
+                  {buildStatus.status === "building" ? <><Loader2 size={14} className="animate-spin" /> {language === "es" ? "Actualizando…" : "Updating…"}</> : buildStatus.status === "ready" ? <><CheckCircle size={14} /> {language === "es" ? "App actualizada ✓" : "Updated ✓"}</> : <><RefreshCw size={14} /> {language === "es" ? "Actualizar App" : "Update App"}</>}
+                </motion.button>
+              </div>
+              <div className="px-4 pt-3 pb-4">
+                <div className="flex items-center gap-2 mb-2.5">
+                  <div className={`w-5 h-5 rounded-full flex items-center justify-center text-white text-[10px] font-black flex-shrink-0 ${buildStatus.status === "ready" ? "btn-primary" : "bg-slate-300"}`}>2</div>
+                  <p className={`text-xs font-bold ${buildStatus.status === "ready" ? "text-slate-700" : "text-slate-400"}`}>{language === "es" ? "Descargar app (.zip)" : "Download app (.zip)"}</p>
+                </div>
+                <motion.button whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.97 }}
+                  onClick={handleDownloadPackage} disabled={downloadLoading || buildStatus.status === "building"} data-testid="desktop-download-btn"
+                  className="w-full flex items-center justify-center gap-2 py-3 rounded-xl text-sm font-bold transition-all disabled:opacity-40"
+                  style={{ background: buildStatus.status === "ready" ? "linear-gradient(135deg,var(--t-from),var(--t-to))" : "#e2e8f0", color: buildStatus.status === "ready" ? "white" : "#94a3b8" }}>
+                  {downloadLoading ? <><Loader2 size={14} className="animate-spin" /> {s.desktopDownloading}</> : <><Package size={14} /> {s.desktopDownload}</>}
+                </motion.button>
+              </div>
+            </div>
+
+            <p className="text-[11px] text-slate-400 leading-relaxed">{s.desktopNote}</p>
+          </div>
+        </Section>
+
+        {/* ── PUBLICAR EN LÍNEA ────────────────────── */}
+        <Section icon={Globe} title={language === "es" ? "Publicar en Línea" : "Publish Online"}
+          desc={language === "es" ? "Despliega tu app en hosting externo para acceder desde cualquier lugar" : "Deploy to external hosting for anywhere access"}>
+          <div className="space-y-4">
+            {[
+              {
+                id: "hostinger",
+                name: "Hostinger VPS",
+                icon: "🟠",
+                badge: "Recomendado",
+                badgeColor: "bg-orange-100 text-orange-700",
+                desc: language === "es" ? "VPS Linux con Docker — máximo control" : "Linux VPS with Docker — full control",
+                steps: [
+                  "Contrata plan VPS KVM1 o superior en hostinger.com",
+                  "Conecta por SSH: ssh root@tu-ip-servidor",
+                  "Instala Docker: curl -fsSL https://get.docker.com | sh",
+                  "Sube tu proyecto: scp -r ./cinema-app root@tu-ip:/opt/cinema",
+                  "Copia .env y edita las variables de entorno",
+                  "Ejecuta: docker-compose up -d",
+                  "Configura dominio en hPanel → DNS → A record → tu-ip",
+                  "¡Listo! Accede en https://tudominio.com",
+                ],
+              },
+              {
+                id: "railway",
+                name: "Railway.app",
+                icon: "🟣",
+                badge: "Más fácil",
+                badgeColor: "bg-purple-100 text-purple-700",
+                desc: language === "es" ? "Deploy con GitHub en 1 clic — gratis hasta $5/mes" : "GitHub 1-click deploy — free up to $5/mo",
+                steps: [
+                  "Crea cuenta en railway.app",
+                  "Nuevo proyecto → Deploy from GitHub",
+                  "Conecta tu repositorio de GitHub",
+                  "Railway detecta Python/Node automáticamente",
+                  "Ve a Variables → copia el contenido de .env.template",
+                  "Clic en Deploy → Railway despliega automáticamente",
+                  "Ajustes → Domain → Generate Domain (gratis *.up.railway.app)",
+                  "¡En 5 minutos tu app está en línea!",
+                ],
+                link: "https://railway.app",
+              },
+              {
+                id: "render",
+                name: "Render.com",
+                icon: "🔵",
+                badge: "Gratis",
+                badgeColor: "bg-blue-100 text-blue-700",
+                desc: language === "es" ? "Tier gratis para proyectos personales" : "Free tier for personal projects",
+                steps: [
+                  "Crea cuenta en render.com",
+                  "New → Web Service → conecta GitHub",
+                  "Para el backend: Build Command: pip install -r backend/requirements.txt",
+                  "Start Command: uvicorn backend.server:app --host 0.0.0.0 --port $PORT",
+                  "Para el frontend: Static Site → Build: cd frontend && npm run build",
+                  "Agrega variables de entorno (Environment tab)",
+                  "Render asigna URL *.onrender.com automáticamente",
+                  "Nota: en tier gratis el servicio 'duerme' después de 15 min inactividad",
+                ],
+                link: "https://render.com",
+              },
+              {
+                id: "digitalocean",
+                name: "DigitalOcean",
+                icon: "🔹",
+                badge: "$4/mes",
+                badgeColor: "bg-sky-100 text-sky-700",
+                desc: language === "es" ? "Droplet + App Platform — muy confiable" : "Droplet + App Platform — very reliable",
+                steps: [
+                  "Crea una cuenta en digitalocean.com ($200 crédito gratis para nuevos)",
+                  "App Platform → Create App → GitHub source",
+                  "Detecta automáticamente Python y Node.js",
+                  "Configura variables de entorno en Settings",
+                  "Asigna dominio personalizado o usa *.ondigitalocean.app",
+                  "Escala fácilmente con Managed MongoDB Database si necesitas",
+                ],
+                link: "https://digitalocean.com",
+              },
+            ].map((platform) => (
+              <div key={platform.id} className="border border-slate-200/60 rounded-2xl overflow-hidden bg-white/40">
+                <button className="w-full flex items-center gap-3 px-4 py-3.5 text-left hover:bg-white/60 transition-colors"
+                  data-testid={`platform-${platform.id}`}
+                  onClick={() => setExpandedPlatform(expandedPlatform === platform.id ? null : platform.id)}>
+                  <span className="text-xl">{platform.icon}</span>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <span className="text-sm font-black text-slate-800">{platform.name}</span>
+                      <span className={`text-[9px] font-black px-2 py-0.5 rounded-full ${platform.badgeColor}`}>{platform.badge}</span>
+                    </div>
+                    <span className="text-[11px] text-slate-400">{platform.desc}</span>
+                  </div>
+                  <ChevronDown size={14} className={`text-slate-400 transition-transform ${expandedPlatform === platform.id ? "rotate-180" : ""}`} />
+                </button>
+                <AnimatePresence>
+                  {expandedPlatform === platform.id && (
+                    <motion.div key="steps" initial={{ height: 0, opacity: 0 }} animate={{ height: "auto", opacity: 1 }} exit={{ height: 0, opacity: 0 }}
+                      className="border-t border-slate-200/60 px-4 py-3 bg-slate-50/40 overflow-hidden">
+                      <ol className="space-y-2">
+                        {platform.steps.map((step, i) => (
+                          <li key={i} className="flex items-start gap-2.5">
+                            <span className="w-5 h-5 rounded-full bg-slate-800 text-white text-[9px] font-black flex items-center justify-center shrink-0 mt-0.5">{i + 1}</span>
+                            <span className="text-xs text-slate-600 leading-relaxed">{step}</span>
+                          </li>
+                        ))}
+                      </ol>
+                      {platform.link && (
+                        <a href={platform.link} target="_blank" rel="noreferrer"
+                          className="mt-3 flex items-center gap-1.5 text-xs font-bold text-indigo-600 hover:text-indigo-800 transition-colors">
+                          <Globe size={11} /> Abrir {platform.name} →
+                        </a>
+                      )}
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+              </div>
+            ))}
+
+            <div className="bg-slate-50/60 rounded-2xl p-4 border border-slate-200/50 space-y-3">
+              <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Archivos de despliegue</p>
+              <div className="grid grid-cols-2 gap-2.5">
+                <motion.button whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.97 }}
+                  data-testid="download-env-btn"
+                  onClick={async () => {
+                    try {
+                      const API = process.env.REACT_APP_BACKEND_URL;
+                      const res = await fetch(`${API}/api/deployment/env-template`);
+                      const blob = await res.blob();
+                      const url = URL.createObjectURL(blob);
+                      const a = document.createElement("a"); a.href = url; a.download = ".env.template";
+                      document.body.appendChild(a); a.click(); document.body.removeChild(a);
+                      URL.revokeObjectURL(url);
+                      toast({ title: ".env.template descargado ✓" });
+                    } catch { toast({ title: "Error al descargar", variant: "destructive" }); }
+                  }}
+                  className="flex flex-col items-center gap-1.5 py-3 px-2 rounded-xl bg-white/70 border border-slate-200/70 hover:bg-white text-xs font-bold text-slate-700 transition-all">
+                  <Download size={14} className="text-emerald-500" />
+                  <span>.env Template</span>
+                  <span className="text-[9px] text-slate-400">Variables de entorno</span>
+                </motion.button>
+                <motion.button whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.97 }}
+                  data-testid="download-docker-btn"
+                  onClick={async () => {
+                    try {
+                      const API = process.env.REACT_APP_BACKEND_URL;
+                      const res = await fetch(`${API}/api/deployment/docker-compose`);
+                      const blob = await res.blob();
+                      const url = URL.createObjectURL(blob);
+                      const a = document.createElement("a"); a.href = url; a.download = "docker-compose.yml";
+                      document.body.appendChild(a); a.click(); document.body.removeChild(a);
+                      URL.revokeObjectURL(url);
+                      toast({ title: "docker-compose.yml descargado ✓" });
+                    } catch { toast({ title: "Error al descargar", variant: "destructive" }); }
+                  }}
+                  className="flex flex-col items-center gap-1.5 py-3 px-2 rounded-xl bg-white/70 border border-slate-200/70 hover:bg-white text-xs font-bold text-slate-700 transition-all">
+                  <Package size={14} className="text-blue-500" />
+                  <span>docker-compose</span>
+                  <span className="text-[9px] text-slate-400">Config de containers</span>
+                </motion.button>
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Verificar despliegue</p>
+              <div className="flex gap-2">
+                <input type="url" value={deployUrl} onChange={e => { setDeployUrl(e.target.value); setHealthResult(null); }}
+                  placeholder="https://tudominio.com"
+                  data-testid="deploy-url-input"
+                  className="flex-1 bg-white/60 border border-slate-200/80 rounded-xl px-3 py-2.5 text-sm text-slate-800 placeholder-slate-300 focus:outline-none focus:ring-2 focus:ring-indigo-300" />
+                <motion.button whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.97 }}
+                  data-testid="health-check-btn"
+                  disabled={!deployUrl || healthLoading}
+                  onClick={async () => {
+                    setHealthLoading(true); setHealthResult(null);
+                    try {
+                      const API = process.env.REACT_APP_BACKEND_URL;
+                      const res = await fetch(`${API}/api/deployment/health-check?url=${encodeURIComponent(deployUrl)}`, { method: "POST" });
+                      const data = await res.json();
+                      setHealthResult(data);
+                    } catch { setHealthResult({ ok: false, error: "Error de conexión" }); }
+                    finally { setHealthLoading(false); }
+                  }}
+                  className="px-4 py-2.5 rounded-xl bg-indigo-500 text-white text-xs font-bold disabled:opacity-40 hover:bg-indigo-600 transition-colors whitespace-nowrap flex items-center gap-1.5">
+                  {healthLoading ? <Loader2 size={12} className="animate-spin" /> : <Wifi size={12} />}
+                  Verificar
+                </motion.button>
+              </div>
+              {healthResult && (
+                <motion.div initial={{ opacity: 0, y: -4 }} animate={{ opacity: 1, y: 0 }}
+                  className={`flex items-center gap-2.5 px-4 py-3 rounded-xl text-xs font-semibold ${healthResult.ok ? "bg-emerald-50 text-emerald-700 border border-emerald-200/60" : "bg-red-50 text-red-600 border border-red-200/60"}`}>
+                  {healthResult.ok ? <CheckCircle size={13} /> : <XCircle size={13} />}
+                  {healthResult.message || healthResult.error}
+                </motion.div>
+              )}
+            </div>
+
+            <div className="bg-green-50/60 rounded-2xl p-4 border border-green-200/50 space-y-2.5">
+              <div className="flex items-center gap-2">
+                <Database size={14} className="text-green-600" />
+                <p className="text-xs font-black text-green-800">MongoDB Atlas (Base de datos en la nube — Gratis)</p>
+              </div>
+              <ol className="space-y-1.5">
+                {[
+                  "Ve a mongodb.com/cloud/atlas → crear cuenta gratis",
+                  "Create Cluster → M0 Free (512 MB gratis para siempre)",
+                  "Database Access → Add User (usuario + contraseña segura)",
+                  "Network Access → Add IP → 0.0.0.0/0 (acceso desde cualquier lugar)",
+                  "Connect → Drivers → copia la URI: mongodb+srv://user:pass@cluster...",
+                  "Pega la URI en tu .env como MONGO_URL=mongodb+srv://...",
+                ].map((step, i) => (
+                  <li key={i} className="flex items-start gap-2 text-[11px] text-green-700">
+                    <span className="font-black shrink-0">{i + 1}.</span>
+                    <span>{step}</span>
+                  </li>
+                ))}
+              </ol>
+            </div>
+          </div>
+        </Section>
 
         {/* ── ATAJOS DE TECLADO ─────────────────────── */}
         <Section icon={Zap} title={language === "es" ? "Atajos de Teclado" : "Keyboard Shortcuts"} desc={language === "es" ? "Referencia de atajos disponibles en la app" : "Available keyboard shortcuts"}>
