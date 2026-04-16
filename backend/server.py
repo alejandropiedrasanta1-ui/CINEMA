@@ -1639,7 +1639,7 @@ _ENV_TEMPLATE = """# =======================================================
 # O ejecuta config.bat para una ventana visual de configuracion.
 # O usa la interfaz: Ajustes > Base de Datos > Cambiar conexion MongoDB
 #
-MONGO_URL=mongodb+srv://reu1:f7PcopzMzWkHuMMJ@cluster0.ozg25wu.mongodb.net/?appName=Cluster0
+MONGO_URL=embedded
 DB_NAME=cinema_productions
 """
 
@@ -1945,7 +1945,7 @@ wait $SERVER_PID
 _REQUIREMENTS = """fastapi>=0.100.0
 uvicorn[standard]>=0.20.0
 motor>=3.0.0
-pymongo[srv]>=4.0.0
+pymongo>=4.0.0
 dnspython>=2.3.0
 python-dotenv>=1.0.0
 pydantic>=2.0.0
