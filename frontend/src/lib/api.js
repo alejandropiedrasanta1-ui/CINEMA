@@ -48,7 +48,8 @@ export const switchDatabase = (url) => api.post("/settings/database/connect", { 
 export const resetDatabase = () => api.post("/settings/database/reset").then(r => r.data);
 
 // Reminders
-export const sendTestReminder = () => api.post("/reminders/send").then(r => r.data);
+export const sendTestReminder   = () => api.post("/reminders/send").then(r => r.data);
+export const testEmailConnection = () => api.post("/reminders/test-email").then(r => r.data);
 
 // Notifications
 export const getPendingNotifications = () => api.get("/notifications/pending").then(r => r.data);

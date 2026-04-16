@@ -9,7 +9,7 @@ import {
 } from "lucide-react";
 import { useSettings, CURRENCIES } from "@/context/SettingsContext";
 import { useToast } from "@/hooks/use-toast";
-import { getAppSettings, updateAppSettings, getDbStats, testDbConnection, switchDatabase, resetDatabase, sendTestReminder, getBackupHistory, createServerBackup, deleteBackupFile, downloadBackupUrl, restoreBackup } from "@/lib/api";
+import { getAppSettings, updateAppSettings, getDbStats, testDbConnection, switchDatabase, resetDatabase, sendTestReminder, testEmailConnection, getBackupHistory, createServerBackup, deleteBackupFile, downloadBackupUrl, restoreBackup } from "@/lib/api";
 import { useNotifications } from "@/hooks/useNotifications";
 
 const item = {
@@ -106,6 +106,24 @@ export default function Settings() {
   const [healthLoading,    setHealthLoading]     = useState(false);
   const [healthResult,     setHealthResult]      = useState(null);
   const [expandedPlatform, setExpandedPlatform]  = useState(null);
+
+  // ── Email test ───────────────────────────────────────────────────
+  const [emailTestLoading, setEmailTestLoading] = useState(false);
+  const [emailTestResult, setEmailTestResult]   = useState(null);
+
+  const handleTestEmail = async () => {
+    setEmailTestLoading(true);
+    setEmailTestResult(null);
+    try {
+      const res = await testEmailConnection();
+      setEmailTestResult({ ok: true, msg: res.message });
+      toast({ title: "✓ " + res.message });
+    } catch (e) {
+      const msg = e.response?.data?.detail || "Error al enviar email de prueba";
+      setEmailTestResult({ ok: false, msg });
+      toast({ title: msg, variant: "destructive" });
+    } finally { setEmailTestLoading(false); }
+  };
 
   // DB state
   const [dbStats, setDbStats] = useState(null);
@@ -655,26 +673,96 @@ export default function Settings() {
                   </div>
                   <div className="flex-1">
                     <p className="text-xs font-black text-slate-800">Email — Resend</p>
-                    <p className="text-[10px] text-slate-400">Gratis hasta 3,000 emails/mes</p>
+                    <p className="text-[10px] text-slate-400">Gratis hasta 3,000 emails/mes · <a href="https://resend.com" target="_blank" rel="noreferrer" className="text-indigo-500 underline">resend.com</a></p>
                   </div>
                   {notif.resend_api_key && notif.resend_api_key.includes("•") && (
                     <span className="text-[10px] font-black px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-700">ACTIVO</span>
                   )}
                 </div>
-                <input type="email" value={notif.admin_email}
-                  onChange={e => setNotif(p => ({ ...p, admin_email: e.target.value }))}
-                  placeholder="tu@email.com"
-                  data-testid="notif-email-input"
-                  className="w-full bg-white/70 border border-white/80 rounded-xl px-4 py-2.5 text-sm text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-300" />
+
+                {/* API Key */}
                 <div>
+                  <label className="text-[10px] font-black text-slate-500 uppercase tracking-wider mb-1 block">API Key</label>
                   <input type="password" value={notif.resend_api_key}
                     onChange={e => setNotif(p => ({ ...p, resend_api_key: e.target.value }))}
-                    placeholder="re_xxxxx (clave API de resend.com)"
+                    placeholder="re_xxxxx — Obtén la clave en resend.com"
                     data-testid="notif-resend-key-input"
                     className="w-full bg-white/70 border border-white/80 rounded-xl px-4 py-2.5 text-sm text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-300" />
-                  <p className="text-[10px] text-slate-400 mt-1">
-                    Gratis en <a href="https://resend.com" target="_blank" rel="noreferrer" className="text-indigo-500 underline">resend.com</a>
-                  </p>
+                </div>
+
+                {/* Email destino */}
+                <div>
+                  <label className="text-[10px] font-black text-slate-500 uppercase tracking-wider mb-1 block">Email Destino (Admin)</label>
+                  <input type="email" value={notif.admin_email}
+                    onChange={e => setNotif(p => ({ ...p, admin_email: e.target.value }))}
+                    placeholder="tu@email.com"
+                    data-testid="notif-email-input"
+                    className="w-full bg-white/70 border border-white/80 rounded-xl px-4 py-2.5 text-sm text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-300" />
+                </div>
+
+                {/* Nombre del remitente */}
+                <div>
+                  <label className="text-[10px] font-black text-slate-500 uppercase tracking-wider mb-1 block">Nombre del Remitente</label>
+                  <input type="text" value={notif.sender_name || ""}
+                    onChange={e => setNotif(p => ({ ...p, sender_name: e.target.value }))}
+                    placeholder="Cinema Productions"
+                    data-testid="notif-sender-name"
+                    className="w-full bg-white/70 border border-white/80 rounded-xl px-4 py-2.5 text-sm text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-300" />
+                </div>
+
+                {/* Asunto personalizado */}
+                <div>
+                  <label className="text-[10px] font-black text-slate-500 uppercase tracking-wider mb-1 block">Asunto del Email (opcional)</label>
+                  <input type="text" value={notif.email_subject || ""}
+                    onChange={e => setNotif(p => ({ ...p, email_subject: e.target.value }))}
+                    placeholder="Recordatorio: eventos próximos"
+                    data-testid="notif-email-subject"
+                    className="w-full bg-white/70 border border-white/80 rounded-xl px-4 py-2.5 text-sm text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-300" />
+                </div>
+
+                {/* CC adicionales */}
+                <div>
+                  <label className="text-[10px] font-black text-slate-500 uppercase tracking-wider mb-1 block">Emails adicionales (CC, separados por coma)</label>
+                  <input type="text" value={notif.cc_emails || ""}
+                    onChange={e => setNotif(p => ({ ...p, cc_emails: e.target.value }))}
+                    placeholder="socio@email.com, asistente@email.com"
+                    data-testid="notif-cc-emails"
+                    className="w-full bg-white/70 border border-white/80 rounded-xl px-4 py-2.5 text-sm text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-300" />
+                  <p className="text-[10px] text-slate-400 mt-1">Recibirán copia de cada recordatorio</p>
+                </div>
+
+                {/* Notificar al cliente */}
+                <div className="flex items-center justify-between bg-white/50 rounded-xl px-3 py-2.5">
+                  <div>
+                    <p className="text-xs font-bold text-slate-700">Enviar también al cliente</p>
+                    <p className="text-[10px] text-slate-400">Envía un recordatorio al email del cliente en la reserva</p>
+                  </div>
+                  <button
+                    data-testid="notify-client-toggle"
+                    onClick={() => setNotif(p => ({ ...p, notify_client: !p.notify_client }))}
+                    className={`w-9 h-5 rounded-full transition-all relative shrink-0 ${notif.notify_client ? "bg-blue-500" : "bg-slate-200"}`}>
+                    <span className={`absolute top-0.5 w-4 h-4 bg-white rounded-full shadow transition-all ${notif.notify_client ? "left-[18px]" : "left-0.5"}`} />
+                  </button>
+                </div>
+
+                {/* Test result */}
+                {emailTestResult && (
+                  <motion.div initial={{ opacity: 0, y: -4 }} animate={{ opacity: 1, y: 0 }}
+                    className={`flex items-center gap-2 px-3 py-2.5 rounded-xl text-xs font-semibold ${emailTestResult.ok ? "bg-emerald-50 text-emerald-700 border border-emerald-200/60" : "bg-red-50 text-red-600 border border-red-200/60"}`}>
+                    {emailTestResult.ok ? <CheckCircle size={13} /> : <XCircle size={13} />}
+                    {emailTestResult.msg}
+                  </motion.div>
+                )}
+
+                {/* Botones */}
+                <div className="flex gap-2 pt-1">
+                  <motion.button whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.97 }}
+                    onClick={handleTestEmail} disabled={emailTestLoading}
+                    data-testid="test-email-btn"
+                    className="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl bg-blue-500 hover:bg-blue-600 text-white text-xs font-bold transition-all disabled:opacity-50">
+                    {emailTestLoading ? <Loader2 size={13} className="animate-spin" /> : <Mail size={13} />}
+                    {emailTestLoading ? "Enviando…" : "Probar conexión"}
+                  </motion.button>
                 </div>
               </div>
 

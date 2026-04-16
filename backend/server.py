@@ -167,6 +167,11 @@ class NotificationSettingsModel(BaseModel):
     admin_whatsapp: Optional[str] = None
     notification_channel: str = "email"
     resend_api_key: Optional[str] = None
+    # ── New email fields ───────────────────────────────────────
+    sender_name: Optional[str] = "Cinema Productions"
+    cc_emails: Optional[str] = None          # comma-separated CC emails
+    email_subject: Optional[str] = None      # custom subject template
+    notify_client: bool = False              # also email client_email field
     telegram_enabled: bool = False
     telegram_bot_token: Optional[str] = None
     telegram_chat_id: Optional[str] = None
@@ -191,39 +196,68 @@ class DBConnectRequest(BaseModel):
 
 
 # ─── Reminder Logic ──────────────────────────────────────
-def _build_reminder_html(events: list, days: int) -> str:
+def _build_reminder_html(events: list, days: int, sender_name: str = "Cinema Productions") -> str:
     rows = ""
     for ev in events:
+        balance = ev.get("total_amount", 0) - ev.get("advance_paid", 0)
+        balance_str = f"Q{balance:,.2f}" if balance > 0 else '<span style="color:#10b981;font-weight:bold;">Pagado</span>'
         rows += f"""
         <tr>
           <td style="padding:10px 16px;border-bottom:1px solid #e5e7eb;">{ev.get('client_name','')}</td>
           <td style="padding:10px 16px;border-bottom:1px solid #e5e7eb;">{ev.get('event_type','')}</td>
-          <td style="padding:10px 16px;border-bottom:1px solid #e5e7eb;">{ev.get('event_date','')}</td>
+          <td style="padding:10px 16px;border-bottom:1px solid #e5e7eb;">{ev.get('event_date','')} {ev.get('event_time','')}</td>
           <td style="padding:10px 16px;border-bottom:1px solid #e5e7eb;">{ev.get('venue') or '—'}</td>
+          <td style="padding:10px 16px;border-bottom:1px solid #e5e7eb;">{balance_str}</td>
         </tr>"""
     return f"""
-    <div style="font-family:Arial,sans-serif;max-width:600px;margin:0 auto;background:#f8fafc;padding:32px;">
-      <div style="background:#6366f1;border-radius:16px 16px 0 0;padding:24px 32px;">
-        <h1 style="color:#fff;margin:0;font-size:22px;">Cinema Productions</h1>
-        <p style="color:rgba(255,255,255,0.8);margin:4px 0 0;">Recordatorio de eventos próximos</p>
+    <div style="font-family:Arial,sans-serif;max-width:620px;margin:0 auto;background:#f8fafc;padding:32px;">
+      <div style="background:linear-gradient(135deg,#6366f1,#8b5cf6);border-radius:16px 16px 0 0;padding:24px 32px;">
+        <h1 style="color:#fff;margin:0;font-size:22px;">{sender_name}</h1>
+        <p style="color:rgba(255,255,255,0.85);margin:4px 0 0;font-size:14px;">Recordatorio de eventos próximos</p>
       </div>
-      <div style="background:#fff;border-radius:0 0 16px 16px;padding:24px 32px;">
-        <p style="color:#374151;font-size:16px;">
+      <div style="background:#fff;border-radius:0 0 16px 16px;padding:24px 32px;box-shadow:0 4px 24px rgba(0,0,0,0.06);">
+        <p style="color:#374151;font-size:16px;margin-top:0;">
           Tienes <strong>{len(events)} evento(s)</strong> programado(s) en <strong>{days} día(s)</strong>:
         </p>
-        <table style="width:100%;border-collapse:collapse;margin-top:16px;">
+        <table style="width:100%;border-collapse:collapse;margin-top:16px;font-size:13px;">
           <thead>
             <tr style="background:#f1f5f9;">
-              <th style="padding:10px 16px;text-align:left;color:#6366f1;font-size:13px;">Cliente</th>
-              <th style="padding:10px 16px;text-align:left;color:#6366f1;font-size:13px;">Tipo</th>
-              <th style="padding:10px 16px;text-align:left;color:#6366f1;font-size:13px;">Fecha</th>
-              <th style="padding:10px 16px;text-align:left;color:#6366f1;font-size:13px;">Lugar</th>
+              <th style="padding:10px 16px;text-align:left;color:#6366f1;">Cliente</th>
+              <th style="padding:10px 16px;text-align:left;color:#6366f1;">Tipo</th>
+              <th style="padding:10px 16px;text-align:left;color:#6366f1;">Fecha / Hora</th>
+              <th style="padding:10px 16px;text-align:left;color:#6366f1;">Lugar</th>
+              <th style="padding:10px 16px;text-align:left;color:#6366f1;">Saldo</th>
             </tr>
           </thead>
           <tbody>{rows}</tbody>
         </table>
-        <p style="color:#9ca3af;font-size:12px;margin-top:24px;">
-          Cinema Productions — Sistema de Gestión de Reservas
+        <p style="color:#9ca3af;font-size:11px;margin-top:24px;border-top:1px solid #e5e7eb;padding-top:16px;">
+          {sender_name} — Sistema de Gestión de Reservas · Este es un recordatorio automático
+        </p>
+      </div>
+    </div>"""
+
+
+def _build_client_reminder_html(ev: dict, days: int, sender_name: str = "Cinema Productions") -> str:
+    balance = ev.get("total_amount", 0) - ev.get("advance_paid", 0)
+    balance_str = f"Saldo pendiente: Q{balance:,.2f}" if balance > 0 else "Pago completado ✓"
+    return f"""
+    <div style="font-family:Arial,sans-serif;max-width:560px;margin:0 auto;background:#f8fafc;padding:32px;">
+      <div style="background:linear-gradient(135deg,#6366f1,#8b5cf6);border-radius:16px 16px 0 0;padding:24px 32px;">
+        <h1 style="color:#fff;margin:0;font-size:20px;">{sender_name}</h1>
+        <p style="color:rgba(255,255,255,0.85);margin:4px 0 0;font-size:14px;">Recordatorio de tu evento</p>
+      </div>
+      <div style="background:#fff;border-radius:0 0 16px 16px;padding:24px 32px;box-shadow:0 4px 24px rgba(0,0,0,0.06);">
+        <p style="color:#374151;font-size:16px;margin-top:0;">Hola <strong>{ev.get('client_name','')}</strong>,</p>
+        <p style="color:#374151;">Te recordamos que tu evento está programado en <strong>{days} día(s)</strong>:</p>
+        <div style="background:#f1f5f9;border-radius:12px;padding:20px;margin:16px 0;">
+          <p style="margin:0 0 8px;color:#6366f1;font-weight:bold;">{ev.get('event_type', 'Evento')}</p>
+          <p style="margin:0 0 6px;color:#374151;">📅 {ev.get('event_date', '')} {ev.get('event_time', '')}</p>
+          <p style="margin:0 0 6px;color:#374151;">📍 {ev.get('venue') or 'Por confirmar'}</p>
+          <p style="margin:0;color:#374151;">💳 {balance_str}</p>
+        </div>
+        <p style="color:#9ca3af;font-size:11px;margin-top:24px;border-top:1px solid #e5e7eb;padding-top:16px;">
+          {sender_name} — Este es un recordatorio automático
         </p>
       </div>
     </div>"""
@@ -241,7 +275,7 @@ async def check_and_send_reminders():
 
         cursor = db.reservations.find(
             {"event_date": target_date, "status": {"$nin": ["Cancelado", "Completado"]}},
-            {"client_name": 1, "event_date": 1, "event_type": 1, "venue": 1, "_id": 0}
+            {"client_name": 1, "event_date": 1, "event_time": 1, "event_type": 1, "venue": 1, "total_amount": 1, "advance_paid": 1, "email": 1, "_id": 0}
         )
         upcoming = await cursor.to_list(100)
 
@@ -250,6 +284,11 @@ async def check_and_send_reminders():
             return
 
         channel = settings_doc.get("notification_channel", "email")
+        sender_name = settings_doc.get("sender_name") or "Cinema Productions"
+        custom_subject = settings_doc.get("email_subject") or f"Recordatorio: {len(upcoming)} evento(s) en {days} día(s)"
+        cc_raw = settings_doc.get("cc_emails") or ""
+        cc_list = [e.strip() for e in cc_raw.split(",") if e.strip()]
+        notify_client = settings_doc.get("notify_client", False)
         logger.info(f"Sending reminders for {len(upcoming)} events on {target_date} via {channel}")
 
         if channel in ("email", "both"):
@@ -257,15 +296,28 @@ async def check_and_send_reminders():
             admin_email = settings_doc.get("admin_email")
             if api_key and admin_email:
                 resend_lib.api_key = api_key
-                html = _build_reminder_html(upcoming, days)
+                html = _build_reminder_html(upcoming, days, sender_name)
+                to_list = [admin_email] + cc_list
                 params = {
-                    "from": "Cinema Productions <onboarding@resend.dev>",
-                    "to": [admin_email],
-                    "subject": f"Recordatorio: {len(upcoming)} evento(s) en {days} día(s)",
+                    "from": f"{sender_name} <onboarding@resend.dev>",
+                    "to": to_list,
+                    "subject": custom_subject,
                     "html": html,
                 }
                 await asyncio.to_thread(resend_lib.Emails.send, params)
-                logger.info(f"Reminder email sent to {admin_email}")
+                logger.info(f"Reminder email sent to {to_list}")
+                # Also notify each client if they have email
+                if notify_client:
+                    for ev in upcoming:
+                        client_email = ev.get("email")
+                        if client_email:
+                            client_params = {
+                                "from": f"{sender_name} <onboarding@resend.dev>",
+                                "to": [client_email],
+                                "subject": f"Recordatorio de tu evento — {ev.get('event_type', '')} el {ev.get('event_date', '')}",
+                                "html": _build_client_reminder_html(ev, days, sender_name),
+                            }
+                            await asyncio.to_thread(resend_lib.Emails.send, client_params)
             else:
                 logger.warning("Email reminders enabled but api_key or admin_email missing.")
 
@@ -345,7 +397,7 @@ async def _send_telegram(bot_token: str, chat_id: str, text: str):
 
 
 def _build_telegram_text(events: list, days: int) -> str:
-    lines = [f"<b>Cinema Productions</b> — Recordatorio\n"]
+    lines = ["<b>Cinema Productions</b> — Recordatorio\n"]
     lines.append(f"Tienes <b>{len(events)} evento(s)</b> en <b>{days} día(s)</b>:\n")
     for ev in events:
         date = ev.get("event_date", "")
@@ -1457,6 +1509,54 @@ async def get_pending_notifications():
     docs = await cursor.to_list(100)
     return [doc_to_dict(d) for d in docs]
 
+
+
+@api_router.post("/reminders/test-email")
+async def test_email_connection():
+    """Send a test email to verify Resend API key and email config — no events needed."""
+    try:
+        settings_doc = await db.app_settings.find_one({}, {"_id": 0})
+        if not settings_doc:
+            raise HTTPException(status_code=400, detail="Configura los ajustes primero")
+
+        api_key   = settings_doc.get("resend_api_key")
+        admin_email = settings_doc.get("admin_email")
+        sender_name = settings_doc.get("sender_name") or "Cinema Productions"
+
+        if not api_key:
+            raise HTTPException(status_code=400, detail="Ingresa tu API Key de Resend primero")
+        if not admin_email:
+            raise HTTPException(status_code=400, detail="Ingresa un Email Destino primero")
+
+        resend_lib.api_key = api_key
+        html = f"""
+        <div style="font-family:Arial,sans-serif;max-width:520px;margin:0 auto;background:#f8fafc;padding:32px;">
+          <div style="background:linear-gradient(135deg,#6366f1,#8b5cf6);border-radius:16px 16px 0 0;padding:24px 32px;">
+            <h1 style="color:#fff;margin:0;font-size:20px;">{sender_name}</h1>
+            <p style="color:rgba(255,255,255,0.85);margin:4px 0 0;font-size:14px;">Prueba de conexión de email</p>
+          </div>
+          <div style="background:#fff;border-radius:0 0 16px 16px;padding:24px 32px;box-shadow:0 4px 24px rgba(0,0,0,0.06);">
+            <p style="color:#10b981;font-size:18px;font-weight:bold;margin-top:0;">✓ Conexión exitosa</p>
+            <p style="color:#374151;">Tu configuración de email con Resend funciona correctamente.</p>
+            <p style="color:#374151;">Los recordatorios automáticos se enviarán a: <strong>{admin_email}</strong></p>
+            <p style="color:#9ca3af;font-size:11px;margin-top:24px;border-top:1px solid #e5e7eb;padding-top:16px;">
+              {sender_name} — Prueba enviada desde el Sistema de Gestión de Reservas
+            </p>
+          </div>
+        </div>"""
+        params = {
+            "from": f"{sender_name} <onboarding@resend.dev>",
+            "to": [admin_email],
+            "subject": f"✓ Prueba de email — {sender_name}",
+            "html": html,
+        }
+        result = await asyncio.to_thread(resend_lib.Emails.send, params)
+        return {"success": True, "message": f"Email de prueba enviado a {admin_email}", "id": getattr(result, 'id', str(result))}
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"test-email error: {e}")
+        raise HTTPException(status_code=500, detail=f"Error al enviar: {str(e)}")
 
 
 @api_router.post("/reminders/send")
