@@ -1226,53 +1226,67 @@ export default function AppearancePage() {
                       className="flex flex-col rounded-2xl overflow-hidden transition-all text-left"
                       style={{ border: isActive ? "2px solid var(--t-from)" : "2px solid rgba(226,232,240,0.8)" }}>
                       {/* Preview thumbnail */}
-                      <div className="relative h-24 w-full overflow-hidden" style={{ background: cfg.previewBg }}>
-                        {/* Header bar */}
-                        <div className="h-6 flex items-center px-2 gap-1.5 border-b border-white/10" style={{ background: cfg.previewBar }}>
-                          <div className="w-2 h-2 rounded-full" style={{ background: "rgba(148,163,184,0.5)" }} />
-                          <div className="flex-1 h-1 rounded" style={{ background: "rgba(148,163,184,0.3)" }} />
-                          <div className="w-8 h-3 rounded-full" style={{ background: "linear-gradient(90deg,var(--t-from),var(--t-to))" }} />
-                        </div>
-                        {/* Input rows */}
-                        <div className="px-2 pt-2 space-y-1.5">
-                          <div className="flex gap-1">
-                            {[1,2,3].map(i => (
-                              <div key={i} className="flex-1" style={{
-                                height: 14,
-                                borderRadius: cfg.previewUnderlineOnly ? 0 : 6,
-                                background: cfg.previewInp,
-                                border: cfg.previewUnderlineOnly ? "none" : `1.5px solid ${cfg.previewBorder}`,
-                                borderBottom: cfg.previewUnderlineOnly ? `2px solid ${cfg.previewBorder}` : undefined,
-                                boxShadow: cfg.previewGlow ? `0 0 6px 0 var(--t-from)66` : undefined,
-                              }} />
-                            ))}
+                      <div className="relative h-24 w-full overflow-hidden"
+                        style={{ background: cfg.previewLayout === "floating" ? (cfg.previewOverlay || "rgba(15,23,42,0.55)") : cfg.previewBg }}>
+                        {cfg.previewLayout === "floating" ? (
+                          /* Floating: show centered card within overlay */
+                          <div className="absolute inset-0 flex items-center justify-center p-2">
+                            <div className="w-full rounded-xl overflow-hidden shadow-lg" style={{ background: cfg.previewBg }}>
+                              {/* accent strip or header */}
+                              <div className="h-5 flex items-center px-2 gap-1" style={{ background: typeof cfg.previewBar === "string" && cfg.previewBar.includes("gradient") ? cfg.previewBar : (cfg.previewBar || "rgba(255,255,255,0.08)") }}>
+                                <div className="w-1.5 h-1.5 rounded-full bg-white/40" />
+                                <div className="flex-1 h-0.5 rounded bg-white/20" />
+                                <div className="w-6 h-2.5 rounded-full" style={{ background: "linear-gradient(90deg,var(--t-from),var(--t-to))" }} />
+                              </div>
+                              <div className="px-1.5 pt-1.5 pb-1 space-y-1">
+                                {[[1,1],[1,1,1,1],[1,1]].map((row, ri) => (
+                                  <div key={ri} className="flex gap-0.5">
+                                    {row.map((_, ci) => (
+                                      <div key={ci} className="flex-1" style={{
+                                        height: ri === 0 ? 10 : 8,
+                                        borderRadius: cfg.previewUnderlineOnly ? 0 : 4,
+                                        background: cfg.previewInp,
+                                        border: cfg.previewUnderlineOnly ? "none" : `1px solid ${cfg.previewBorder}`,
+                                        borderBottom: cfg.previewUnderlineOnly ? `1.5px solid ${cfg.previewBorder}` : undefined,
+                                        boxShadow: cfg.previewIsGreen ? `0 0 4px 0 rgba(74,222,128,0.4)` : undefined,
+                                      }} />
+                                    ))}
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
                           </div>
-                          <div className="flex gap-1">
-                            {[1,2,3,4].map(i => (
-                              <div key={i} className="flex-1" style={{
-                                height: 11,
-                                borderRadius: cfg.previewUnderlineOnly ? 0 : 6,
-                                background: cfg.previewInp,
-                                border: cfg.previewUnderlineOnly ? "none" : `1.5px solid ${cfg.previewBorder}`,
-                                borderBottom: cfg.previewUnderlineOnly ? `2px solid ${cfg.previewBorder}` : undefined,
-                                boxShadow: cfg.previewGlow ? `0 0 6px 0 var(--t-from)66` : undefined,
-                              }} />
-                            ))}
-                          </div>
-                          <div className="flex gap-1">
-                            {[1,2].map(i => (
-                              <div key={i} className="flex-1" style={{
-                                height: 11,
-                                borderRadius: cfg.previewUnderlineOnly ? 0 : 6,
-                                background: cfg.previewInp,
-                                border: cfg.previewUnderlineOnly ? "none" : `1.5px solid ${cfg.previewBorder}`,
-                                borderBottom: cfg.previewUnderlineOnly ? `2px solid ${cfg.previewBorder}` : undefined,
-                                boxShadow: cfg.previewGlow ? `0 0 6px 0 var(--t-from)66` : undefined,
-                              }} />
-                            ))}
-                          </div>
-                        </div>
+                        ) : (
+                          /* Fullscreen: form fills the whole thumbnail */
+                          <>
+                            <div className="h-6 flex items-center px-2 gap-1.5 border-b border-white/10" style={{ background: cfg.previewBar }}>
+                              <div className="w-2 h-2 rounded-full" style={{ background: "rgba(148,163,184,0.5)" }} />
+                              <div className="flex-1 h-1 rounded" style={{ background: "rgba(148,163,184,0.3)" }} />
+                              <div className="w-8 h-3 rounded-full" style={{ background: "linear-gradient(90deg,var(--t-from),var(--t-to))" }} />
+                            </div>
+                            <div className="px-2 pt-2 space-y-1.5">
+                              {[[1,2,3],[1,2,3,4],[1,2]].map((row, ri) => (
+                                <div key={ri} className="flex gap-1">
+                                  {row.map(i => (
+                                    <div key={i} className="flex-1" style={{
+                                      height: ri === 0 ? 14 : 11,
+                                      borderRadius: cfg.previewUnderlineOnly ? 0 : 6,
+                                      background: cfg.previewInp,
+                                      border: cfg.previewUnderlineOnly ? "none" : `1.5px solid ${cfg.previewBorder}`,
+                                      borderBottom: cfg.previewUnderlineOnly ? `2px solid ${cfg.previewBorder}` : undefined,
+                                    }} />
+                                  ))}
+                                </div>
+                              ))}
+                            </div>
+                          </>
+                        )}
                         {isActive && <div className="absolute top-1.5 right-1.5 w-5 h-5 rounded-full btn-primary flex items-center justify-center shadow-md"><CheckCircle size={11} className="text-white" /></div>}
+                        {/* Layout badge */}
+                        <div className="absolute bottom-1 left-1.5 text-[7px] font-black uppercase tracking-wide px-1.5 py-0.5 rounded-full"
+                          style={{ background: cfg.previewLayout === "floating" ? "rgba(99,102,241,0.85)" : "rgba(0,0,0,0.3)", color: "white" }}>
+                          {cfg.previewLayout === "floating" ? "popup" : "full"}
+                        </div>
                       </div>
                       {/* Label */}
                       <div className="p-2 bg-white/70">
@@ -1303,33 +1317,67 @@ export default function AppearancePage() {
                       className="flex flex-col rounded-2xl overflow-hidden transition-all text-left"
                       style={{ border: isActive ? "2px solid var(--t-from)" : "2px solid rgba(226,232,240,0.8)" }}>
                       {/* Preview thumbnail — same layout but with photo area */}
-                      <div className="relative h-24 w-full overflow-hidden" style={{ background: cfg.previewBg }}>
-                        <div className="h-6 flex items-center px-2 gap-1.5 border-b border-white/10" style={{ background: cfg.previewBar }}>
-                          <div className="w-2 h-2 rounded-full" style={{ background: "rgba(148,163,184,0.5)" }} />
-                          <div className="flex-1 h-1 rounded" style={{ background: "rgba(148,163,184,0.3)" }} />
-                          <div className="w-8 h-3 rounded-full" style={{ background: "linear-gradient(90deg,var(--t-from),var(--t-to))" }} />
-                        </div>
-                        <div className="flex gap-2 px-2 pt-2">
-                          {/* Photo placeholder */}
-                          <div className="w-10 h-[52px] rounded-xl flex-shrink-0" style={{
-                            background: cfg.isDark ? "rgba(255,255,255,0.12)" : "linear-gradient(135deg,var(--t-from)44,var(--t-to)44)",
-                            border: `1.5px solid ${cfg.previewBorder}`,
-                          }} />
-                          {/* Fields */}
-                          <div className="flex-1 space-y-1.5">
-                            {[14,11,11].map((h,i) => (
-                              <div key={i} style={{
-                                height: h,
-                                borderRadius: cfg.previewUnderlineOnly ? 0 : 6,
-                                background: cfg.previewInp,
-                                border: cfg.previewUnderlineOnly ? "none" : `1.5px solid ${cfg.previewBorder}`,
-                                borderBottom: cfg.previewUnderlineOnly ? `2px solid ${cfg.previewBorder}` : undefined,
-                                boxShadow: cfg.previewGlow ? `0 0 6px 0 var(--t-from)66` : undefined,
-                              }} />
-                            ))}
+                      <div className="relative h-24 w-full overflow-hidden"
+                        style={{ background: cfg.previewLayout === "floating" ? (cfg.previewOverlay || "rgba(15,23,42,0.55)") : cfg.previewBg }}>
+                        {cfg.previewLayout === "floating" ? (
+                          <div className="absolute inset-0 flex items-center justify-center p-2">
+                            <div className="w-full rounded-xl overflow-hidden shadow-lg" style={{ background: cfg.previewBg }}>
+                              <div className="h-5 flex items-center px-2 gap-1" style={{ background: typeof cfg.previewBar === "string" && cfg.previewBar.includes("gradient") ? cfg.previewBar : (cfg.previewBar || "rgba(255,255,255,0.08)") }}>
+                                <div className="w-1.5 h-1.5 rounded-full bg-white/40" />
+                                <div className="flex-1 h-0.5 rounded bg-white/20" />
+                                <div className="w-6 h-2.5 rounded-full" style={{ background: "linear-gradient(90deg,var(--t-from),var(--t-to))" }} />
+                              </div>
+                              <div className="flex gap-1.5 px-1.5 pt-1.5 pb-1">
+                                <div className="w-8 h-[38px] rounded-lg flex-shrink-0" style={{
+                                  background: cfg.isDark ? "rgba(255,255,255,0.12)" : "linear-gradient(135deg,var(--t-from)44,var(--t-to)44)",
+                                  border: `1px solid ${cfg.previewBorder}`,
+                                }} />
+                                <div className="flex-1 space-y-1">
+                                  {[12,9,9].map((h,i) => (
+                                    <div key={i} style={{
+                                      height: h,
+                                      borderRadius: cfg.previewUnderlineOnly ? 0 : 4,
+                                      background: cfg.previewInp,
+                                      border: cfg.previewUnderlineOnly ? "none" : `1px solid ${cfg.previewBorder}`,
+                                      borderBottom: cfg.previewUnderlineOnly ? `1.5px solid ${cfg.previewBorder}` : undefined,
+                                      boxShadow: cfg.previewIsGreen ? `0 0 4px 0 rgba(74,222,128,0.4)` : undefined,
+                                    }} />
+                                  ))}
+                                </div>
+                              </div>
+                            </div>
                           </div>
-                        </div>
+                        ) : (
+                          <>
+                            <div className="h-6 flex items-center px-2 gap-1.5 border-b border-white/10" style={{ background: cfg.previewBar }}>
+                              <div className="w-2 h-2 rounded-full" style={{ background: "rgba(148,163,184,0.5)" }} />
+                              <div className="flex-1 h-1 rounded" style={{ background: "rgba(148,163,184,0.3)" }} />
+                              <div className="w-8 h-3 rounded-full" style={{ background: "linear-gradient(90deg,var(--t-from),var(--t-to))" }} />
+                            </div>
+                            <div className="flex gap-2 px-2 pt-2">
+                              <div className="w-10 h-[52px] rounded-xl flex-shrink-0" style={{
+                                background: cfg.isDark ? "rgba(255,255,255,0.12)" : "linear-gradient(135deg,var(--t-from)44,var(--t-to)44)",
+                                border: `1.5px solid ${cfg.previewBorder}`,
+                              }} />
+                              <div className="flex-1 space-y-1.5">
+                                {[14,11,11].map((h,i) => (
+                                  <div key={i} style={{
+                                    height: h,
+                                    borderRadius: cfg.previewUnderlineOnly ? 0 : 6,
+                                    background: cfg.previewInp,
+                                    border: cfg.previewUnderlineOnly ? "none" : `1.5px solid ${cfg.previewBorder}`,
+                                    borderBottom: cfg.previewUnderlineOnly ? `2px solid ${cfg.previewBorder}` : undefined,
+                                  }} />
+                                ))}
+                              </div>
+                            </div>
+                          </>
+                        )}
                         {isActive && <div className="absolute top-1.5 right-1.5 w-5 h-5 rounded-full btn-primary flex items-center justify-center shadow-md"><CheckCircle size={11} className="text-white" /></div>}
+                        <div className="absolute bottom-1 left-1.5 text-[7px] font-black uppercase tracking-wide px-1.5 py-0.5 rounded-full"
+                          style={{ background: cfg.previewLayout === "floating" ? "rgba(99,102,241,0.85)" : "rgba(0,0,0,0.3)", color: "white" }}>
+                          {cfg.previewLayout === "floating" ? "popup" : "full"}
+                        </div>
                       </div>
                       <div className="p-2 bg-white/70">
                         <p className="text-[11px] font-black text-slate-800">{cfg.name}</p>
