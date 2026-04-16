@@ -1,0 +1,33 @@
+{
+  "summary": "Tested 'Campos de Formulario' feature in Apariencia page. All 10 test items verified successfully.",
+  "backend_issues": {
+    "critical": [],
+    "minor": []
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": []
+  },
+  "test_report_links": [],
+  "action_items": [],
+  "critical_code_review_comments": [],
+  "updated_files": [],
+  "success_rate": {"backend": "N/A", "frontend": "100%"},
+  "seed_data_creation": "",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "Feature fully working: Apariencia page has 'Campos de Formulario' section with NUEVO badge. All 7 reservation toggles and 5 socio toggles present with correct data-testids. Toggling fields OFF hides them in the respective forms (ReservationForm, SocioForm). Reset buttons ('Mostrar todos') restore all fields. Toast notifications shown on toggle/reset actions.",
+  "test_results": {
+    "appearance_section": "PASS - Campos de Formulario section with NUEVO badge visible",
+    "reservation_toggles": "PASS - All 7 toggles (email, phone, time, venue, guests, advance, notes) present",
+    "socio_toggles": "PASS - All 5 toggles (photo, phone, email, rate, notes) present",
+    "toggle_off_email_reservation": "PASS - Email field hidden in reservation form when toggled OFF",
+    "toggle_off_time_reservation": "PASS - Time field hidden in reservation form when toggled OFF",
+    "toggle_off_guests_reservation": "PASS - Guests field hidden in reservation form when toggled OFF",
+    "reset_reservation": "PASS - 'Mostrar todos' restores all reservation fields",
+    "toggle_off_photo_socio": "PASS - Photo section hidden in socio form when toggled OFF",
+    "toggle_off_email_socio": "PASS - Email field hidden in socio form when toggled OFF",
+    "reset_buttons_present": "PASS - Both reset buttons found"
+  }
+}
