@@ -144,9 +144,22 @@ export default function Dashboard() {
       const [s, r] = await Promise.all([getStats(), getReservations()]);
       setStats(s);
       setAll(r);
-      setRecent([...r].sort((a, b) => new Date(a.event_date) - new Date(b.event_date)).slice(0, 6));
+      // Filter events for the current month
+      const now = new Date();
+      const cm = now.getMonth();
+      const cy = now.getFullYear();
+      const monthEvents = [...r]
+        .filter(res => {
+          if (!res.event_date) return false;
+          const d = new Date(res.event_date + "T00:00:00");
+          return d.getMonth() === cm && d.getFullYear() === cy && res.status !== "Cancelado";
+        })
+        .sort((a, b) => new Date(a.event_date) - new Date(b.event_date));
+      setRecent(monthEvents);
     } catch (e) { console.error(e); } finally { setLoading(false); }
   };
+
+  const currentMonthName = tr.months[new Date().getMonth()];
 
   useEffect(() => { load(); }, []);
 
@@ -219,9 +232,19 @@ export default function Dashboard() {
         className="glass rounded-3xl overflow-hidden"
       >
         <div className="flex items-center justify-between px-6 py-5 border-b border-white/40">
-          <h2 className="text-lg font-black text-slate-900" style={{ fontFamily: "Cabinet Grotesk, sans-serif" }}>
-            {d.upcomingTitle}
-          </h2>
+          <div className="flex items-center gap-3">
+            <h2 className="text-lg font-black text-slate-900" style={{ fontFamily: "Cabinet Grotesk, sans-serif" }}>
+              {d.upcomingTitle}
+            </h2>
+            <span className="text-[11px] font-black px-2.5 py-1 rounded-full btn-primary text-white">
+              {currentMonthName}
+            </span>
+            {recent.length > 0 && (
+              <span className="text-[11px] font-bold px-2 py-0.5 rounded-full bg-slate-100 text-slate-500">
+                {recent.length} {language === "es" ? "evento(s)" : "event(s)"}
+              </span>
+            )}
+          </div>
           <motion.button
             whileHover={{ x: 3 }}
             onClick={() => navigate("/reservaciones")}
@@ -238,7 +261,9 @@ export default function Dashboard() {
             <div className="w-16 h-16 rounded-3xl bg-slate-100/80 flex items-center justify-center mx-auto mb-3">
               <CalendarDays size={24} className="text-slate-300" />
             </div>
-            <p className="text-slate-400 text-sm font-medium">{d.noUpcoming}</p>
+            <p className="text-slate-400 text-sm font-medium">
+              {language === "es" ? `Sin eventos en ${currentMonthName}` : `No events in ${currentMonthName}`}
+            </p>
             <p className="text-slate-300 text-xs mt-1">{d.createFirst}</p>
           </div>
         ) : (
