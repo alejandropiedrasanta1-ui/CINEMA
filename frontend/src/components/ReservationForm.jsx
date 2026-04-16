@@ -245,7 +245,7 @@ export default function ReservationForm({ reservation, onClose, onSaved }) {
             exit={{ opacity: 0, scale: 0.95 }}
             transition={{ duration: 0.28, ease: [0.22,1,0.36,1] }}
             className={`w-full ${dc.cardMaxWidth||"max-w-3xl"} ${dc.cardRadius||"rounded-3xl"} overflow-hidden ${dc.cardShadow||"shadow-2xl"} my-auto`}
-            style={{ background: dc.cardBg, backdropFilter: dc.cardBackdrop }}
+            style={{ background: dc.cardBg, backdropFilter: dc.cardBackdrop||"none", WebkitBackdropFilter: dc.cardBackdrop||"none", isolation:"isolate" }}
             onClick={(e) => e.stopPropagation()}
           >
             <FloatingTopBar />

@@ -110,7 +110,7 @@ export default function SocioForm({ socio, onClose, onSaved }) {
             exit={{ opacity: 0, scale: 0.94, y: 16 }}
             transition={{ duration: 0.3, ease: [0.22,1,0.36,1] }}
             className={`w-full ${dc.cardMaxWidth || "max-w-2xl"} ${dc.cardRadius || "rounded-3xl"} overflow-hidden ${dc.cardShadow || "shadow-2xl"}`}
-            style={{ background: dc.cardBg, backdropFilter: dc.cardBackdrop }}
+            style={{ background: dc.cardBg, backdropFilter: dc.cardBackdrop||"none", WebkitBackdropFilter: dc.cardBackdrop||"none", isolation:"isolate" }}
             onClick={(e) => e.stopPropagation()}
           >
             {/* Accent bar (Tarjeta / App) */}
