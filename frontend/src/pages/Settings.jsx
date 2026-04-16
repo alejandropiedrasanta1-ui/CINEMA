@@ -111,6 +111,21 @@ export default function Settings() {
   const [emailTestLoading, setEmailTestLoading] = useState(false);
   const [emailTestResult, setEmailTestResult]   = useState(null);
 
+  // ── Timezone sync ─────────────────────────────────────────────────
+  const [timezoneMsg, setTimezoneMsg] = useState(null);
+
+  const handleSyncTimezone = () => {
+    try {
+      const detected = Intl.DateTimeFormat().resolvedOptions().timeZone;
+      setNotif(p => ({ ...p, timezone: detected }));
+      setTimezoneMsg({ ok: true, tz: detected });
+      toast({ title: `Zona horaria sincronizada: ${detected}` });
+    } catch {
+      setTimezoneMsg({ ok: false });
+      toast({ title: "No se pudo detectar la zona horaria", variant: "destructive" });
+    }
+  };
+
   const handleTestEmail = async () => {
     setEmailTestLoading(true);
     setEmailTestResult(null);
@@ -568,6 +583,86 @@ export default function Settings() {
           </div>
         </Section>
 
+        {/* ── ZONA HORARIA ───────────────────────── */}
+        <Section icon={Clock} title={language === "es" ? "Hora y Zona Horaria" : "Time & Timezone"} desc={language === "es" ? "Sincroniza con tu hora local para recordatorios precisos" : "Sync with your local time for accurate reminders"}>
+          <div className="space-y-4">
+            <div>
+              <label className="text-xs font-bold text-slate-600 mb-2 block">{language === "es" ? "Zona horaria" : "Timezone"}</label>
+              <div className="flex gap-2">
+                <select
+                  value={notif.timezone || "America/Guatemala"}
+                  onChange={e => { setNotif(p => ({ ...p, timezone: e.target.value })); setTimezoneMsg(null); }}
+                  data-testid="timezone-select"
+                  className="flex-1 bg-white/70 border border-white/80 rounded-xl px-3 py-2.5 text-sm font-bold text-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-300">
+                  <optgroup label="América">
+                    <option value="America/Guatemala">Guatemala (UTC-6)</option>
+                    <option value="America/Mexico_City">México CDMX (UTC-6)</option>
+                    <option value="America/Bogota">Colombia (UTC-5)</option>
+                    <option value="America/Lima">Perú (UTC-5)</option>
+                    <option value="America/Caracas">Venezuela (UTC-4)</option>
+                    <option value="America/Montevideo">Uruguay (UTC-3)</option>
+                    <option value="America/Argentina/Buenos_Aires">Argentina (UTC-3)</option>
+                    <option value="America/Santiago">Chile (UTC-3)</option>
+                    <option value="America/New_York">Nueva York (UTC-5)</option>
+                    <option value="America/Los_Angeles">Los Ángeles (UTC-8)</option>
+                    <option value="America/Chicago">Chicago (UTC-6)</option>
+                    <option value="America/Denver">Denver (UTC-7)</option>
+                  </optgroup>
+                  <optgroup label="Europa">
+                    <option value="Europe/Madrid">España (UTC+1)</option>
+                    <option value="Europe/London">Londres (UTC+0)</option>
+                    <option value="Europe/Paris">Francia (UTC+1)</option>
+                  </optgroup>
+                  <optgroup label="Otras">
+                    <option value="UTC">UTC</option>
+                  </optgroup>
+                </select>
+                <motion.button whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.97 }}
+                  onClick={handleSyncTimezone}
+                  data-testid="sync-timezone-btn"
+                  className="flex items-center gap-2 px-4 py-2.5 rounded-xl btn-primary text-white text-xs font-bold whitespace-nowrap shrink-0">
+                  <Zap size={13} />
+                  {language === "es" ? "Detectar auto" : "Auto-detect"}
+                </motion.button>
+              </div>
+              {timezoneMsg && (
+                <motion.p initial={{ opacity: 0 }} animate={{ opacity: 1 }}
+                  className={`text-[11px] mt-1.5 font-semibold ${timezoneMsg.ok ? "text-emerald-600" : "text-red-500"}`}>
+                  {timezoneMsg.ok ? `✓ Detectado: ${timezoneMsg.tz}` : "No se pudo detectar"}
+                </motion.p>
+              )}
+            </div>
+
+            <div className="flex items-center gap-3 bg-white/50 rounded-2xl px-4 py-3">
+              <div className="w-8 h-8 rounded-xl bg-indigo-100 flex items-center justify-center shrink-0">
+                <Clock size={14} className="text-indigo-600" />
+              </div>
+              <div>
+                <p className="text-xs font-bold text-slate-700">
+                  {language === "es" ? "Hora local ahora: " : "Local time now: "}
+                  <span className="font-black text-indigo-600">
+                    {new Date().toLocaleTimeString(language === "es" ? "es-GT" : "en-US", { hour: "2-digit", minute: "2-digit", second: "2-digit", timeZone: notif.timezone || "America/Guatemala" })}
+                  </span>
+                </p>
+                <p className="text-[10px] text-slate-400 mt-0.5">
+                  {language === "es" ? "Los recordatorios automáticos usarán esta hora" : "Automatic reminders use this time"}
+                </p>
+              </div>
+            </div>
+
+            <div>
+              <label className="text-xs font-bold text-slate-600 mb-1.5 flex items-center gap-1.5 block">
+                <Clock size={11} /> {language === "es" ? "Hora de aviso diario" : "Daily reminder time"}
+              </label>
+              <input type="time" value={notif.reminder_time || "09:00"}
+                onChange={e => setNotif(p => ({ ...p, reminder_time: e.target.value }))}
+                data-testid="notif-time-input"
+                className="w-full bg-white/70 border border-white/80 rounded-xl px-3 py-2 text-sm font-bold text-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-300" />
+              <p className="text-[10px] text-slate-400 mt-1">{language === "es" ? "El sistema enviará recordatorios diariamente a esta hora" : "System will send daily reminders at this time"}</p>
+            </div>
+          </div>
+        </Section>
+
         {/* Notifications */}
         <Section icon={Bell} title={s.notifTitle} desc={s.notifDesc}
           badge={
@@ -645,19 +740,9 @@ export default function Settings() {
                       : "Desactivado — actívalo para avisar horas antes"}
                   </p>
                 </div>
-                <div>
-                  <label className="text-xs font-bold text-slate-600 mb-1.5 flex items-center gap-1.5 block">
-                    <Clock size={11} />
-                    {language === "es" ? "Hora de aviso diario" : "Daily reminder time"}
-                  </label>
-                  <input type="time" value={notif.reminder_time || "09:00"}
-                    onChange={e => setNotif(p => ({ ...p, reminder_time: e.target.value }))}
-                    data-testid="notif-time-input"
-                    className="w-full bg-white/70 border border-white/80 rounded-xl px-3 py-2 text-sm font-bold text-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-300" />
-                  <p className="text-[10px] text-slate-400 mt-1">Notificación diaria a esta hora</p>
-                </div>
               </div>
-            </div>
+
+            </div> {/* close grid-cols-2 */}
 
             {/* ── Canales de notificación ── */}
             <div className="space-y-3">
@@ -958,7 +1043,6 @@ export default function Settings() {
 
           </div>
         </Section>
-
         {/* Database — moved to dedicated page */}
         <Link to="/base-de-datos"
           className="flex items-center gap-4 glass rounded-3xl p-5 hover:bg-white/40 transition-all group no-underline">

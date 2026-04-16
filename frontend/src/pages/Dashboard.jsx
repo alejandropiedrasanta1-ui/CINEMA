@@ -152,7 +152,7 @@ export default function Dashboard() {
         .filter(res => {
           if (!res.event_date) return false;
           const d = new Date(res.event_date + "T00:00:00");
-          return d.getMonth() === cm && d.getFullYear() === cy && res.status !== "Cancelado";
+          return d.getMonth() === cm && d.getFullYear() === cy;
         })
         .sort((a, b) => new Date(a.event_date) - new Date(b.event_date));
       setRecent(monthEvents);
