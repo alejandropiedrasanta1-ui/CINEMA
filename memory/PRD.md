@@ -130,4 +130,5 @@ Contiene claves de apariencia + configuración de negocio:
 - 2025: Base de datos avanzada (backup, restore, import, export)
 - 2025: 13+ opciones de apariencia en Settings.jsx
 - 2026-04-15: **Migración a AppearancePage.jsx** + 6 nuevas funciones (glassBlur, layoutDensity, pageTransition, iconSize, sidebarStyle, bgImage) + transiciones de página dinámicas
-- 2026: **Limpieza de Settings.jsx** — Eliminadas secciones: "Plantillas de Recordatorio", "Configuración del Negocio", "Importar / Exportar Configuración". Secciones conservadas: App de Escritorio, Publicar en Línea, Atajos de Teclado, Recordatorios, Idioma, Moneda.
+- 2026: **Limpieza de Settings.jsx** — Eliminadas secciones: "Plantillas de Recordatorio", "Configuración del Negocio", "Importar / Exportar Configuración", "Atajos de Teclado". Secciones conservadas: App de Escritorio, Publicar en Línea, Recordatorios, Idioma, Moneda.
+- 2026: **Títulos del Sitio** en Apariencia — Editor de títulos en tiempo real: Barra Lateral (8 campos), Dashboard (6 tarjetas), Encabezados de Página (3 campos). CustomLabels mergeados sobre T[language] en SettingsContext.

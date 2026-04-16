@@ -1,6 +1,6 @@
 {
   "_meta": {
-    "created_at": "2026-04-15T21:23:00.768840+00:00",
+    "created_at": "2026-04-16T00:49:30.690467+00:00",
     "label": "auto_pre_cleanup"
   },
   "reservations": [
@@ -102,7 +102,20 @@
       "id": "69dfe7f1d8166a50d7773745"
     }
   ],
-  "socios": [],
+  "socios": [
+    {
+      "name": "hjh",
+      "role": "Fotógrafo",
+      "phone": null,
+      "email": null,
+      "notes": null,
+      "rate_per_event": null,
+      "photo": null,
+      "photo_content_type": null,
+      "created_at": "2026-04-16T00:46:56.338366+00:00",
+      "id": "69e0318050a8649bc3f81195"
+    }
+  ],
   "app_settings": [
     {
       "reminders_enabled": false,

@@ -30,8 +30,8 @@ export default function Layout({ children }) {
     { path: "/reservaciones",  label: tr.nav.reservations,       icon: List },
     { path: "/calendario",     label: tr.nav.calendar,           icon: CalendarDays },
     { path: "/socios",         label: tr.nav.socios || "Socios", icon: Users },
-    { path: "/base-de-datos",  label: "Base de Datos",           icon: Database },
-    { path: "/apariencia",     label: "Apariencia",              icon: Palette },
+    { path: "/base-de-datos",  label: tr.nav.database || "Base de Datos", icon: Database },
+    { path: "/apariencia",     label: tr.nav.appearance || "Apariencia",  icon: Palette },
     { path: "/ajustes",        label: tr.nav.settings,           icon: SlidersHorizontal },
   ];
 

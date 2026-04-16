@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import {
   Palette, CheckCircle, Zap, Pencil, RotateCcw, Upload, ImageIcon, Trash2,
   Sparkles, Layers, SlidersHorizontal, Wind, Maximize2, Monitor, Type, Moon,
-  AlignJustify, BarChart2, LayoutGrid, Shield, MousePointer2, FileText, Columns,
+  AlignJustify, BarChart2, LayoutGrid, Shield, MousePointer2, FileText, Columns, Tag,
 } from "lucide-react";
 import { useSettings, THEMES, PRESETS } from "@/context/SettingsContext";
 import { getEventConfig, getEventTypeName, AVAILABLE_ICONS, AVAILABLE_COLORS, EVENT_TYPES } from "@/lib/eventConfig";
@@ -117,6 +117,7 @@ export default function AppearancePage() {
     advancedStyle, changeAdvancedStyle,
     eventConfigs, updateEventTypeConfig, resetEventTypeConfig,
     logoUrl, pdfLogoUrl, logoSize, usePdfLogo, useCustomPdfLogo, updateLogoSettings,
+    customLabels, changeCustomLabel, resetCustomLabels,
   } = useSettings();
 
   const { toast } = useToast();
@@ -1082,7 +1083,151 @@ export default function AppearancePage() {
           </div>
         </Section>
 
+        {/* ═══════════════════════════════════════════════════════════════
+            TÍTULOS DEL SITIO
+        ═══════════════════════════════════════════════════════════════ */}
+        <SiteTitlesSection
+          es={es}
+          customLabels={customLabels}
+          changeCustomLabel={changeCustomLabel}
+          resetCustomLabels={resetCustomLabels}
+          toast={toast}
+        />
+
       </motion.div>
     </div>
+  );
+}
+
+// ── Sección de títulos del sitio ──────────────────────────────────────────────
+function SiteTitlesSection({ es, customLabels, changeCustomLabel, resetCustomLabels, toast }) {
+  const LABEL_GROUPS = [
+    {
+      id: "nav",
+      title: es ? "Barra Lateral" : "Sidebar",
+      desc: es ? "Nombres de las secciones en el menú" : "Section names in the sidebar menu",
+      fields: [
+        { key: "nav.dashboard",    label: "Dashboard",       placeholder: "Dashboard" },
+        { key: "nav.reservations", label: es ? "Reservaciones" : "Reservations", placeholder: es ? "Reservaciones" : "Reservations" },
+        { key: "nav.calendar",     label: es ? "Calendario" : "Calendar",       placeholder: es ? "Calendario" : "Calendar" },
+        { key: "nav.socios",       label: es ? "Socios" : "Partners",           placeholder: es ? "Socios" : "Partners" },
+        { key: "nav.database",     label: es ? "Base de Datos" : "Database",    placeholder: es ? "Base de Datos" : "Database" },
+        { key: "nav.appearance",   label: es ? "Apariencia" : "Appearance",     placeholder: es ? "Apariencia" : "Appearance" },
+        { key: "nav.settings",     label: es ? "Ajustes" : "Settings",          placeholder: es ? "Ajustes" : "Settings" },
+        { key: "nav.tagline",      label: es ? "Eslogan sidebar" : "Sidebar tagline", placeholder: es ? "Gestión de Reservas" : "Reservation Manager" },
+      ],
+    },
+    {
+      id: "dashboard",
+      title: "Dashboard",
+      desc: es ? "Tarjetas y títulos de estadísticas" : "Stat cards and section titles",
+      fields: [
+        { key: "dashboard.upcoming",      label: es ? "Tarjeta: Próximos Eventos" : "Card: Upcoming Events",       placeholder: es ? "Próximos Eventos" : "Upcoming Events" },
+        { key: "dashboard.confirmed",     label: es ? "Tarjeta: Confirmados" : "Card: Confirmed",                 placeholder: es ? "Confirmados" : "Confirmed" },
+        { key: "dashboard.pending",       label: es ? "Tarjeta: Pago Pendiente" : "Card: Pending Payment",        placeholder: es ? "Pago Pendiente" : "Pending Payment" },
+        { key: "dashboard.total",         label: es ? "Tarjeta: Total Reservas" : "Card: Total Reservations",     placeholder: es ? "Total Reservas" : "Total Reservations" },
+        { key: "dashboard.realIncome",    label: es ? "Tarjeta: Ingreso Real" : "Card: Real Income",             placeholder: es ? "Ingreso Real" : "Real Income" },
+        { key: "dashboard.upcomingTitle", label: es ? "Sección: Próximas Reservas" : "Section: Upcoming Reservations", placeholder: es ? "Próximas Reservas" : "Upcoming Reservations" },
+      ],
+    },
+    {
+      id: "pages",
+      title: es ? "Encabezados de Página" : "Page Headers",
+      desc: es ? "Subtítulos y descripciones de cada sección" : "Subtitles and descriptions of each section",
+      fields: [
+        { key: "settings.title",    label: es ? "Título: Ajustes" : "Title: Settings",            placeholder: es ? "Ajustes" : "Settings" },
+        { key: "settings.subtitle", label: es ? "Subtítulo: Ajustes" : "Subtitle: Settings",      placeholder: es ? "Personaliza tu experiencia" : "Customize your experience" },
+        { key: "calendar.subtitle", label: es ? "Subtítulo: Calendario" : "Subtitle: Calendar",   placeholder: es ? "Vista mensual de eventos" : "Monthly event view" },
+      ],
+    },
+  ];
+
+  const [expandedGroup, setExpandedGroup] = React.useState("nav");
+  const hasChanges = Object.keys(customLabels).length > 0;
+
+  return (
+    <motion.div variants={{ hidden: { opacity: 0, y: 20 }, show: { opacity: 1, y: 0, transition: { duration: 0.4, ease: [0.22, 1, 0.36, 1] } } }} className="glass rounded-3xl p-7">
+      {/* Header */}
+      <div className="flex items-center justify-between mb-5">
+        <div className="flex items-center gap-3">
+          <div className="w-9 h-9 rounded-2xl btn-primary flex items-center justify-center shrink-0">
+            <Tag size={15} className="text-white" />
+          </div>
+          <div>
+            <h2 className="text-sm font-black text-slate-900 flex items-center gap-2" style={{ fontFamily: "Cabinet Grotesk, sans-serif" }}>
+              {es ? "Títulos del Sitio" : "Site Titles"}
+              <span className="text-[8px] font-black px-1.5 py-0.5 rounded-full bg-violet-100 text-violet-600 uppercase tracking-wide">NUEVO</span>
+            </h2>
+            <p className="text-xs text-slate-400">{es ? "Personaliza cada título, nombre y etiqueta de la app" : "Customize every title, name and label in the app"}</p>
+          </div>
+        </div>
+        {hasChanges && (
+          <motion.button whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}
+            onClick={() => { resetCustomLabels(); toast({ title: es ? "Títulos restaurados ✓" : "Titles reset ✓" }); }}
+            data-testid="reset-labels-btn"
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-xs font-bold text-slate-600 transition-all">
+            <RotateCcw size={11} /> {es ? "Restaurar todo" : "Reset all"}
+          </motion.button>
+        )}
+      </div>
+
+      {/* Group tabs */}
+      <div className="flex gap-1.5 mb-4 bg-white/40 rounded-2xl p-1">
+        {LABEL_GROUPS.map(g => (
+          <button key={g.id} onClick={() => setExpandedGroup(g.id)}
+            data-testid={`labels-tab-${g.id}`}
+            className={`flex-1 py-2 rounded-xl text-xs font-bold transition-all ${expandedGroup === g.id ? "btn-primary text-white shadow-sm" : "text-slate-500 hover:text-slate-700 hover:bg-white/50"}`}>
+            {g.title}
+          </button>
+        ))}
+      </div>
+
+      {/* Fields */}
+      <AnimatePresence mode="wait">
+        {LABEL_GROUPS.filter(g => g.id === expandedGroup).map(group => (
+          <motion.div key={group.id} initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} transition={{ duration: 0.2 }}>
+            <p className="text-[10px] text-slate-400 font-semibold mb-3">{group.desc}</p>
+            <div className="space-y-2.5">
+              {group.fields.map(field => {
+                const current = customLabels[field.key] ?? "";
+                const isModified = !!customLabels[field.key];
+                return (
+                  <div key={field.key} className="flex items-center gap-2.5">
+                    <div className="flex-1">
+                      <label className="text-[10px] font-bold text-slate-500 mb-1 block">{field.label}</label>
+                      <div className="flex gap-2 items-center">
+                        <input
+                          type="text"
+                          value={current}
+                          onChange={e => changeCustomLabel(field.key, e.target.value)}
+                          placeholder={field.placeholder}
+                          data-testid={`label-input-${field.key.replace(".", "-")}`}
+                          className={`flex-1 bg-white/70 border rounded-xl px-3 py-2 text-sm text-slate-800 placeholder-slate-300 focus:outline-none focus:ring-2 focus:ring-[var(--t-from)]/40 transition-all ${isModified ? "border-[var(--t-from)]/40 bg-white/90" : "border-white/80"}`}
+                        />
+                        {isModified && (
+                          <motion.button whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.9 }}
+                            onClick={() => changeCustomLabel(field.key, "")}
+                            data-testid={`label-reset-${field.key.replace(".", "-")}`}
+                            className="p-2 rounded-xl bg-slate-100 hover:bg-red-50 hover:text-red-500 text-slate-400 transition-all shrink-0">
+                            <RotateCcw size={12} />
+                          </motion.button>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+
+            {hasChanges && (
+              <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="mt-4 flex items-center gap-2 text-[10px] text-emerald-600 bg-emerald-50/80 px-3 py-2 rounded-xl border border-emerald-200/60">
+                <CheckCircle size={11} />
+                {es ? "Los cambios se aplican en tiempo real en toda la app" : "Changes apply in real-time across the whole app"}
+              </motion.div>
+            )}
+          </motion.div>
+        ))}
+      </AnimatePresence>
+    </motion.div>
   );
 }

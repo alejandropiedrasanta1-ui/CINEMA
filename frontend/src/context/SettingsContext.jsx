@@ -42,7 +42,7 @@ export const CURRENCIES = [
 
 const T = {
   es: {
-    nav: { dashboard: "Dashboard", reservations: "Reservaciones", calendar: "Calendario", settings: "Ajustes", tagline: "Gestión de Reservas", socios: "Socios" },
+    nav: { dashboard: "Dashboard", reservations: "Reservaciones", calendar: "Calendario", settings: "Ajustes", tagline: "Gestión de Reservas", socios: "Socios", database: "Base de Datos", appearance: "Apariencia" },
     common: { newReservation: "Nueva Reserva", cancel: "Cancelar", save: "Guardar cambios", create: "Crear reserva", saving: "Guardando...", edit: "Editar", viewAll: "Ver todas" },
     statuses: { Pendiente: "Pendiente", Confirmado: "Confirmado", Completado: "Completado", Cancelado: "Cancelado" },
     months: ["Enero","Febrero","Marzo","Abril","Mayo","Junio","Julio","Agosto","Septiembre","Octubre","Noviembre","Diciembre"],
@@ -119,7 +119,7 @@ const T = {
     },
   },
   en: {
-    nav: { dashboard: "Dashboard", reservations: "Reservations", calendar: "Calendar", settings: "Settings", tagline: "Reservation Manager", socios: "Partners" },
+    nav: { dashboard: "Dashboard", reservations: "Reservations", calendar: "Calendar", settings: "Settings", tagline: "Reservation Manager", socios: "Partners", database: "Database", appearance: "Appearance" },
     common: { newReservation: "New Reservation", cancel: "Cancel", save: "Save changes", create: "Create reservation", saving: "Saving...", edit: "Edit", viewAll: "View all" },
     statuses: { Pendiente: "Pending", Confirmado: "Confirmed", Completado: "Completed", Cancelado: "Cancelled" },
     months: ["January","February","March","April","May","June","July","August","September","October","November","December"],
@@ -256,6 +256,26 @@ export function SettingsProvider({ children }) {
     try { return JSON.parse(localStorage.getItem("advanced_style") || "{}"); }
     catch { return {}; }
   });
+
+  // ── Custom site labels ─────────────────────────────────────────────
+  const [customLabels, setCustomLabels] = useState(() => {
+    try { return JSON.parse(localStorage.getItem("custom_labels") || "{}"); }
+    catch { return {}; }
+  });
+
+  const changeCustomLabel = (dotKey, value) => {
+    setCustomLabels(prev => {
+      const next = { ...prev };
+      if (value === "") { delete next[dotKey]; } else { next[dotKey] = value; }
+      localStorage.setItem("custom_labels", JSON.stringify(next));
+      return next;
+    });
+  };
+
+  const resetCustomLabels = () => {
+    setCustomLabels({});
+    localStorage.removeItem("custom_labels");
+  };
 
   const changePdfTheme = (t) => { setPdfTheme(t); localStorage.setItem("pdf_theme", t); };
 
@@ -571,7 +591,18 @@ export function SettingsProvider({ children }) {
     if ("useCustomPdf"  in updates) { setUseCustomPdfLogo(updates.useCustomPdf); localStorage.setItem("cp_custom_pdf_logo", String(updates.useCustomPdf)); }
   };
 
-  const tr = T[language] || T.es;
+  const baseT = T[language] || T.es;
+  const tr = (() => {
+    if (!Object.keys(customLabels).length) return baseT;
+    const merged = JSON.parse(JSON.stringify(baseT));
+    Object.entries(customLabels).forEach(([dotKey, val]) => {
+      if (!val) return;
+      const [section, ...rest] = dotKey.split(".");
+      const key = rest.join(".");
+      if (merged[section] && key) merged[section][key] = val;
+    });
+    return merged;
+  })();
 
   const formatCurrency = useCallback((n) => {
     const cur = CURRENCIES.find(c => c.code === currency) || CURRENCIES[0];
@@ -612,6 +643,8 @@ export function SettingsProvider({ children }) {
       // Event & logo
       eventConfigs, updateEventTypeConfig, resetEventTypeConfig,
       logoUrl, pdfLogoUrl, logoSize, usePdfLogo, useCustomPdfLogo, updateLogoSettings,
+      // Custom labels
+      customLabels, changeCustomLabel, resetCustomLabels,
     }}>
       {children}
     </SettingsContext.Provider>
