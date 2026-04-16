@@ -1,6 +1,6 @@
 {
   "_meta": {
-    "created_at": "2026-04-16T05:02:56.617325+00:00",
+    "created_at": "2026-04-16T05:45:54.504359+00:00",
     "label": "auto_pre_cleanup"
   },
   "reservations": [
@@ -102,34 +102,6 @@
       "id": "69dfe7f1d8166a50d7773745"
     },
     {
-      "client_name": "juan",
-      "client_phone": "",
-      "client_email": "",
-      "event_type": "Boda",
-      "event_date": "2026-04-06",
-      "event_time": "",
-      "venue": "",
-      "guests_count": null,
-      "total_amount": 3500.0,
-      "advance_paid": 0.0,
-      "status": "Pendiente",
-      "notes": "",
-      "receipt_images": [],
-      "created_at": "2026-04-16T01:01:51.636877+00:00",
-      "assigned_partners": [
-        {
-          "socio_id": "69e0318050a8649bc3f81195",
-          "name": "hjh",
-          "role": "Fotógrafo",
-          "photo": null,
-          "photo_content_type": null,
-          "payment": 800,
-          "payment_status": "Pendiente"
-        }
-      ],
-      "id": "69e034ff50a8649bc3f81196"
-    },
-    {
       "client_name": "Maria",
       "client_phone": "",
       "client_email": "",
@@ -140,7 +112,7 @@
       "guests_count": null,
       "total_amount": 2000.0,
       "advance_paid": 0.0,
-      "status": "Pendiente",
+      "status": "Confirmado",
       "notes": "",
       "receipt_images": [],
       "created_at": "2026-04-16T01:07:23.281641+00:00",

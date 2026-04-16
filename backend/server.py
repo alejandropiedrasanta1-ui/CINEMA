@@ -682,6 +682,12 @@ async def health_check_url(url: str):
 
 
 
+@api_router.delete("/data/clear-all")
+async def clear_all_data_endpoint(auto_backup: bool = True):
+    """Elimina todas las reservas y socios. Crea respaldo automático si auto_backup=True."""
+    return await clear_all_data(auto_backup=auto_backup)
+
+
 async def clear_all_data(auto_backup: bool = True):
     """Elimina todas las reservas y socios. Crea respaldo automático si auto_backup=True."""
     if auto_backup:

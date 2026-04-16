@@ -217,7 +217,7 @@ export default function Dashboard() {
           className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8"
           data-testid="stats-grid"
         >
-          <StatCard icon={CalendarDays} label={d.upcoming} value={stats?.upcoming_events ?? 0} sub={d.upcomingSub} gradient={STAT_GRADIENTS[0]} />
+          <StatCard icon={CalendarDays} label={d.upcoming} value={recent.length} sub={currentMonthName} gradient={STAT_GRADIENTS[0]} />
           <StatCard icon={Clock} label={d.total} value={stats?.total_reservations ?? 0} sub={d.totalSub} gradient={STAT_GRADIENTS[3]} />
           <StatCard icon={CreditCard} label={d.pending} value={formatCurrency(stats?.pending_payment)} sub={d.pendingSub} gradient={STAT_GRADIENTS[2]} />
           <StatCard icon={DollarSign} label={d.realIncome} value={formatCurrency(stats?.real_income)} sub={d.realIncomeSub} gradient={STAT_GRADIENTS[1]} />
