@@ -9,21 +9,64 @@ export default function Layout({ children }) {
   const { tr, preset, logoUrl, logoSize, sidebarCompact, iconSize, sidebarStyle } = useSettings();
   const presetLabel = PRESETS.find(p => p.id === preset)?.name || "Glass Aurora";
   const sidebarLogoH = Math.min(Math.max(logoSize || 40, 24), 80);
-  const compact = sidebarCompact;
+
+  // "pill" style forces compact mode
+  const compact = sidebarCompact || sidebarStyle === "pill";
 
   // Icon size mapping
   const iconPx = iconSize === "small" ? 14 : iconSize === "large" ? 22 : 18;
   const iconPxInline = iconSize === "small" ? 12 : iconSize === "large" ? 20 : 16;
 
-  // Sidebar style extras
-  const sidebarExtra = sidebarStyle === "floating"
-    ? { margin: "12px 0 12px 12px", borderRadius: "20px", minHeight: "calc(100vh - 24px)", height: "calc(100vh - 24px)", boxShadow: "0 20px 60px rgba(31,38,135,0.14), 0 4px 16px rgba(0,0,0,0.06)" }
-    : sidebarStyle === "borderless"
-    ? { borderRight: "none", boxShadow: "none" }
-    : {};
-  const mainExtra = sidebarStyle === "floating"
-    ? { marginLeft: compact ? "calc(72px + 24px)" : "calc(240px + 24px)" }
-    : {};
+  const sidebarWidth = (sidebarStyle === "pill") ? "72px" : compact ? "72px" : "240px";
+
+  // Per-style inline overrides
+  const styleMap = {
+    normal:     {},
+    floating: {
+      margin: "12px 0 12px 12px",
+      borderRadius: "20px",
+      minHeight: "calc(100vh - 24px)",
+      height: "calc(100vh - 24px)",
+      boxShadow: "0 20px 60px rgba(31,38,135,0.14), 0 4px 16px rgba(0,0,0,0.06)",
+    },
+    borderless: {
+      borderRight: "none",
+      boxShadow: "none",
+      background: "transparent",
+      backdropFilter: "none",
+    },
+    island: {
+      margin: "14px 0 14px 14px",
+      borderRadius: "28px",
+      minHeight: "calc(100vh - 28px)",
+      height: "calc(100vh - 28px)",
+      boxShadow: "0 32px 80px rgba(31,38,135,0.22), 0 8px 30px rgba(0,0,0,0.1)",
+      background: "rgba(255,255,255,0.88)",
+      backdropFilter: "blur(28px) saturate(180%)",
+    },
+    minimal: {
+      background: "rgba(255,255,255,0.18)",
+      borderRight: "1px solid rgba(255,255,255,0.22)",
+      boxShadow: "none",
+      backdropFilter: "blur(6px)",
+    },
+    pill: {
+      margin: "20px 0 20px 14px",
+      borderRadius: "40px",
+      minHeight: "calc(100vh - 40px)",
+      height: "calc(100vh - 40px)",
+      width: "72px",
+      boxShadow: "0 24px 70px rgba(31,38,135,0.18)",
+      overflow: "hidden",
+    },
+  };
+
+  const sidebarExtra = styleMap[sidebarStyle] || {};
+  const mainMarginLeft = ["floating", "island"].includes(sidebarStyle)
+    ? `calc(${sidebarWidth} + 26px)`
+    : sidebarStyle === "pill"
+    ? "calc(72px + 28px)"
+    : sidebarWidth;
 
   const navItems = [
     { path: "/dashboard",      label: tr.nav.dashboard,          icon: LayoutDashboard },
@@ -40,7 +83,7 @@ export default function Layout({ children }) {
       {/* Desktop Sidebar */}
       <aside
         className="hidden md:flex flex-col min-h-screen glass-sidebar fixed left-0 top-0 z-20 transition-all duration-300"
-        style={{ width: compact ? "72px" : "240px", ...sidebarExtra }}
+        style={{ width: sidebarWidth, ...sidebarExtra }}
       >
         {/* Logo area */}
         <div className={`border-b border-white/40 transition-all duration-300 ${compact ? "px-3 py-5 flex justify-center" : "px-6 py-6"}`}>
@@ -137,7 +180,7 @@ export default function Layout({ children }) {
 
       <main
         className="flex-1 min-h-screen transition-all duration-300"
-        style={{ marginLeft: compact ? "72px" : "240px", ...mainExtra }}
+        style={{ marginLeft: mainMarginLeft }}
       >
         <div className="pt-16 md:pt-0 min-h-screen">{children}</div>
       </main>

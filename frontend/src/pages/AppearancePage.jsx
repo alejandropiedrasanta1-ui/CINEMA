@@ -579,7 +579,68 @@ export default function AppearancePage() {
               options={[{id:"comfortable",label:es?"Cómodo":"Comfortable"},{id:"standard",label:es?"Estándar":"Standard"},{id:"compact",label:es?"Compacto":"Compact"}]} />
 
             <OptionRow label={es ? "Estilo de barra lateral" : "Sidebar Style"} testPrefix="sidebar-style" current={sidebarStyle} onChange={v => { changeSidebarStyle(v); toast({ title: `Sidebar: ${v}` }); }} cols={3} defaultValue="normal"
-              options={[{id:"normal",label:es?"Normal":"Normal"},{id:"floating",label:es?"Flotante":"Floating"},{id:"borderless",label:es?"Sin borde":"Borderless"}]} />
+              options={[
+                { id:"normal",
+                  label: es ? "Normal" : "Normal",
+                  hint: es ? "Estilo por defecto" : "Default",
+                  preview: (
+                    <div className="w-14 h-9 bg-slate-100 rounded-lg overflow-hidden flex">
+                      <div className="w-3.5 h-full bg-white/80 border-r border-slate-200" />
+                      <div className="flex-1 bg-slate-50/60" />
+                    </div>
+                  ),
+                },
+                { id:"floating",
+                  label: "Floating",
+                  hint: es ? "Con margen" : "With margin",
+                  preview: (
+                    <div className="w-14 h-9 bg-slate-100 rounded-lg overflow-hidden flex items-center">
+                      <div className="w-3 h-7 ml-0.5 bg-white/90 rounded-lg shadow-md border border-white/60" />
+                      <div className="flex-1 bg-slate-50/60 rounded-r-lg ml-0.5" />
+                    </div>
+                  ),
+                },
+                { id:"borderless",
+                  label: es ? "Sin borde" : "Borderless",
+                  hint: es ? "Transparente" : "Transparent",
+                  preview: (
+                    <div className="w-14 h-9 bg-slate-100 rounded-lg overflow-hidden flex">
+                      <div className="w-3.5 h-full bg-white/20" />
+                      <div className="flex-1 bg-slate-50/60" />
+                    </div>
+                  ),
+                },
+                { id:"island",
+                  label: "Island",
+                  hint: es ? "Flotante isla" : "Detached island",
+                  preview: (
+                    <div className="w-14 h-9 bg-slate-100 rounded-lg overflow-hidden flex items-center">
+                      <div className="w-3 h-7 ml-1 bg-white rounded-2xl shadow-lg border border-white/80" />
+                      <div className="flex-1 bg-slate-50/60 rounded-r-lg" />
+                    </div>
+                  ),
+                },
+                { id:"minimal",
+                  label: "Minimal",
+                  hint: es ? "Ultra sutil" : "Ultra subtle",
+                  preview: (
+                    <div className="w-14 h-9 bg-slate-100 rounded-lg overflow-hidden flex">
+                      <div className="w-3.5 h-full bg-white/10 border-r border-white/30" />
+                      <div className="flex-1 bg-slate-50/60" />
+                    </div>
+                  ),
+                },
+                { id:"pill",
+                  label: "Pill",
+                  hint: es ? "Cápsula" : "Capsule",
+                  preview: (
+                    <div className="w-14 h-9 bg-slate-100 rounded-lg overflow-hidden flex items-center">
+                      <div className="w-2.5 h-7 ml-1 bg-white/90 rounded-full shadow-md border border-white/60" />
+                      <div className="flex-1 bg-slate-50/60 rounded-r-lg" />
+                    </div>
+                  ),
+                },
+              ]} />
 
             <div className="flex items-center justify-between">
               <div><p className="text-sm font-black text-slate-800">{es ? "Barra lateral compacta" : "Compact Sidebar"}</p><p className="text-[11px] text-slate-400 mt-0.5">{es ? "Solo iconos" : "Icons only"}</p></div>
