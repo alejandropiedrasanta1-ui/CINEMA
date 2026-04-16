@@ -1,164 +1,165 @@
 // ── Form Design Presets ──────────────────────────────────────────────────────
-// layout: "fullscreen" → covers whole screen (classic)
-// layout: "floating"   → centered card/modal over blurred overlay
+// layout: "fullscreen" → cubre toda la pantalla (clásico)
+// layout: "floating"   → tarjeta centrada sobre overlay borroso
 //
-// Floating-only props:
-//   overlayBg   → backdrop style
-//   cardBg      → inner card background
-//   cardMaxWidth→ tailwind max-w class for the card
-//   accentBar   → colored strip shown at top of card (optional)
-//   submitClass → override primary button class
+// Props de floating:
+//   overlayBg     → estilo del backdrop
+//   overlayBlur   → backdrop-filter
+//   cardBg        → fondo de la card
+//   cardMaxWidth  → clase tailwind max-w-*
+//   accentBar     → barra de color en la parte superior (opcional)
 
 export const FORM_DESIGN_CONFIGS = {
-  // ── 1. Aurora — Fullscreen vidrio ──────────────────────────────────────────
+
+  // ── 1. Aurora — Pantalla completa élite ───────────────────────────────────
   aurora: {
     name: "Aurora",
     hint: "Pantalla completa",
     layout: "fullscreen",
-    containerBg: "linear-gradient(135deg,rgba(238,242,255,0.98),rgba(248,250,255,0.98),rgba(240,248,255,0.98))",
-    barClass: "border-slate-200/60 bg-white/40",
-    inp: "w-full text-base px-5 py-4 rounded-2xl bg-white/70 border-2 border-white/80 focus:outline-none focus:border-[var(--t-from)] focus:bg-white text-slate-800 placeholder-slate-400 font-medium transition-all duration-200",
-    labelClass: "block text-xs font-black text-slate-500 uppercase tracking-widest mb-2",
+    containerBg: "linear-gradient(160deg,#eef2ff 0%,#f8faff 45%,#f3f0ff 100%)",
+    barClass: "border-slate-200/50 bg-white/50",
+    inp: "w-full text-sm px-4 py-3.5 rounded-2xl bg-white/80 border border-white/90 focus:outline-none focus:border-[var(--t-from)] focus:ring-2 focus:ring-[var(--t-from)]/15 focus:bg-white text-slate-800 placeholder-slate-400 font-medium transition-all shadow-sm",
+    labelClass: "block text-[10px] font-black text-indigo-400/90 uppercase tracking-[0.12em] mb-1.5",
     labelStyle: undefined, inpStyle: undefined,
     titleClass: "text-slate-900",
-    cancelClass: "glass border-slate-200/60 text-slate-600 hover:bg-white/80",
+    cancelClass: "bg-white/80 border border-slate-200/70 text-slate-600 hover:bg-white",
     isDark: false,
     previewLayout: "fullscreen",
-    previewBg: "linear-gradient(135deg,rgba(200,210,255,0.35),rgba(220,235,255,0.35))",
-    previewBar: "rgba(255,255,255,0.5)", previewInp: "rgba(255,255,255,0.68)",
-    previewBorder: "rgba(255,255,255,0.88)", previewUnderlineOnly: false,
+    previewBg: "linear-gradient(160deg,#eef2ff,#f3f0ff)",
+    previewBar: "rgba(255,255,255,0.5)", previewInp: "rgba(255,255,255,0.85)",
+    previewBorder: "rgba(255,255,255,0.95)", previewUnderlineOnly: false,
   },
 
-  // ── 2. Flotante — Tarjeta blanca centrada ─────────────────────────────────
+  // ── 2. Flotante — Tarjeta blanca premium (Stripe / Linear style) ──────────
   flotante: {
     name: "Flotante",
-    hint: "Tarjeta centrada",
+    hint: "Card blanca premium",
     layout: "floating",
-    overlayBg: "rgba(15,23,42,0.55)",
-    overlayBlur: "blur(14px)",
+    overlayBg: "rgba(30,30,60,0.42)",
+    overlayBlur: "blur(18px)",
     cardBg: "#ffffff",
     cardMaxWidth: "max-w-3xl",
     cardRadius: "rounded-3xl",
-    cardShadow: "shadow-[0_32px_80px_-12px_rgba(0,0,0,0.35)]",
-    barClass: "border-slate-100 bg-slate-50/80",
-    inp: "w-full text-sm px-4 py-3 rounded-xl bg-white border border-slate-200 focus:outline-none focus:border-[var(--t-from)] focus:ring-2 focus:ring-[var(--t-from)]/20 text-slate-800 placeholder-slate-400 font-medium transition-all",
-    labelClass: "block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5",
+    cardShadow: "shadow-[0_40px_100px_-15px_rgba(0,0,0,0.4),0_8px_30px_-8px_rgba(0,0,0,0.2)]",
+    barClass: "border-slate-100 bg-white",
+    inp: "w-full text-sm px-4 py-3.5 rounded-2xl bg-slate-50/80 border border-slate-200 focus:outline-none focus:border-[var(--t-from)] focus:ring-2 focus:ring-[var(--t-from)]/15 focus:bg-white text-slate-800 placeholder-slate-400 font-medium transition-all",
+    labelClass: "block text-[9px] font-black text-slate-400 uppercase tracking-[0.14em] mb-1.5",
     labelStyle: undefined, inpStyle: undefined,
     titleClass: "text-slate-900",
-    cancelClass: "bg-white border border-slate-200 text-slate-600 hover:bg-slate-50",
+    cancelClass: "bg-slate-100 text-slate-500 hover:bg-slate-200",
     isDark: false,
     previewLayout: "floating",
-    previewOverlay: "rgba(15,23,42,0.55)",
+    previewOverlay: "rgba(30,30,60,0.42)",
     previewBg: "#ffffff",
-    previewBar: "#f8fafc", previewInp: "#f1f5f9",
+    previewBar: "#ffffff", previewInp: "#f8fafc",
     previewBorder: "#e2e8f0", previewUnderlineOnly: false,
   },
 
-  // ── 3. Tarjeta — Card con barra de acento superior ────────────────────────
+  // ── 3. Elegante — Dark glass sofisticado ──────────────────────────────────
+  elegante: {
+    name: "Elegante",
+    hint: "Dark glass premium",
+    layout: "floating",
+    overlayBg: "rgba(10,10,25,0.75)",
+    overlayBlur: "blur(24px)",
+    cardBg: "rgba(22,28,48,0.92)",
+    cardBackdrop: "blur(20px) saturate(150%)",
+    cardMaxWidth: "max-w-3xl",
+    cardRadius: "rounded-3xl",
+    cardShadow: "shadow-[0_40px_100px_-10px_rgba(0,0,0,0.7),inset_0_1px_0_rgba(255,255,255,0.08)]",
+    barClass: "border-white/8 bg-white/4",
+    inp: "w-full text-sm px-4 py-3.5 rounded-2xl bg-white/6 border border-white/10 focus:outline-none focus:border-[var(--t-from)]/70 focus:bg-white/10 text-white placeholder-white/25 font-medium transition-all",
+    labelClass: "block text-[9px] font-black text-white/40 uppercase tracking-[0.14em] mb-1.5",
+    labelStyle: undefined, inpStyle: undefined,
+    titleClass: "text-white",
+    cancelClass: "bg-white/8 border border-white/12 text-white/60 hover:bg-white/14",
+    isDark: true,
+    previewLayout: "floating",
+    previewOverlay: "rgba(10,10,25,0.75)",
+    previewBg: "rgba(22,28,48,0.92)",
+    previewBar: "rgba(255,255,255,0.04)", previewInp: "rgba(255,255,255,0.06)",
+    previewBorder: "rgba(255,255,255,0.10)", previewUnderlineOnly: false,
+  },
+
+  // ── 4. Tarjeta — Acento de color + fondo blanco ────────────────────────────
   tarjeta: {
     name: "Tarjeta",
-    hint: "Card con acento",
+    hint: "Acento + blanco",
     layout: "floating",
-    overlayBg: "rgba(15,23,42,0.6)",
-    overlayBlur: "blur(16px)",
+    overlayBg: "rgba(15,15,35,0.65)",
+    overlayBlur: "blur(20px)",
     cardBg: "#ffffff",
     cardMaxWidth: "max-w-3xl",
     cardRadius: "rounded-2xl",
-    cardShadow: "shadow-[0_24px_60px_-8px_rgba(0,0,0,0.3)]",
-    accentBar: "linear-gradient(90deg,var(--t-from),var(--t-to))",
-    barClass: "border-white/0 bg-transparent",
-    inp: "w-full text-sm px-4 py-3 rounded-xl bg-slate-50 border-2 border-slate-100 focus:outline-none focus:border-[var(--t-from)] text-slate-800 placeholder-slate-400 font-medium transition-all",
-    labelClass: "block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1.5",
+    cardShadow: "shadow-[0_32px_80px_-10px_rgba(0,0,0,0.35)]",
+    accentBar: "linear-gradient(100deg,var(--t-from),var(--t-to))",
+    barClass: "border-transparent bg-transparent",
+    inp: "w-full text-sm px-4 py-3.5 rounded-xl bg-slate-50 border border-slate-200 focus:outline-none focus:border-[var(--t-from)] text-slate-800 placeholder-slate-400 font-medium transition-all",
+    labelClass: "block text-[9px] font-black text-slate-400 uppercase tracking-[0.14em] mb-1.5",
     labelStyle: undefined, inpStyle: undefined,
     titleClass: "text-white",
-    cancelClass: "bg-white/20 border border-white/40 text-white hover:bg-white/30",
+    cancelClass: "bg-white/20 border border-white/30 text-white hover:bg-white/30",
     isDark: false,
     previewLayout: "floating",
-    previewOverlay: "rgba(15,23,42,0.6)",
+    previewOverlay: "rgba(15,15,35,0.65)",
     previewBg: "#ffffff",
-    previewAccent: "var(--t-from)",
-    previewBar: "linear-gradient(90deg,var(--t-from),var(--t-to))", previewInp: "#f1f5f9",
+    previewBar: "linear-gradient(100deg,var(--t-from),var(--t-to))", previewInp: "#f1f5f9",
     previewBorder: "#e2e8f0", previewUnderlineOnly: false,
   },
 
-  // ── 4. Popup Oscuro — Modal dark compacto ────────────────────────────────
-  popup: {
-    name: "Popup",
-    hint: "Modal oscuro",
-    layout: "floating",
-    overlayBg: "rgba(0,0,0,0.78)",
-    overlayBlur: "blur(20px)",
-    cardBg: "#1e293b",
-    cardMaxWidth: "max-w-2xl",
-    cardRadius: "rounded-3xl",
-    cardShadow: "shadow-[0_40px_100px_-10px_rgba(0,0,0,0.7)]",
-    barClass: "border-white/10 bg-white/5",
-    inp: "w-full text-sm px-4 py-3 rounded-xl bg-white/8 border border-white/15 focus:outline-none focus:border-[var(--t-from)] focus:bg-white/12 text-white placeholder-white/30 font-medium transition-all",
-    labelClass: "block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5",
-    labelStyle: undefined, inpStyle: undefined,
-    titleClass: "text-white",
-    cancelClass: "bg-white/10 border border-white/20 text-white/70 hover:bg-white/15",
-    isDark: true,
-    previewLayout: "floating",
-    previewOverlay: "rgba(0,0,0,0.78)",
-    previewBg: "#1e293b",
-    previewBar: "rgba(255,255,255,0.06)", previewInp: "rgba(255,255,255,0.08)",
-    previewBorder: "rgba(255,255,255,0.15)", previewUnderlineOnly: false,
-  },
-
-  // ── 5. App — Dark con gradiente verde (inspiración mobile) ───────────────
+  // ── 5. App — Dark Navy con acento eléctrico ────────────────────────────────
   app: {
     name: "App",
-    hint: "Estilo app oscuro",
+    hint: "Dark Navy eléctrico",
     layout: "floating",
-    overlayBg: "rgba(0,0,0,0.88)",
-    overlayBlur: "blur(24px)",
-    cardBg: "#0d1117",
+    overlayBg: "rgba(2,4,18,0.92)",
+    overlayBlur: "blur(28px)",
+    cardBg: "#0d1224",
     cardMaxWidth: "max-w-2xl",
     cardRadius: "rounded-3xl",
-    cardShadow: "shadow-[0_40px_100px_-8px_rgba(0,0,0,0.8)]",
-    accentBar: "linear-gradient(90deg,#16a34a,#22c55e,#4ade80)",
-    barClass: "border-white/5 bg-black/40",
-    inp: "w-full text-sm px-4 py-3 rounded-xl bg-white/6 border border-[var(--t-from)]/30 focus:outline-none focus:border-[var(--t-from)] text-white placeholder-white/25 font-medium transition-all",
-    labelClass: "block text-[10px] font-black uppercase tracking-widest mb-1.5",
-    labelStyle: { color: "#4ade80" },
+    cardShadow: "shadow-[0_50px_120px_-15px_rgba(99,102,241,0.25),0_20px_50px_-10px_rgba(0,0,0,0.8)]",
+    accentBar: "linear-gradient(100deg,var(--t-from),var(--t-to),var(--t-from))",
+    barClass: "border-white/5 bg-black/20",
+    inp: "w-full text-sm px-4 py-3.5 rounded-xl bg-white/5 border border-white/8 focus:outline-none focus:border-[var(--t-from)]/60 focus:bg-white/8 text-white placeholder-white/20 font-medium transition-all",
+    labelClass: "block text-[9px] font-black uppercase tracking-[0.14em] mb-1.5",
+    labelStyle: { color: "var(--t-from)", opacity: 0.7 },
     inpStyle: undefined,
     titleClass: "text-white",
-    cancelClass: "bg-white/5 border border-white/10 text-white/60 hover:bg-white/10",
+    cancelClass: "bg-white/6 border border-white/10 text-white/50 hover:bg-white/10",
     isDark: true,
     previewLayout: "floating",
-    previewOverlay: "rgba(0,0,0,0.88)",
-    previewBg: "#0d1117",
-    previewBar: "linear-gradient(90deg,#16a34a,#22c55e)", previewInp: "rgba(255,255,255,0.06)",
-    previewBorder: "rgba(74,222,128,0.35)", previewUnderlineOnly: false, previewIsGreen: true,
+    previewOverlay: "rgba(2,4,18,0.92)",
+    previewBg: "#0d1224",
+    previewBar: "linear-gradient(100deg,var(--t-from),var(--t-to))", previewInp: "rgba(255,255,255,0.05)",
+    previewBorder: "rgba(255,255,255,0.08)", previewUnderlineOnly: false, previewIsGreen: false,
   },
 
-  // ── 6. Minimalista — Limpio puro ─────────────────────────────────────────
+  // ── 6. Minimal — Frosted light (como Notion/Figma) ─────────────────────────
   minimal: {
     name: "Minimal",
-    hint: "Líneas limpias",
+    hint: "Frosted claro",
     layout: "floating",
-    overlayBg: "rgba(248,250,252,0.85)",
-    overlayBlur: "blur(8px)",
+    overlayBg: "rgba(241,245,249,0.8)",
+    overlayBlur: "blur(12px)",
     cardBg: "#ffffff",
     cardMaxWidth: "max-w-2xl",
     cardRadius: "rounded-2xl",
-    cardShadow: "shadow-[0_8px_40px_-4px_rgba(0,0,0,0.12)]",
+    cardShadow: "shadow-[0_8px_50px_-8px_rgba(0,0,0,0.14),0_2px_10px_-2px_rgba(0,0,0,0.08)]",
     barClass: "border-slate-100 bg-white",
     inp: "w-full text-sm px-1 py-3 bg-transparent border-0 border-b border-slate-200 focus:outline-none focus:border-[var(--t-from)] text-slate-800 placeholder-slate-300 font-medium transition-all rounded-none",
-    labelClass: "block text-[9px] font-black text-slate-400 uppercase tracking-[0.15em] mb-1",
+    labelClass: "block text-[9px] font-black text-slate-400 uppercase tracking-[0.16em] mb-1",
     labelStyle: undefined, inpStyle: undefined,
     titleClass: "text-slate-900",
-    cancelClass: "text-slate-400 hover:text-slate-700 transition-colors",
+    cancelClass: "text-slate-400 hover:text-slate-700 font-bold transition-colors",
     isDark: false,
     previewLayout: "floating",
-    previewOverlay: "rgba(248,250,252,0.85)",
+    previewOverlay: "rgba(241,245,249,0.8)",
     previewBg: "#ffffff",
     previewBar: "#ffffff", previewInp: "transparent",
     previewBorder: "#e2e8f0", previewUnderlineOnly: true,
   },
 
-  // ── 7. Cristal — Glass blur effect ───────────────────────────────────────
+  // ── 7. Cristal — Glass flotante (favorito del usuario) ────────────────────
   cristal: {
     name: "Cristal",
     hint: "Vidrio flotante",
@@ -169,10 +170,10 @@ export const FORM_DESIGN_CONFIGS = {
     cardBackdrop: "blur(24px) saturate(180%)",
     cardMaxWidth: "max-w-3xl",
     cardRadius: "rounded-3xl",
-    cardShadow: "shadow-[0_24px_60px_-8px_rgba(99,102,241,0.25)]",
+    cardShadow: "shadow-[0_24px_60px_-8px_rgba(99,102,241,0.25),inset_0_1px_0_rgba(255,255,255,0.9)]",
     barClass: "border-white/50 bg-white/30",
-    inp: "w-full text-sm px-4 py-3 rounded-xl bg-white/60 border border-sky-200/70 focus:outline-none focus:border-[var(--t-from)] focus:bg-white text-slate-800 placeholder-slate-400 font-medium transition-all",
-    labelClass: "block text-[10px] font-black text-sky-700/80 uppercase tracking-widest mb-1.5",
+    inp: "w-full text-sm px-4 py-3.5 rounded-2xl bg-white/60 border border-sky-200/70 focus:outline-none focus:border-[var(--t-from)] focus:bg-white text-slate-800 placeholder-slate-400 font-medium transition-all",
+    labelClass: "block text-[9px] font-black text-sky-600/80 uppercase tracking-[0.14em] mb-1.5",
     labelStyle: undefined, inpStyle: undefined,
     titleClass: "text-slate-800",
     cancelClass: "bg-white/50 border border-white/60 text-slate-600 hover:bg-white/80",
@@ -185,4 +186,4 @@ export const FORM_DESIGN_CONFIGS = {
   },
 };
 
-export const FORM_DESIGN_ORDER = ["aurora", "flotante", "tarjeta", "popup", "app", "minimal", "cristal"];
+export const FORM_DESIGN_ORDER = ["aurora", "flotante", "elegante", "tarjeta", "app", "minimal", "cristal"];

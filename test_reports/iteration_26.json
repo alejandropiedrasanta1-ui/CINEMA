@@ -1,0 +1,39 @@
+{
+  "summary": "Tested all 7 form design styles, campos visibles defaults (email/guests OFF), field distribution without gaps, enabling email toggle, and reservation creation with cristal design.",
+  "backend_issues": { "critical": [], "minor": [] },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": [
+      {
+        "screen": "Flotante design form",
+        "issues": ["Flotante card appears semi-transparent (rgba 255,255,255,0.45) instead of solid white due to Glass Aurora preset applying glassmorphism globally. Expected: solid white premium card. Minor visual issue."]
+      }
+    ]
+  },
+  "test_report_links": [],
+  "action_items": [
+    "Minor: Flotante design cardBg '#ffffff' may be overridden by global glassmorphism preset. Consider applying cardBg inline style to override the preset when design=flotante."
+  ],
+  "critical_code_review_comments": [],
+  "updated_files": [],
+  "success_rate": { "backend": "N/A", "frontend": "95%" },
+  "seed_data_creation": "Created test reservation 'Test Cristal' Q25,000 Boda with cristal design",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "All 7 designs working (aurora=fullscreen, 6=floating). Email+guests OFF by default in SettingsContext FORM_FIELDS_DEFAULT. Enabling email via localStorage {email:true,guests:false} shows email field correctly in row 1 (Nombre+Teléfono+Email). Reservation creation works with cristal. Toggle selectors in Apariencia page do NOT use role='switch' for campo visibility toggles - they use custom components.",
+  "test_results": {
+    "cristal_floating_glass": "PASS - Opens as centered floating card with glass/blur overlay",
+    "email_hidden_default": "PASS - Email field absent from form with default settings",
+    "guests_hidden_default": "PASS - Guests field absent from form with default settings",
+    "no_empty_spaces": "PASS - 10 visible inputs, fields fill space without gaps",
+    "flotante_card": "PASS - White card floating modal (minor: slightly transparent due to preset)",
+    "elegante_dark_glass": "PASS - Dark glass premium floating card confirmed",
+    "tarjeta_accent_bar": "PASS - White card with purple/gradient accent bar at top",
+    "app_dark_navy": "PASS - Dark navy floating card with accent bar",
+    "minimal_clean": "PASS - White clean card with underline-style inputs",
+    "campos_visibles_defaults": "PASS - Email del cliente OFF, N° de invitados OFF confirmed in Apariencia UI",
+    "enable_email_shows_in_form": "PASS - Email field appears in form row when enabled via localStorage",
+    "create_reservation_cristal": "PASS - 'Reserva creada' toast shown, dashboard count updated to 3"
+  }
+}

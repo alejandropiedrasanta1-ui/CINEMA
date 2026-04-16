@@ -349,16 +349,27 @@ export function SettingsProvider({ children }) {
   };
 
   // ── Form design styles ────────────────────────────────────────────────────
-  const [reservationFormDesign, setReservationFormDesign] = useState(() => localStorage.getItem("reservation_form_design") || "aurora");
+  const VALID_FORM_DESIGNS = ["aurora","flotante","elegante","tarjeta","app","minimal","cristal"];
+  const [reservationFormDesign, setReservationFormDesign] = useState(() => {
+    const saved = localStorage.getItem("reservation_form_design") || "aurora";
+    return VALID_FORM_DESIGNS.includes(saved) ? saved : "aurora";
+  });
   const changeReservationFormDesign = (val) => { setReservationFormDesign(val); localStorage.setItem("reservation_form_design", val); };
 
-  const [socioFormDesign, setSocioFormDesign] = useState(() => localStorage.getItem("socio_form_design") || "aurora");
+  const [socioFormDesign, setSocioFormDesign] = useState(() => {
+    const saved = localStorage.getItem("socio_form_design") || "aurora";
+    return VALID_FORM_DESIGNS.includes(saved) ? saved : "aurora";
+  });
   const changeSocioFormDesign = (val) => { setSocioFormDesign(val); localStorage.setItem("socio_form_design", val); };
 
   // ── Form fields visibility ────────────────────────────────────────────────
+  const FORM_FIELDS_DEFAULT = { email: false, guests: false };
   const [formFieldsVisibility, setFormFieldsVisibility] = useState(() => {
-    try { return JSON.parse(localStorage.getItem("form_fields_visibility") || "{}"); }
-    catch { return {}; }
+    try {
+      const saved = localStorage.getItem("form_fields_visibility");
+      if (saved === null) return FORM_FIELDS_DEFAULT;
+      return { ...FORM_FIELDS_DEFAULT, ...JSON.parse(saved) };
+    } catch { return FORM_FIELDS_DEFAULT; }
   });
   const changeFormFieldVisibility = (field, visible) => {
     setFormFieldsVisibility(prev => {

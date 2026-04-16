@@ -115,15 +115,20 @@ export default function SocioForm({ socio, onClose, onSaved }) {
           >
             {/* Accent bar (Tarjeta / App) */}
             {dc.accentBar && (
-              <div className="h-12 flex items-center px-6 gap-3" style={{ background: dc.accentBar }}>
-                <button type="button" onClick={onClose}
-                  className={`flex items-center gap-1.5 text-sm font-bold transition-all px-3 py-1.5 rounded-full ${dc.cancelClass}`}
-                  data-testid="cancel-socio-btn">
-                  <ArrowLeft size={14}/> Volver
+              <div className="flex items-center gap-3 px-6 py-3.5" style={{ background: dc.accentBar }}>
+                <button type="button" onClick={onClose} data-testid="cancel-socio-btn"
+                  className={`flex items-center gap-1.5 text-sm font-bold px-3 py-1.5 rounded-full transition-all ${dc.cancelClass}`}>
+                  <ArrowLeft size={13}/>
                 </button>
-                <h2 className={`text-base font-black ${dc.titleClass}`} style={{ fontFamily:"Cabinet Grotesk, sans-serif" }}>
+                <h2 className={`flex-1 text-base font-black ${dc.titleClass}`} style={{ fontFamily:"Cabinet Grotesk, sans-serif" }}>
                   {title}
                 </h2>
+                <motion.button whileHover={{ scale:1.03 }} whileTap={{ scale:0.97 }} type="button" onClick={handleSubmit}
+                  disabled={saving}
+                  className="px-5 py-2 rounded-full bg-white/20 border border-white/30 text-white font-bold text-sm disabled:opacity-60 hover:bg-white/30"
+                  data-testid="submit-socio-btn">
+                  {submitLabel}
+                </motion.button>
               </div>
             )}
 
@@ -159,7 +164,7 @@ export default function SocioForm({ socio, onClose, onSaved }) {
             <form onSubmit={handleSubmit} className="px-6 py-5">
               <div className="flex gap-6 items-start">
                 <PhotoBlock />
-                <div className="flex-1 space-y-4">
+                <div className="flex-1 space-y-3">
                   {/* Nombre */}
                   <div>
                     <Label>Nombre completo *</Label>

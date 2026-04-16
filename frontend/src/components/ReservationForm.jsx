@@ -49,11 +49,11 @@ export default function ReservationForm({ reservation, onClose, onSaved }) {
   const set = (field) => (e) => setForm(p => ({ ...p, [field]: e.target.value }));
 
   const handleSubmit = async (e) => {
-    e.preventDefault();
-    if (!form.client_name.trim()) { toast({ title: "Nombre requerido", variant:"destructive" }); return; }
-    if (!form.event_date)         { toast({ title: "Fecha requerida",  variant:"destructive" }); return; }
+    if (e && e.preventDefault) e.preventDefault();
+    if (!form.client_name.trim()) { toast({ title:"Nombre requerido", variant:"destructive" }); return; }
+    if (!form.event_date)         { toast({ title:"Fecha requerida",  variant:"destructive" }); return; }
     if (!form.total_amount || isNaN(Number(form.total_amount))) {
-      toast({ title: "Monto inválido", variant:"destructive" }); return;
+      toast({ title:"Monto inválido", variant:"destructive" }); return;
     }
     setSaving(true);
     const payload = {
@@ -63,11 +63,11 @@ export default function ReservationForm({ reservation, onClose, onSaved }) {
       advance_paid: parseFloat(form.advance_paid) || 0,
     };
     try {
-      if (isEdit) { await updateReservation(reservation.id, payload); toast({ title: "Reserva actualizada" }); }
-      else        { await createReservation(payload);                  toast({ title: "Reserva creada" }); }
+      if (isEdit) { await updateReservation(reservation.id, payload); toast({ title:"Reserva actualizada" }); }
+      else        { await createReservation(payload);                  toast({ title:"Reserva creada" }); }
       onSaved();
     } catch (err) {
-      toast({ title: "Error al guardar", description: err.response?.data?.detail || "Error", variant:"destructive" });
+      toast({ title:"Error al guardar", description:err.response?.data?.detail||"Error", variant:"destructive" });
     } finally { setSaving(false); }
   };
 
@@ -76,169 +76,181 @@ export default function ReservationForm({ reservation, onClose, onSaved }) {
   const title = isEdit ? "Editar Reserva" : "Nueva Reserva";
   const submitLabel = saving ? "Guardando…" : isEdit ? "Guardar cambios" : "Crear reserva";
 
-  // ── FLOATING LAYOUT (modal card over overlay) ──────────────────────────────
+  // ── Filas de campos con flex-wrap (distribución automática) ──────────────
+  const FieldRows = () => (
+    <div className="space-y-4">
+
+      {/* Fila 1 — Cliente */}
+      <div className="flex flex-wrap gap-3">
+        <div className="flex-[2] min-w-[180px]">
+          <Label>{f.clientName} *</Label>
+          <input value={form.client_name} onChange={set("client_name")} placeholder="Ej: María García" required
+            data-testid="input-client-name" className={inp} style={dc.inpStyle}/>
+        </div>
+        {ff.phone !== false && (
+          <div className="flex-1 min-w-[140px]">
+            <Label>{f.phone}</Label>
+            <input value={form.client_phone} onChange={set("client_phone")} placeholder="+502 1234…"
+              data-testid="input-phone" className={inp} style={dc.inpStyle}/>
+          </div>
+        )}
+        {ff.email !== false && (
+          <div className="flex-1 min-w-[150px]">
+            <Label>{f.email}</Label>
+            <input type="email" value={form.client_email} onChange={set("client_email")} placeholder="correo@email.com"
+              data-testid="input-email" className={inp} style={dc.inpStyle}/>
+          </div>
+        )}
+      </div>
+
+      {/* Fila 2 — Evento */}
+      <div className="flex flex-wrap gap-3">
+        <div className="flex-1 min-w-[140px]">
+          <Label>{f.eventType}</Label>
+          <select value={form.event_type} onChange={set("event_type")} required
+            data-testid="input-event-type" className={sel} style={dc.inpStyle}>
+            {EVENT_TYPES.map(t => <option key={t} value={t} className="bg-white text-slate-800">{getEventTypeName(t)}</option>)}
+          </select>
+        </div>
+        <div className="flex-1 min-w-[130px]">
+          <Label>{f.status}</Label>
+          <select value={form.status} onChange={set("status")}
+            data-testid="input-status" className={sel} style={dc.inpStyle}>
+            {activeStatuses.map(s => <option key={s.key} value={s.key} className="bg-white text-slate-800">{s.label}</option>)}
+          </select>
+        </div>
+        <div className="flex-1 min-w-[140px]">
+          <Label>{f.eventDate} *</Label>
+          <input type="date" value={form.event_date} onChange={set("event_date")} required
+            data-testid="input-event-date" className={inp} style={dc.inpStyle}/>
+        </div>
+        {ff.time !== false && (
+          <div className="flex-1 min-w-[110px]">
+            <Label>{f.time}</Label>
+            <input type="time" value={form.event_time} onChange={set("event_time")}
+              data-testid="input-event-time" className={inp} style={dc.inpStyle}/>
+          </div>
+        )}
+      </div>
+
+      {/* Fila 3 — Lugar / Invitados / Total */}
+      <div className="flex flex-wrap gap-3">
+        {ff.venue !== false && (
+          <div className="flex-[2] min-w-[180px]">
+            <Label>{f.venue}</Label>
+            <input value={form.venue} onChange={set("venue")} placeholder="Salón / Hotel…"
+              data-testid="input-venue" className={inp} style={dc.inpStyle}/>
+          </div>
+        )}
+        {ff.guests !== false && (
+          <div className="flex-1 min-w-[110px]">
+            <Label>{f.guests}</Label>
+            <input type="number" value={form.guests_count} onChange={set("guests_count")} placeholder="150" min="0"
+              data-testid="input-guests" className={inp} style={dc.inpStyle}/>
+          </div>
+        )}
+        <div className="flex-1 min-w-[130px]">
+          <Label>{f.totalAmount} *</Label>
+          <input type="number" value={form.total_amount} onChange={set("total_amount")} placeholder="50,000" min="0" step="0.01" required
+            data-testid="input-total" className={inp} style={dc.inpStyle}/>
+        </div>
+      </div>
+
+      {/* Fila 4 — Anticipo / Notas */}
+      {(ff.advance !== false || ff.notes !== false) && (
+        <div className="flex flex-wrap gap-3">
+          {ff.advance !== false && (
+            <div className="flex-1 min-w-[130px]">
+              <Label>{f.advancePaid}</Label>
+              <input type="number" value={form.advance_paid} onChange={set("advance_paid")} placeholder="10,000" min="0" step="0.01"
+                data-testid="input-advance" className={inp} style={dc.inpStyle}/>
+            </div>
+          )}
+          {ff.notes !== false && (
+            <div className="flex-[3] min-w-[200px]">
+              <Label>{f.notes}</Label>
+              <input value={form.notes} onChange={set("notes")} placeholder="Detalles especiales, temas, requerimientos…"
+                data-testid="input-notes" className={inp} style={dc.inpStyle}/>
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  );
+
+  // ── TOP BAR compartido para floating ──────────────────────────────────────
+  const FloatingTopBar = () => (
+    <>
+      {dc.accentBar && (
+        <div className="flex items-center gap-3 px-6 py-3.5" style={{ background: dc.accentBar }}>
+          <button type="button" onClick={onClose} data-testid="cancel-form-btn"
+            className={`flex items-center gap-1.5 text-sm font-bold px-3 py-1.5 rounded-full transition-all ${dc.cancelClass}`}>
+            <ArrowLeft size={13}/>
+          </button>
+          <h2 className={`flex-1 text-base font-black ${dc.titleClass}`} style={{ fontFamily:"Cabinet Grotesk, sans-serif" }}>
+            {title}
+          </h2>
+          <motion.button whileHover={{ scale:1.03 }} whileTap={{ scale:0.97 }} type="button" onClick={handleSubmit}
+            disabled={saving}
+            className="px-5 py-2 rounded-full bg-white/20 border border-white/30 text-white font-bold text-sm disabled:opacity-60 hover:bg-white/30 transition-all"
+            data-testid="submit-form-btn">
+            {submitLabel}
+          </motion.button>
+        </div>
+      )}
+      {!dc.accentBar && (
+        <div className={`flex items-center justify-between px-6 py-4 border-b ${dc.barClass}`}>
+          <div className="flex items-center gap-3">
+            <button type="button" onClick={onClose} data-testid="cancel-form-btn"
+              className={`flex items-center gap-1.5 text-sm font-bold px-3 py-2 rounded-full transition-all ${dc.cancelClass}`}>
+              <ArrowLeft size={13}/> Cancelar
+            </button>
+            <h2 className={`text-lg font-black ${dc.titleClass}`} style={{ fontFamily:"Cabinet Grotesk, sans-serif" }}>
+              {title}
+            </h2>
+          </div>
+          <div className="flex items-center gap-2">
+            <motion.button whileHover={{ scale:1.03 }} whileTap={{ scale:0.97 }} type="button" onClick={handleSubmit}
+              disabled={saving}
+              className="px-6 py-2.5 rounded-full btn-primary text-white font-bold text-sm disabled:opacity-60 shadow-md"
+              data-testid="submit-form-btn">
+              {submitLabel}
+            </motion.button>
+            <button type="button" onClick={onClose}
+              className={`w-9 h-9 rounded-full flex items-center justify-center transition-all ${dc.cancelClass}`}>
+              <X size={15}/>
+            </button>
+          </div>
+        </div>
+      )}
+    </>
+  );
+
+  // ── FLOATING LAYOUT ───────────────────────────────────────────────────────
   if (dc.layout === "floating") {
     return (
       <AnimatePresence>
         <motion.div
           key="overlay"
           initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-          transition={{ duration: 0.22 }}
-          className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto py-6 px-4"
+          transition={{ duration: 0.2 }}
+          className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto py-8 px-4"
           style={{ background: dc.overlayBg, backdropFilter: dc.overlayBlur }}
           onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}
           data-testid="reservation-form"
         >
           <motion.div
-            initial={{ opacity: 0, scale: 0.94, y: 28 }}
+            initial={{ opacity: 0, scale: 0.95, y: 24 }}
             animate={{ opacity: 1, scale: 1, y: 0 }}
-            exit={{ opacity: 0, scale: 0.94, y: 16 }}
-            transition={{ duration: 0.3, ease: [0.22,1,0.36,1] }}
-            className={`w-full ${dc.cardMaxWidth || "max-w-3xl"} ${dc.cardRadius || "rounded-3xl"} overflow-hidden ${dc.cardShadow || "shadow-2xl"} my-auto`}
-            style={{
-              background: dc.cardBg,
-              backdropFilter: dc.cardBackdrop,
-            }}
+            exit={{ opacity: 0, scale: 0.95 }}
+            transition={{ duration: 0.28, ease: [0.22,1,0.36,1] }}
+            className={`w-full ${dc.cardMaxWidth||"max-w-3xl"} ${dc.cardRadius||"rounded-3xl"} overflow-hidden ${dc.cardShadow||"shadow-2xl"} my-auto`}
+            style={{ background: dc.cardBg, backdropFilter: dc.cardBackdrop }}
             onClick={(e) => e.stopPropagation()}
           >
-            {/* Accent bar (Tarjeta / App styles) */}
-            {dc.accentBar && (
-              <div className="h-12 flex items-center px-6 gap-3" style={{ background: dc.accentBar }}>
-                <button type="button" onClick={onClose}
-                  className={`flex items-center gap-1.5 text-sm font-bold transition-all px-3 py-1.5 rounded-full ${dc.cancelClass}`}
-                  data-testid="cancel-form-btn">
-                  <ArrowLeft size={14}/> Volver
-                </button>
-                <h2 className={`text-base font-black ${dc.titleClass}`} style={{ fontFamily:"Cabinet Grotesk, sans-serif" }}>
-                  {title}
-                </h2>
-              </div>
-            )}
-
-            {/* Top bar */}
-            <div className={`flex items-center justify-between px-6 py-4 border-b ${dc.barClass} ${dc.accentBar ? "hidden" : ""}`}>
-              <div className="flex items-center gap-3">
-                <button type="button" onClick={onClose}
-                  className={`flex items-center gap-1.5 text-sm font-bold transition-all px-3 py-2 rounded-full ${dc.cancelClass}`}
-                  data-testid="cancel-form-btn">
-                  <ArrowLeft size={14}/> {dc.layout === "floating" ? "Cerrar" : "Cancelar"}
-                </button>
-                <h2 className={`text-lg font-black ${dc.titleClass}`} style={{ fontFamily:"Cabinet Grotesk, sans-serif" }}>
-                  {title}
-                </h2>
-              </div>
-              <div className="flex items-center gap-2">
-                <motion.button whileHover={{ scale:1.03 }} whileTap={{ scale:0.97 }} type="button" onClick={handleSubmit}
-                  disabled={saving}
-                  className="px-6 py-2.5 rounded-full btn-primary text-white font-bold text-sm disabled:opacity-60 shadow-md"
-                  data-testid="submit-form-btn">
-                  {submitLabel}
-                </motion.button>
-                <button type="button" onClick={onClose}
-                  className={`w-9 h-9 rounded-full flex items-center justify-center transition-all ${dc.cancelClass}`}>
-                  <X size={16}/>
-                </button>
-              </div>
-            </div>
-
-            {/* Form body */}
-            <form onSubmit={handleSubmit} className="px-6 py-5 space-y-4">
-
-              {/* Row 1: name + phone + email */}
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <Label>{f.clientName}</Label>
-                  <input value={form.client_name} onChange={set("client_name")} placeholder="Ej: María García" required data-testid="input-client-name" className={inp} style={dc.inpStyle}/>
-                </div>
-                <div className="grid grid-cols-2 gap-3">
-                  {ff.phone !== false && (
-                    <div>
-                      <Label>{f.phone}</Label>
-                      <input value={form.client_phone} onChange={set("client_phone")} placeholder="+502 1234…" data-testid="input-phone" className={inp} style={dc.inpStyle}/>
-                    </div>
-                  )}
-                  {ff.email !== false && (
-                    <div>
-                      <Label>{f.email}</Label>
-                      <input type="email" value={form.client_email} onChange={set("client_email")} placeholder="correo@email.com" data-testid="input-email" className={inp} style={dc.inpStyle}/>
-                    </div>
-                  )}
-                </div>
-              </div>
-
-              {/* Row 2: type + status + date + time */}
-              <div className="grid grid-cols-4 gap-3">
-                <div>
-                  <Label>{f.eventType}</Label>
-                  <select value={form.event_type} onChange={set("event_type")} required data-testid="input-event-type" className={sel} style={dc.inpStyle}>
-                    {EVENT_TYPES.map(t => <option key={t} value={t} className="bg-white text-slate-800">{getEventTypeName(t)}</option>)}
-                  </select>
-                </div>
-                <div>
-                  <Label>{f.status}</Label>
-                  <select value={form.status} onChange={set("status")} data-testid="input-status" className={sel} style={dc.inpStyle}>
-                    {activeStatuses.map(s => <option key={s.key} value={s.key} className="bg-white text-slate-800">{s.label}</option>)}
-                  </select>
-                </div>
-                <div>
-                  <Label>{f.eventDate}</Label>
-                  <input type="date" value={form.event_date} onChange={set("event_date")} required data-testid="input-event-date" className={inp} style={dc.inpStyle}/>
-                </div>
-                {ff.time !== false && (
-                  <div>
-                    <Label>{f.time}</Label>
-                    <input type="time" value={form.event_time} onChange={set("event_time")} data-testid="input-event-time" className={inp} style={dc.inpStyle}/>
-                  </div>
-                )}
-              </div>
-
-              {/* Row 3: venue + guests + total + advance */}
-              <div className="grid grid-cols-4 gap-3">
-                {ff.venue !== false && (
-                  <div className="col-span-2">
-                    <Label>{f.venue}</Label>
-                    <input value={form.venue} onChange={set("venue")} placeholder="Salón / Hotel…" data-testid="input-venue" className={inp} style={dc.inpStyle}/>
-                  </div>
-                )}
-                {ff.guests !== false && (
-                  <div>
-                    <Label>{f.guests}</Label>
-                    <input type="number" value={form.guests_count} onChange={set("guests_count")} placeholder="150" min="0" data-testid="input-guests" className={inp} style={dc.inpStyle}/>
-                  </div>
-                )}
-                <div>
-                  <Label>{f.totalAmount}</Label>
-                  <input type="number" value={form.total_amount} onChange={set("total_amount")} placeholder="50,000" min="0" step="0.01" required data-testid="input-total" className={inp} style={dc.inpStyle}/>
-                </div>
-              </div>
-
-              {/* Row 4: advance + notes */}
-              <div className="grid grid-cols-4 gap-3">
-                {ff.advance !== false && (
-                  <div>
-                    <Label>{f.advancePaid}</Label>
-                    <input type="number" value={form.advance_paid} onChange={set("advance_paid")} placeholder="10,000" min="0" step="0.01" data-testid="input-advance" className={inp} style={dc.inpStyle}/>
-                  </div>
-                )}
-                {ff.notes !== false && (
-                  <div className="col-span-3">
-                    <Label>{f.notes}</Label>
-                    <input value={form.notes} onChange={set("notes")} placeholder="Detalles especiales, temas, requerimientos…" data-testid="input-notes" className={inp} style={dc.inpStyle}/>
-                  </div>
-                )}
-              </div>
-
-              {/* Submit button inside form (accentBar designs) */}
-              {dc.accentBar && (
-                <div className="flex justify-end pt-2">
-                  <motion.button whileHover={{ scale:1.03 }} whileTap={{ scale:0.97 }} type="button" onClick={handleSubmit}
-                    disabled={saving}
-                    className="px-8 py-3 rounded-full btn-primary text-white font-bold text-sm disabled:opacity-60 shadow-md"
-                    data-testid="submit-form-btn">
-                    {submitLabel}
-                  </motion.button>
-                </div>
-              )}
+            <FloatingTopBar />
+            <form onSubmit={handleSubmit} className="px-6 py-5">
+              <FieldRows />
             </form>
           </motion.div>
         </motion.div>
@@ -246,16 +258,15 @@ export default function ReservationForm({ reservation, onClose, onSaved }) {
     );
   }
 
-  // ── FULLSCREEN LAYOUT (default) ────────────────────────────────────────────
+  // ── FULLSCREEN LAYOUT ─────────────────────────────────────────────────────
   return (
     <motion.div
       initial={{ opacity: 0, y: 30 }} animate={{ opacity: 1, y: 0 }}
       exit={{ opacity: 0, y: 20 }} transition={{ duration: 0.3, ease: [0.22,1,0.36,1] }}
       className="fixed inset-0 z-50 flex flex-col"
-      style={{ background: dc.containerBg, backdropFilter: "blur(20px)" }}
+      style={{ background: dc.containerBg, backdropFilter:"blur(20px)" }}
       data-testid="reservation-form"
     >
-      {/* ── TOP BAR ── */}
       <div className={`flex-shrink-0 flex items-center justify-between px-10 py-5 border-b ${dc.barClass}`}>
         <div className="flex items-center gap-4">
           <motion.button whileHover={{ scale:1.05 }} whileTap={{ scale:0.95 }} type="button" onClick={onClose}
@@ -263,7 +274,7 @@ export default function ReservationForm({ reservation, onClose, onSaved }) {
             data-testid="cancel-form-btn">
             <ArrowLeft size={16}/> Cancelar
           </motion.button>
-          <h1 className={`text-2xl font-black ${dc.titleClass}`} style={{ fontFamily:'Cabinet Grotesk, sans-serif' }}>
+          <h1 className={`text-2xl font-black ${dc.titleClass}`} style={{ fontFamily:"Cabinet Grotesk, sans-serif" }}>
             {title}
           </h1>
         </div>
@@ -274,82 +285,9 @@ export default function ReservationForm({ reservation, onClose, onSaved }) {
           {submitLabel}
         </motion.button>
       </div>
-
-      {/* ── FORM BODY ── */}
-      <form onSubmit={handleSubmit} className="flex-1 flex flex-col justify-center px-10 py-8 gap-5">
-        <div className="grid grid-cols-3 gap-5">
-          <div className="col-span-1">
-            <Label>{f.clientName}</Label>
-            <input value={form.client_name} onChange={set("client_name")} placeholder="Ej: María García" required data-testid="input-client-name" className={inp} style={dc.inpStyle}/>
-          </div>
-          {ff.phone !== false && (
-            <div>
-              <Label>{f.phone}</Label>
-              <input value={form.client_phone} onChange={set("client_phone")} placeholder="+502 1234 5678" data-testid="input-phone" className={inp} style={dc.inpStyle}/>
-            </div>
-          )}
-          {ff.email !== false && (
-            <div>
-              <Label>{f.email}</Label>
-              <input type="email" value={form.client_email} onChange={set("client_email")} placeholder="correo@email.com" data-testid="input-email" className={inp} style={dc.inpStyle}/>
-            </div>
-          )}
-        </div>
-        <div className="grid grid-cols-4 gap-5">
-          <div>
-            <Label>{f.eventType}</Label>
-            <select value={form.event_type} onChange={set("event_type")} required data-testid="input-event-type" className={sel} style={dc.inpStyle}>
-              {EVENT_TYPES.map(t => <option key={t} value={t} className="bg-white text-slate-800">{getEventTypeName(t)}</option>)}
-            </select>
-          </div>
-          <div>
-            <Label>{f.status}</Label>
-            <select value={form.status} onChange={set("status")} data-testid="input-status" className={sel} style={dc.inpStyle}>
-              {activeStatuses.map(s => <option key={s.key} value={s.key} className="bg-white text-slate-800">{s.label}</option>)}
-            </select>
-          </div>
-          <div>
-            <Label>{f.eventDate}</Label>
-            <input type="date" value={form.event_date} onChange={set("event_date")} required data-testid="input-event-date" className={inp} style={dc.inpStyle}/>
-          </div>
-          {ff.time !== false && (
-            <div>
-              <Label>{f.time}</Label>
-              <input type="time" value={form.event_time} onChange={set("event_time")} data-testid="input-event-time" className={inp} style={dc.inpStyle}/>
-            </div>
-          )}
-        </div>
-        <div className="grid grid-cols-4 gap-5">
-          {ff.venue !== false && (
-            <div className="col-span-2">
-              <Label>{f.venue}</Label>
-              <input value={form.venue} onChange={set("venue")} placeholder="Salón / Hotel / Iglesia…" data-testid="input-venue" className={inp} style={dc.inpStyle}/>
-            </div>
-          )}
-          {ff.guests !== false && (
-            <div>
-              <Label>{f.guests}</Label>
-              <input type="number" value={form.guests_count} onChange={set("guests_count")} placeholder="150" min="0" data-testid="input-guests" className={inp} style={dc.inpStyle}/>
-            </div>
-          )}
-          <div>
-            <Label>{f.totalAmount}</Label>
-            <input type="number" value={form.total_amount} onChange={set("total_amount")} placeholder="50,000" min="0" step="0.01" required data-testid="input-total" className={inp} style={dc.inpStyle}/>
-          </div>
-        </div>
-        <div className="grid grid-cols-4 gap-5">
-          {ff.advance !== false && (
-            <div>
-              <Label>{f.advancePaid}</Label>
-              <input type="number" value={form.advance_paid} onChange={set("advance_paid")} placeholder="10,000" min="0" step="0.01" data-testid="input-advance" className={inp} style={dc.inpStyle}/>
-            </div>
-          )}
-          {ff.notes !== false && (
-            <div className="col-span-3">
-              <Label>{f.notes}</Label>
-              <input value={form.notes} onChange={set("notes")} placeholder="Detalles especiales, temas, requerimientos…" data-testid="input-notes" className={inp} style={dc.inpStyle}/>
-            </div>
-          )}
+      <form onSubmit={handleSubmit} className="flex-1 flex flex-col justify-center px-10 py-8">
+        <div className="w-full max-w-5xl mx-auto">
+          <FieldRows />
         </div>
       </form>
     </motion.div>
