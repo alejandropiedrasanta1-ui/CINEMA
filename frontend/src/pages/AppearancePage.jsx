@@ -51,10 +51,21 @@ function Toggle({ value, onChange, testId }) {
   );
 }
 
-function OptionRow({ label, options, current, onChange, testPrefix, cols = 4 }) {
+function OptionRow({ label, options, current, onChange, testPrefix, cols = 4, defaultValue }) {
+  const isDirty = defaultValue !== undefined && current !== defaultValue;
   return (
     <div>
-      <p className="text-xs font-black text-slate-600 mb-2.5">{label}</p>
+      <div className="flex items-center justify-between mb-2.5">
+        <p className="text-xs font-black text-slate-600">{label}</p>
+        {isDirty && (
+          <motion.button whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.9 }}
+            onClick={() => onChange(defaultValue)}
+            className="flex items-center gap-1 text-[9px] font-bold text-slate-400 hover:text-slate-600 transition-colors"
+            title="Restablecer valor de fábrica">
+            <RotateCcw size={9} /> fábrica
+          </motion.button>
+        )}
+      </div>
       <div className={`grid grid-cols-${cols} gap-2`}>
         {options.map(o => (
           <motion.button key={o.id} whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.97 }}
@@ -70,7 +81,18 @@ function OptionRow({ label, options, current, onChange, testPrefix, cols = 4 }) 
   );
 }
 
-function StyleSlider({ label, value, min, max, step = 1, onChange, unit = "", testId, isNew }) {
+function StyleSlider({ label, value, min, max, step = 1, onChange, unit = "", testId, isNew, defaultValue }) {
+  const [inputVal, setInputVal] = React.useState(String(value));
+  React.useEffect(() => { setInputVal(String(value)); }, [value]);
+  const isDirty = defaultValue !== undefined && value !== defaultValue;
+
+  const handleInputChange = (e) => {
+    const raw = e.target.value;
+    setInputVal(raw);
+    const n = parseFloat(raw);
+    if (!isNaN(n) && n >= min && n <= max) onChange(n);
+  };
+
   return (
     <div>
       <div className="flex items-center justify-between mb-2">
@@ -78,7 +100,26 @@ function StyleSlider({ label, value, min, max, step = 1, onChange, unit = "", te
           {label}
           {isNew && <span className="text-[8px] font-bold px-1.5 py-0.5 rounded-full bg-emerald-100 text-emerald-600">NUEVO</span>}
         </p>
-        <span className="text-xs font-bold text-slate-600">{value}{unit}</span>
+        <div className="flex items-center gap-2">
+          {isDirty && (
+            <motion.button whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.9 }}
+              onClick={() => onChange(defaultValue)}
+              className="flex items-center gap-1 text-[9px] font-bold text-slate-400 hover:text-slate-600 transition-colors"
+              title="Restablecer valor de fábrica">
+              <RotateCcw size={9} /> fábrica
+            </motion.button>
+          )}
+          <div className="flex items-center gap-1 bg-white/60 border border-white/80 rounded-xl px-2 py-0.5">
+            <input
+              type="number" min={min} max={max} step={step}
+              value={inputVal}
+              onChange={handleInputChange}
+              data-testid={`${testId}-input`}
+              className="w-10 text-xs font-bold text-slate-700 bg-transparent focus:outline-none text-right"
+            />
+            {unit && <span className="text-[9px] text-slate-400">{unit}</span>}
+          </div>
+        </div>
       </div>
       <Slider min={min} max={max} step={step} value={[value]} onValueChange={([v]) => onChange(v)} data-testid={testId} className="w-full" />
       <div className="flex justify-between text-[9px] text-slate-400 mt-1"><span>{min}{unit}</span><span>{max}{unit}</span></div>
@@ -128,6 +169,7 @@ export default function AppearancePage() {
   const [pdfLoading, setPdfLoading] = useState(false);
   const [activeEventType, setActiveEventType] = useState(null);
   const [typeNameEdit, setTypeNameEdit] = useState("");
+  const [panelSize, setPanelSize] = useState("medium"); // small | medium | full
   const logoInputRef = React.useRef();
   const pdfLogoInputRef = React.useRef();
 
@@ -179,15 +221,41 @@ export default function AppearancePage() {
     finally { setPdfLoading(false); }
   };
 
+  const PANEL_SIZES = {
+    small:  "max-w-lg",
+    medium: "max-w-2xl",
+    full:   "max-w-5xl",
+  };
+
   return (
-    <div className="px-6 py-8 max-w-2xl mx-auto">
+    <div className={`px-6 py-8 ${PANEL_SIZES[panelSize]} mx-auto transition-all duration-300`}>
       <motion.div initial={{ opacity: 0, y: -16 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4 }} className="mb-8">
-        <h1 className="text-5xl font-black gradient-text tracking-tight" style={{ fontFamily: "Cabinet Grotesk, sans-serif" }}>
-          {es ? "Apariencia" : "Appearance"}
-        </h1>
-        <p className="text-sm text-slate-500 font-medium mt-1.5">
-          {es ? "50+ opciones para personalizar cada detalle visual" : "50+ options to customize every visual detail"}
-        </p>
+        <div className="flex items-end justify-between gap-4 flex-wrap">
+          <div>
+            <h1 className="text-5xl font-black gradient-text tracking-tight" style={{ fontFamily: "Cabinet Grotesk, sans-serif" }}>
+              {es ? "Apariencia" : "Appearance"}
+            </h1>
+            <p className="text-sm text-slate-500 font-medium mt-1.5">
+              {es ? "50+ opciones para personalizar cada detalle visual" : "50+ options to customize every visual detail"}
+            </p>
+          </div>
+          {/* Panel size control */}
+          <div className="flex items-center gap-2 bg-white/50 border border-white/70 rounded-2xl p-1 shadow-sm shrink-0">
+            <span className="text-[9px] font-black text-slate-400 px-2 uppercase tracking-widest">{es ? "Tamaño" : "Size"}</span>
+            {[
+              { id: "small",  label: es ? "Pequeño" : "Small",  icon: "▪" },
+              { id: "medium", label: es ? "Medio" : "Medium",   icon: "▫" },
+              { id: "full",   label: es ? "Completo" : "Full",  icon: "□" },
+            ].map(s => (
+              <motion.button key={s.id} whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}
+                data-testid={`panel-size-${s.id}`}
+                onClick={() => setPanelSize(s.id)}
+                className={`flex items-center gap-1 px-3 py-1.5 rounded-xl text-[10px] font-bold transition-all ${panelSize === s.id ? "btn-primary text-white shadow-sm" : "text-slate-500 hover:bg-white/70"}`}>
+                <span className="text-[10px]">{s.icon}</span> {s.label}
+              </motion.button>
+            ))}
+          </div>
+        </div>
       </motion.div>
 
       <motion.div variants={stagger} initial="hidden" animate="show" className="space-y-5">
@@ -302,7 +370,7 @@ export default function AppearancePage() {
               </div>
             </div>
 
-            <OptionRow label={es ? "Tamaño de texto" : "Text Size"} testPrefix="fontscale" current={fontScale} onChange={v => { changeFontScale(v); toast({ title: `Texto: ${v}` }); }} cols={3}
+            <OptionRow label={es ? "Tamaño de texto" : "Text Size"} testPrefix="fontscale" current={fontScale} onChange={v => { changeFontScale(v); toast({ title: `Texto: ${v}` }); }} cols={3} defaultValue="md"
               options={[{id:"compact",label:es?"Compacto":"Compact",hint:"88%"},{id:"normal",label:es?"Normal":"Normal",hint:"100%"},{id:"large",label:es?"Grande":"Large",hint:"110%"}]} />
 
             <OptionRow label={es ? "Tamaño de iconos (sidebar)" : "Icon Size (sidebar)"} testPrefix="icon-size"
@@ -353,7 +421,7 @@ export default function AppearancePage() {
               <Toggle value={animations} onChange={changeAnimations} testId="animations-toggle" />
             </motion.div>
 
-            <OptionRow label={es ? "Velocidad de animaciones" : "Animation Speed"} testPrefix="anim" current={animSpeed} onChange={changeAnimSpeed} cols={4}
+            <OptionRow label={es ? "Velocidad de animaciones" : "Animation Speed"} testPrefix="anim" current={animSpeed} onChange={changeAnimSpeed} cols={4} defaultValue="normal"
               options={[{id:"slow",label:es?"Lenta":"Slow",preview:<span>🐢</span>},{id:"normal",label:es?"Normal":"Normal",preview:<span>✦</span>},{id:"fast",label:es?"Rápida":"Fast",preview:<span>⚡</span>},{id:"instant",label:es?"Instante":"Instant",preview:<span>⚡⚡</span>}]} />
 
             <OptionRow label={es ? "Transición de páginas" : "Page Transition"} testPrefix="page-transition" current={pageTransition} onChange={v => { changePageTransition(v); toast({ title: `Transición: ${v}` }); }} cols={4}
@@ -418,15 +486,12 @@ export default function AppearancePage() {
               </div>
             </div>
 
-            <OptionRow label={es ? "Estilo de botones" : "Button Style"} testPrefix="btn-corner" current={btnCorner} onChange={changeBtnCorner} cols={3}
+            <OptionRow label={es ? "Estilo de botones" : "Button Style"} testPrefix="btn-corner" current={btnCorner} onChange={changeBtnCorner} cols={3} defaultValue="rounded"
               options={[
                 { id:"rounded", label:es?"Redondeado":"Rounded", preview: <div className="w-12 h-4 rounded-xl btn-primary" /> },
                 { id:"pill",    label:"Pill",                    preview: <div className="w-12 h-4 rounded-full btn-primary" /> },
                 { id:"sharp",   label:es?"Angular":"Sharp",      preview: <div className="w-12 h-4 rounded-sm btn-primary" /> },
               ]} />
-
-            <OptionRow label={es ? "Profundidad de sombras" : "Shadow Depth"} testPrefix="shadow" current={shadowDepth} onChange={changeShadowDepth} cols={4}
-              options={[{id:"flat",label:"Flat"},{id:"normal",label:"Normal"},{id:"deep",label:"Deep"},{id:"glow",label:"Glow"}]} />
 
             <OptionRow label={es ? "Estilo de separadores" : "Divider Style"} testPrefix="divider"
               current={as.dividerStyle || "solid"} onChange={v => cs("dividerStyle", v)} cols={5}
@@ -467,10 +532,8 @@ export default function AppearancePage() {
               <Toggle value={darkMode} onChange={v => { changeDarkMode(v); toast({ title: v ? "Modo oscuro ✓" : "Modo claro" }); }} testId="dark-mode-toggle" />
             </div>
 
-            <OptionRow label={es ? "Intensidad de fondo (blobs)" : "Background Intensity"} testPrefix="bg" current={bgIntensity} onChange={changeBgIntensity} cols={4}
+            <OptionRow label={es ? "Intensidad de fondo (blobs)" : "Background Intensity"} testPrefix="bg" current={bgIntensity} onChange={changeBgIntensity} cols={4} defaultValue="normal"
               options={[{id:"off",label:es?"Apagado":"Off"},{id:"subtle",label:es?"Suave":"Subtle"},{id:"normal",label:es?"Normal":"Normal"},{id:"vivid",label:es?"Vivido":"Vivid"}]} />
-
-            <StyleSlider label={es ? "Blur del vidrio" : "Glass Blur"} value={glassBlur} min={0} max={60} step={4} onChange={changeGlassBlur} unit="px" testId="glass-blur-slider" />
 
             <div>
               <div className="flex items-center justify-between mb-2">
@@ -512,10 +575,10 @@ export default function AppearancePage() {
         <Section icon={AlignJustify} title={es ? "Interfaz y Espacio" : "Interface & Space"} desc={es ? "Sidebar, densidad, tamaños, efectos visuales" : "Sidebar, density, sizes, visual effects"}>
           <div className="space-y-5">
 
-            <OptionRow label={es ? "Densidad del contenido" : "Content Density"} testPrefix="density" current={layoutDensity} onChange={v => { changeLayoutDensity(v); toast({ title: `Densidad: ${v}` }); }} cols={3}
+            <OptionRow label={es ? "Densidad del contenido" : "Content Density"} testPrefix="density" current={layoutDensity} onChange={v => { changeLayoutDensity(v); toast({ title: `Densidad: ${v}` }); }} cols={3} defaultValue="standard"
               options={[{id:"comfortable",label:es?"Cómodo":"Comfortable"},{id:"standard",label:es?"Estándar":"Standard"},{id:"compact",label:es?"Compacto":"Compact"}]} />
 
-            <OptionRow label={es ? "Estilo de barra lateral" : "Sidebar Style"} testPrefix="sidebar-style" current={sidebarStyle} onChange={v => { changeSidebarStyle(v); toast({ title: `Sidebar: ${v}` }); }} cols={3}
+            <OptionRow label={es ? "Estilo de barra lateral" : "Sidebar Style"} testPrefix="sidebar-style" current={sidebarStyle} onChange={v => { changeSidebarStyle(v); toast({ title: `Sidebar: ${v}` }); }} cols={3} defaultValue="normal"
               options={[{id:"normal",label:es?"Normal":"Normal"},{id:"floating",label:es?"Flotante":"Floating"},{id:"borderless",label:es?"Sin borde":"Borderless"}]} />
 
             <div className="flex items-center justify-between">
@@ -548,11 +611,11 @@ export default function AppearancePage() {
 
             {/* ── NUEVAS OPCIONES ─────────────────────── */}
 
-            <StyleSlider label={es ? "Opacidad del vidrio (tarjetas)" : "Glass Card Opacity"} value={as.glassOpacity ?? 45} min={10} max={90} step={5} onChange={v => changeAdvancedStyle("glassOpacity", v)} unit="%" testId="glass-opacity-slider" />
+            <StyleSlider label={es ? "Opacidad del vidrio (tarjetas)" : "Glass Card Opacity"} value={as.glassOpacity ?? 45} min={10} max={90} step={5} onChange={v => changeAdvancedStyle("glassOpacity", v)} unit="%" testId="glass-opacity-slider" defaultValue={45} />
 
-            <StyleSlider label={es ? "Desenfoque del vidrio" : "Glass Blur"} value={glassBlur} min={0} max={40} step={2} onChange={changeGlassBlur} unit="px" testId="glass-blur-slider" />
+            <StyleSlider label={es ? "Desenfoque del vidrio" : "Glass Blur"} value={glassBlur} min={0} max={40} step={2} onChange={changeGlassBlur} unit="px" testId="glass-blur-slider" defaultValue={14} />
 
-            <StyleSlider label={es ? "Profundidad de sombra" : "Shadow Depth"} value={shadowDepth} min={0} max={5} step={1} onChange={changeShadowDepth} unit="" testId="shadow-depth-slider" />
+            <StyleSlider label={es ? "Profundidad de sombra" : "Shadow Depth"} value={shadowDepth} min={0} max={5} step={1} onChange={changeShadowDepth} unit="" testId="shadow-depth-slider" defaultValue={2} />
 
             <OptionRow label={es ? "Estilo de divisores" : "Divider Style"} testPrefix="divider-style"
               current={as.dividerStyle || "subtle"} onChange={v => cs("dividerStyle", v)} cols={4}
