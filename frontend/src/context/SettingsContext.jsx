@@ -348,6 +348,19 @@ export function SettingsProvider({ children }) {
     localStorage.removeItem("custom_statuses");
   };
 
+  // ── Island sidebar margins ─────────────────────────────────────────────────
+  const [islandMargins, setIslandMargins] = useState(() => {
+    try { return JSON.parse(localStorage.getItem("island_margins") || "null") || { top: 14, bottom: 14, side: 14 }; }
+    catch { return { top: 14, bottom: 14, side: 14 }; }
+  });
+  const changeIslandMargins = (key, value) => {
+    setIslandMargins(prev => {
+      const next = { ...prev, [key]: value };
+      localStorage.setItem("island_margins", JSON.stringify(next));
+      return next;
+    });
+  };
+
   const changePdfTheme = (t) => { setPdfTheme(t); localStorage.setItem("pdf_theme", t); };
 
   useEffect(() => {
@@ -726,6 +739,8 @@ export function SettingsProvider({ children }) {
       // Custom statuses
       activeStatuses, customStatuses,
       changeStatusLabel, changeStatusColor, addCustomStatus, removeCustomStatus, resetCustomStatuses,
+      // Island margins
+      islandMargins, changeIslandMargins,
     }}>
       {children}
     </SettingsContext.Provider>

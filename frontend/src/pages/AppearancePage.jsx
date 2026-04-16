@@ -161,6 +161,7 @@ export default function AppearancePage() {
     customLabels, changeCustomLabel, resetCustomLabels,
     customStatuses, activeStatuses,
     changeStatusLabel, changeStatusColor, addCustomStatus, removeCustomStatus, resetCustomStatuses,
+    islandMargins, changeIslandMargins,
   } = useSettings();
 
   const { toast } = useToast();
@@ -582,7 +583,7 @@ export default function AppearancePage() {
               options={[
                 { id:"normal",
                   label: es ? "Normal" : "Normal",
-                  hint: es ? "Estilo por defecto" : "Default",
+                  hint: es ? "Por defecto" : "Default",
                   preview: (
                     <div className="w-14 h-9 bg-slate-100 rounded-lg overflow-hidden flex">
                       <div className="w-3.5 h-full bg-white/80 border-r border-slate-200" />
@@ -611,12 +612,12 @@ export default function AppearancePage() {
                   ),
                 },
                 { id:"island",
-                  label: "Island",
-                  hint: es ? "Flotante isla" : "Detached island",
+                  label: "Isla",
+                  hint: es ? "Flotante, sin tocar bordes" : "Floating island",
                   preview: (
-                    <div className="w-14 h-9 bg-slate-100 rounded-lg overflow-hidden flex items-center">
-                      <div className="w-3 h-7 ml-1 bg-white rounded-2xl shadow-lg border border-white/80" />
-                      <div className="flex-1 bg-slate-50/60 rounded-r-lg" />
+                    <div className="w-14 h-9 bg-slate-100 rounded-lg overflow-hidden flex items-center p-0.5">
+                      <div className="w-3 h-full bg-white rounded-2xl shadow-lg border border-white/80 mx-0.5" />
+                      <div className="flex-1 bg-slate-50/60 rounded-lg" />
                     </div>
                   ),
                 },
@@ -630,17 +631,39 @@ export default function AppearancePage() {
                     </div>
                   ),
                 },
-                { id:"pill",
-                  label: "Pill",
-                  hint: es ? "Cápsula" : "Capsule",
-                  preview: (
-                    <div className="w-14 h-9 bg-slate-100 rounded-lg overflow-hidden flex items-center">
-                      <div className="w-2.5 h-7 ml-1 bg-white/90 rounded-full shadow-md border border-white/60" />
-                      <div className="flex-1 bg-slate-50/60 rounded-r-lg" />
-                    </div>
-                  ),
-                },
               ]} />
+
+            {/* Island margin sliders — only when island is active */}
+            {sidebarStyle === "island" && (
+              <motion.div
+                initial={{ opacity: 0, y: -6 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0 }}
+                className="pl-3 border-l-2 border-[var(--t-from)]/30 space-y-4 mt-1"
+              >
+                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">
+                  {es ? "Separaciones de la isla" : "Island spacing"}
+                </p>
+                <StyleSlider
+                  label={es ? "Separación superior" : "Top gap"}
+                  value={islandMargins.top} min={0} max={60} step={2}
+                  onChange={v => changeIslandMargins("top", v)} unit="px"
+                  testId="island-top" defaultValue={14}
+                />
+                <StyleSlider
+                  label={es ? "Separación inferior" : "Bottom gap"}
+                  value={islandMargins.bottom} min={0} max={60} step={2}
+                  onChange={v => changeIslandMargins("bottom", v)} unit="px"
+                  testId="island-bottom" defaultValue={14}
+                />
+                <StyleSlider
+                  label={es ? "Separación lateral (izquierda)" : "Side gap (left)"}
+                  value={islandMargins.side} min={0} max={60} step={2}
+                  onChange={v => changeIslandMargins("side", v)} unit="px"
+                  testId="island-side" defaultValue={14}
+                />
+              </motion.div>
+            )}
 
             <div className="flex items-center justify-between">
               <div><p className="text-sm font-black text-slate-800">{es ? "Barra lateral compacta" : "Compact Sidebar"}</p><p className="text-[11px] text-slate-400 mt-0.5">{es ? "Solo iconos" : "Icons only"}</p></div>

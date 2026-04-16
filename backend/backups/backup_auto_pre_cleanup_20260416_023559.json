@@ -1,6 +1,6 @@
 {
   "_meta": {
-    "created_at": "2026-04-16T01:22:11.608106+00:00",
+    "created_at": "2026-04-16T02:35:58.976569+00:00",
     "label": "auto_pre_cleanup"
   },
   "reservations": [
@@ -110,12 +110,23 @@
       "event_time": "",
       "venue": "",
       "guests_count": null,
-      "total_amount": 111.0,
+      "total_amount": 3500.0,
       "advance_paid": 0.0,
       "status": "Pendiente",
       "notes": "",
       "receipt_images": [],
       "created_at": "2026-04-16T01:01:51.636877+00:00",
+      "assigned_partners": [
+        {
+          "socio_id": "69e0318050a8649bc3f81195",
+          "name": "hjh",
+          "role": "Fotógrafo",
+          "photo": null,
+          "photo_content_type": null,
+          "payment": 800,
+          "payment_status": "Pendiente"
+        }
+      ],
       "id": "69e034ff50a8649bc3f81196"
     },
     {

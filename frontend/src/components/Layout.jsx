@@ -6,18 +6,19 @@ import { useSettings, PRESETS } from "@/context/SettingsContext";
 
 export default function Layout({ children }) {
   const [mobileOpen, setMobileOpen] = useState(false);
-  const { tr, preset, logoUrl, logoSize, sidebarCompact, iconSize, sidebarStyle } = useSettings();
+  const { tr, preset, logoUrl, logoSize, sidebarCompact, iconSize, sidebarStyle, islandMargins } = useSettings();
   const presetLabel = PRESETS.find(p => p.id === preset)?.name || "Glass Aurora";
   const sidebarLogoH = Math.min(Math.max(logoSize || 40, 24), 80);
 
-  // "pill" style forces compact mode
-  const compact = sidebarCompact || sidebarStyle === "pill";
+  // "island" always uses islandMargins for margins; no pill style
+  const compact = sidebarCompact;
 
   // Icon size mapping
   const iconPx = iconSize === "small" ? 14 : iconSize === "large" ? 22 : 18;
   const iconPxInline = iconSize === "small" ? 12 : iconSize === "large" ? 20 : 16;
 
-  const sidebarWidth = (sidebarStyle === "pill") ? "72px" : compact ? "72px" : "240px";
+  const { top: mTop, bottom: mBottom, side: mSide } = islandMargins || { top: 14, bottom: 14, side: 14 };
+  const sidebarWidth = compact ? "72px" : "240px";
 
   // Per-style inline overrides
   const styleMap = {
@@ -36,10 +37,10 @@ export default function Layout({ children }) {
       backdropFilter: "none",
     },
     island: {
-      margin: "14px 0 14px 14px",
+      margin: `${mTop}px 0 ${mBottom}px ${mSide}px`,
       borderRadius: "28px",
-      minHeight: "calc(100vh - 28px)",
-      height: "calc(100vh - 28px)",
+      minHeight: `calc(100vh - ${mTop + mBottom}px)`,
+      height: `calc(100vh - ${mTop + mBottom}px)`,
       boxShadow: "0 32px 80px rgba(31,38,135,0.22), 0 8px 30px rgba(0,0,0,0.1)",
       background: "rgba(255,255,255,0.88)",
       backdropFilter: "blur(28px) saturate(180%)",
@@ -50,22 +51,11 @@ export default function Layout({ children }) {
       boxShadow: "none",
       backdropFilter: "blur(6px)",
     },
-    pill: {
-      margin: "20px 0 20px 14px",
-      borderRadius: "40px",
-      minHeight: "calc(100vh - 40px)",
-      height: "calc(100vh - 40px)",
-      width: "72px",
-      boxShadow: "0 24px 70px rgba(31,38,135,0.18)",
-      overflow: "hidden",
-    },
   };
 
   const sidebarExtra = styleMap[sidebarStyle] || {};
   const mainMarginLeft = ["floating", "island"].includes(sidebarStyle)
-    ? `calc(${sidebarWidth} + 26px)`
-    : sidebarStyle === "pill"
-    ? "calc(72px + 28px)"
+    ? `calc(${sidebarWidth} + ${sidebarStyle === "island" ? mSide + 12 : 14}px)`
     : sidebarWidth;
 
   const navItems = [
