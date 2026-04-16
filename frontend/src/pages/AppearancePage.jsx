@@ -118,6 +118,8 @@ export default function AppearancePage() {
     eventConfigs, updateEventTypeConfig, resetEventTypeConfig,
     logoUrl, pdfLogoUrl, logoSize, usePdfLogo, useCustomPdfLogo, updateLogoSettings,
     customLabels, changeCustomLabel, resetCustomLabels,
+    customStatuses, activeStatuses,
+    changeStatusLabel, changeStatusColor, addCustomStatus, removeCustomStatus, resetCustomStatuses,
   } = useSettings();
 
   const { toast } = useToast();

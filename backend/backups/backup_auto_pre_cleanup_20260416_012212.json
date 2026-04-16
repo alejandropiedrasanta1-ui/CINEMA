@@ -1,6 +1,6 @@
 {
   "_meta": {
-    "created_at": "2026-04-16T00:42:27.552878+00:00",
+    "created_at": "2026-04-16T01:22:11.608106+00:00",
     "label": "auto_pre_cleanup"
   },
   "reservations": [
@@ -100,9 +100,56 @@
       "created_at": "2026-04-15T19:33:05.502152+00:00",
       "imported_from_csv": true,
       "id": "69dfe7f1d8166a50d7773745"
+    },
+    {
+      "client_name": "juan",
+      "client_phone": "",
+      "client_email": "",
+      "event_type": "Boda",
+      "event_date": "2026-04-06",
+      "event_time": "",
+      "venue": "",
+      "guests_count": null,
+      "total_amount": 111.0,
+      "advance_paid": 0.0,
+      "status": "Pendiente",
+      "notes": "",
+      "receipt_images": [],
+      "created_at": "2026-04-16T01:01:51.636877+00:00",
+      "id": "69e034ff50a8649bc3f81196"
+    },
+    {
+      "client_name": "Maria",
+      "client_phone": "",
+      "client_email": "",
+      "event_type": "Quinceañera",
+      "event_date": "2026-04-15",
+      "event_time": "",
+      "venue": "",
+      "guests_count": null,
+      "total_amount": 2000.0,
+      "advance_paid": 0.0,
+      "status": "Pendiente",
+      "notes": "",
+      "receipt_images": [],
+      "created_at": "2026-04-16T01:07:23.281641+00:00",
+      "id": "69e0364b50a8649bc3f81197"
     }
   ],
-  "socios": [],
+  "socios": [
+    {
+      "name": "hjh",
+      "role": "Fotógrafo",
+      "phone": null,
+      "email": null,
+      "notes": null,
+      "rate_per_event": null,
+      "photo": null,
+      "photo_content_type": null,
+      "created_at": "2026-04-16T00:46:56.338366+00:00",
+      "id": "69e0318050a8649bc3f81195"
+    }
+  ],
   "app_settings": [
     {
       "reminders_enabled": false,
