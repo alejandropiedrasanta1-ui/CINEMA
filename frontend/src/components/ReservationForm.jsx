@@ -5,17 +5,22 @@ import { motion } from "framer-motion";
 import { useToast } from "@/hooks/use-toast";
 import { useSettings } from "@/context/SettingsContext";
 import { getEventTypeName } from "@/lib/eventConfig";
+import { FORM_DESIGN_CONFIGS } from "@/lib/formDesigns";
 
 const EVENT_TYPES = ["Boda","Quinceañera","Fiesta Social","Evento Corporativo","Conferencia","Otro"];
 
 export default function ReservationForm({ reservation, onClose, onSaved }) {
   const { toast } = useToast();
-  const { tr, activeStatuses, formFieldsVisibility } = useSettings();
+  const { tr, activeStatuses, formFieldsVisibility, reservationFormDesign } = useSettings();
   const f = tr.form;
   const ff = formFieldsVisibility || {};
-  const isEdit = !!reservation;
-
-  const [form, setForm] = useState({
+  const dc = FORM_DESIGN_CONFIGS[reservationFormDesign] || FORM_DESIGN_CONFIGS.aurora;
+  const inp = dc.inp;
+  const sel = `${dc.inp} cursor-pointer`;
+  const Label = ({ children }) => (
+    <label className={dc.labelClass} style={dc.labelStyle}>{children}</label>
+  );
+  const isEdit = !!reservation;  const [form, setForm] = useState({
     client_name:"", client_phone:"", client_email:"",
     event_type:"Boda", event_date:"", event_time:"",
     venue:"", guests_count:"", total_amount:"",
@@ -65,26 +70,23 @@ export default function ReservationForm({ reservation, onClose, onSaved }) {
     } finally { setSaving(false); }
   };
 
-  const inp = "w-full text-base px-5 py-4 rounded-2xl bg-white/70 border-2 border-white/80 focus:outline-none focus:border-[var(--t-from)] focus:bg-white text-slate-800 placeholder-slate-400 font-medium transition-all duration-200";
-  const sel = `${inp} cursor-pointer`;
-
   return (
     <motion.div
       initial={{ opacity: 0, y: 30 }} animate={{ opacity: 1, y: 0 }}
       exit={{ opacity: 0, y: 20 }} transition={{ duration: 0.3, ease: [0.22,1,0.36,1] }}
       className="fixed inset-0 z-50 flex flex-col"
-      style={{ background: "linear-gradient(135deg, rgba(238,242,255,0.98) 0%, rgba(248,250,255,0.98) 50%, rgba(240,248,255,0.98) 100%)", backdropFilter: "blur(20px)" }}
+      style={{ background: dc.containerBg, backdropFilter: "blur(20px)" }}
       data-testid="reservation-form"
     >
       {/* ── TOP BAR ── */}
-      <div className="flex-shrink-0 flex items-center justify-between px-10 py-5 border-b border-slate-200/60 bg-white/40">
+      <div className={`flex-shrink-0 flex items-center justify-between px-10 py-5 border-b ${dc.barClass}`}>
         <div className="flex items-center gap-4">
           <motion.button whileHover={{ scale:1.05 }} whileTap={{ scale:0.95 }} type="button" onClick={onClose}
-            className="flex items-center gap-2 px-4 py-2.5 rounded-full glass border-slate-200/60 text-slate-600 font-bold text-sm hover:bg-white/80 transition-colors"
+            className={`flex items-center gap-2 px-4 py-2.5 rounded-full font-bold text-sm transition-colors ${dc.cancelClass}`}
             data-testid="cancel-form-btn">
             <ArrowLeft size={16}/> Cancelar
           </motion.button>
-          <h1 className="text-2xl font-black text-slate-900" style={{ fontFamily:'Cabinet Grotesk, sans-serif' }}>
+          <h1 className={`text-2xl font-black ${dc.titleClass}`} style={{ fontFamily:'Cabinet Grotesk, sans-serif' }}>
             {isEdit ? "Editar Reserva" : "Nueva Reserva"}
           </h1>
         </div>
@@ -103,18 +105,18 @@ export default function ReservationForm({ reservation, onClose, onSaved }) {
         <div className="grid grid-cols-3 gap-5">
           <div className="col-span-1">
             <Label>{f.clientName}</Label>
-            <input value={form.client_name} onChange={set("client_name")} placeholder="Ej: María García" required data-testid="input-client-name" className={inp}/>
+            <input value={form.client_name} onChange={set("client_name")} placeholder="Ej: María García" required data-testid="input-client-name" className={inp} style={dc.inpStyle}/>
           </div>
           {ff.phone !== false && (
             <div>
               <Label>{f.phone}</Label>
-              <input value={form.client_phone} onChange={set("client_phone")} placeholder="+502 1234 5678" data-testid="input-phone" className={inp}/>
+              <input value={form.client_phone} onChange={set("client_phone")} placeholder="+502 1234 5678" data-testid="input-phone" className={inp} style={dc.inpStyle}/>
             </div>
           )}
           {ff.email !== false && (
             <div>
               <Label>{f.email}</Label>
-              <input type="email" value={form.client_email} onChange={set("client_email")} placeholder="correo@email.com" data-testid="input-email" className={inp}/>
+              <input type="email" value={form.client_email} onChange={set("client_email")} placeholder="correo@email.com" data-testid="input-email" className={inp} style={dc.inpStyle}/>
             </div>
           )}
         </div>
@@ -123,24 +125,24 @@ export default function ReservationForm({ reservation, onClose, onSaved }) {
         <div className="grid grid-cols-4 gap-5">
           <div>
             <Label>{f.eventType}</Label>
-            <select value={form.event_type} onChange={set("event_type")} required data-testid="input-event-type" className={sel}>
-              {EVENT_TYPES.map(t => <option key={t} value={t} className="bg-white">{getEventTypeName(t)}</option>)}
+            <select value={form.event_type} onChange={set("event_type")} required data-testid="input-event-type" className={sel} style={dc.inpStyle}>
+              {EVENT_TYPES.map(t => <option key={t} value={t} className="bg-white text-slate-800">{getEventTypeName(t)}</option>)}
             </select>
           </div>
           <div>
             <Label>{f.status}</Label>
-            <select value={form.status} onChange={set("status")} data-testid="input-status" className={sel}>
-              {activeStatuses.map(s => <option key={s.key} value={s.key} className="bg-white">{s.label}</option>)}
+            <select value={form.status} onChange={set("status")} data-testid="input-status" className={sel} style={dc.inpStyle}>
+              {activeStatuses.map(s => <option key={s.key} value={s.key} className="bg-white text-slate-800">{s.label}</option>)}
             </select>
           </div>
           <div>
             <Label>{f.eventDate}</Label>
-            <input type="date" value={form.event_date} onChange={set("event_date")} required data-testid="input-event-date" className={inp}/>
+            <input type="date" value={form.event_date} onChange={set("event_date")} required data-testid="input-event-date" className={inp} style={dc.inpStyle}/>
           </div>
           {ff.time !== false && (
             <div>
               <Label>{f.time}</Label>
-              <input type="time" value={form.event_time} onChange={set("event_time")} data-testid="input-event-time" className={inp}/>
+              <input type="time" value={form.event_time} onChange={set("event_time")} data-testid="input-event-time" className={inp} style={dc.inpStyle}/>
             </div>
           )}
         </div>
@@ -150,18 +152,18 @@ export default function ReservationForm({ reservation, onClose, onSaved }) {
           {ff.venue !== false && (
             <div className="col-span-2">
               <Label>{f.venue}</Label>
-              <input value={form.venue} onChange={set("venue")} placeholder="Salón / Hotel / Iglesia…" data-testid="input-venue" className={inp}/>
+              <input value={form.venue} onChange={set("venue")} placeholder="Salón / Hotel / Iglesia…" data-testid="input-venue" className={inp} style={dc.inpStyle}/>
             </div>
           )}
           {ff.guests !== false && (
             <div>
               <Label>{f.guests}</Label>
-              <input type="number" value={form.guests_count} onChange={set("guests_count")} placeholder="150" min="0" data-testid="input-guests" className={inp}/>
+              <input type="number" value={form.guests_count} onChange={set("guests_count")} placeholder="150" min="0" data-testid="input-guests" className={inp} style={dc.inpStyle}/>
             </div>
           )}
           <div>
             <Label>{f.totalAmount}</Label>
-            <input type="number" value={form.total_amount} onChange={set("total_amount")} placeholder="50,000" min="0" step="0.01" required data-testid="input-total" className={inp}/>
+            <input type="number" value={form.total_amount} onChange={set("total_amount")} placeholder="50,000" min="0" step="0.01" required data-testid="input-total" className={inp} style={dc.inpStyle}/>
           </div>
         </div>
 
@@ -170,13 +172,13 @@ export default function ReservationForm({ reservation, onClose, onSaved }) {
           {ff.advance !== false && (
             <div>
               <Label>{f.advancePaid}</Label>
-              <input type="number" value={form.advance_paid} onChange={set("advance_paid")} placeholder="10,000" min="0" step="0.01" data-testid="input-advance" className={inp}/>
+              <input type="number" value={form.advance_paid} onChange={set("advance_paid")} placeholder="10,000" min="0" step="0.01" data-testid="input-advance" className={inp} style={dc.inpStyle}/>
             </div>
           )}
           {ff.notes !== false && (
             <div className="col-span-3">
               <Label>{f.notes}</Label>
-              <input value={form.notes} onChange={set("notes")} placeholder="Detalles especiales, temas, requerimientos…" data-testid="input-notes" className={inp}/>
+              <input value={form.notes} onChange={set("notes")} placeholder="Detalles especiales, temas, requerimientos…" data-testid="input-notes" className={inp} style={dc.inpStyle}/>
             </div>
           )}
         </div>
@@ -184,8 +186,4 @@ export default function ReservationForm({ reservation, onClose, onSaved }) {
       </form>
     </motion.div>
   );
-}
-
-function Label({ children }) {
-  return <label className="block text-xs font-black text-slate-500 uppercase tracking-widest mb-2">{children}</label>;
 }

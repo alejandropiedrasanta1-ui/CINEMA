@@ -4,13 +4,19 @@ import { ArrowLeft, Camera, Upload } from "lucide-react";
 import { motion } from "framer-motion";
 import { useToast } from "@/hooks/use-toast";
 import { useSettings } from "@/context/SettingsContext";
+import { FORM_DESIGN_CONFIGS } from "@/lib/formDesigns";
 
 const ROLES = ["Fotógrafo", "Videógrafo", "Asistente"];
 
 export default function SocioForm({ socio, onClose, onSaved }) {
   const { toast } = useToast();
-  const { socioFieldsVisibility } = useSettings();
+  const { socioFieldsVisibility, socioFormDesign } = useSettings();
   const sf = socioFieldsVisibility || {};
+  const dc = FORM_DESIGN_CONFIGS[socioFormDesign] || FORM_DESIGN_CONFIGS.aurora;
+  const inp = dc.inp;
+  const Label = ({ children }) => (
+    <label className={dc.labelClass} style={dc.labelStyle}>{children}</label>
+  );
   const isEdit = !!socio;
   const [saving, setSaving]           = useState(false);
   const [photoPreview, setPhotoPreview] = useState(null);
@@ -60,24 +66,22 @@ export default function SocioForm({ socio, onClose, onSaved }) {
     } finally { setSaving(false); }
   };
 
-  const inp = "w-full text-base px-5 py-4 rounded-2xl bg-white/70 border-2 border-white/80 focus:outline-none focus:border-[var(--t-from)] focus:bg-white text-slate-800 placeholder-slate-400 font-medium transition-all duration-200";
-
   return (
     <motion.div
       initial={{ opacity:0, y:30 }} animate={{ opacity:1, y:0 }}
       exit={{ opacity:0, y:20 }} transition={{ duration:0.3, ease:[0.22,1,0.36,1] }}
       className="fixed inset-0 z-50 flex flex-col"
-      style={{ background:"linear-gradient(135deg, rgba(238,242,255,0.98) 0%, rgba(248,250,255,0.98) 50%, rgba(240,248,255,0.98) 100%)", backdropFilter:"blur(20px)" }}
+      style={{ background: dc.containerBg, backdropFilter:"blur(20px)" }}
       data-testid="socio-form"
     >
       {/* ── TOP BAR ── */}
-      <div className="flex-shrink-0 flex items-center justify-between px-10 py-5 border-b border-slate-200/60 bg-white/40">
+      <div className={`flex-shrink-0 flex items-center justify-between px-10 py-5 border-b ${dc.barClass}`}>
         <div className="flex items-center gap-4">
           <motion.button whileHover={{ scale:1.05 }} whileTap={{ scale:0.95 }} type="button" onClick={onClose}
-            className="flex items-center gap-2 px-4 py-2.5 rounded-full glass border-slate-200/60 text-slate-600 font-bold text-sm hover:bg-white/80 transition-colors">
+            className={`flex items-center gap-2 px-4 py-2.5 rounded-full font-bold text-sm transition-colors ${dc.cancelClass}`}>
             <ArrowLeft size={16}/> Cancelar
           </motion.button>
-          <h1 className="text-2xl font-black text-slate-900" style={{ fontFamily:'Cabinet Grotesk, sans-serif' }}>
+          <h1 className={`text-2xl font-black ${dc.titleClass}`} style={{ fontFamily:'Cabinet Grotesk, sans-serif' }}>
             {isEdit ? "Editar Socio" : "Nuevo Socio"}
           </h1>
         </div>
@@ -120,7 +124,7 @@ export default function SocioForm({ socio, onClose, onSaved }) {
             {/* Nombre */}
             <div>
               <Label>Nombre completo *</Label>
-              <input value={form.name} onChange={set("name")} placeholder="Ej: Carlos Pérez" required data-testid="input-socio-name" className={inp}/>
+              <input value={form.name} onChange={set("name")} placeholder="Ej: Carlos Pérez" required data-testid="input-socio-name" className={inp} style={dc.inpStyle}/>
             </div>
 
             {/* Rol */}
@@ -130,7 +134,7 @@ export default function SocioForm({ socio, onClose, onSaved }) {
                 {ROLES.map(r => (
                   <motion.button key={r} type="button" whileHover={{ scale:1.02 }} whileTap={{ scale:0.97 }}
                     onClick={() => setForm(p => ({ ...p, role:r }))}
-                    className={`py-4 rounded-2xl text-sm font-bold transition-all ${form.role===r ? "btn-primary text-white shadow-md" : "bg-white/70 border-2 border-white/80 text-slate-600 hover:bg-white"}`}
+                    className={`py-4 rounded-2xl text-sm font-bold transition-all ${form.role===r ? "btn-primary text-white shadow-md" : dc.isDark ? "bg-white/10 border border-white/20 text-white/80 hover:bg-white/20" : "bg-white/70 border-2 border-white/80 text-slate-600 hover:bg-white"}`}
                     data-testid={`role-${r.toLowerCase()}`}>
                     {r==="Fotógrafo"?"📷":r==="Videógrafo"?"🎥":"👤"} {r}
                   </motion.button>
@@ -143,19 +147,19 @@ export default function SocioForm({ socio, onClose, onSaved }) {
               {sf.phone !== false && (
                 <div>
                   <Label>Teléfono</Label>
-                  <input value={form.phone} onChange={set("phone")} placeholder="+502 1234 5678" data-testid="input-socio-phone" className={inp}/>
+                  <input value={form.phone} onChange={set("phone")} placeholder="+502 1234 5678" data-testid="input-socio-phone" className={inp} style={dc.inpStyle}/>
                 </div>
               )}
               {sf.rate !== false && (
                 <div>
                   <Label>Tarifa por evento</Label>
-                  <input type="number" value={form.rate_per_event} onChange={set("rate_per_event")} placeholder="Q 2,000" min="0" data-testid="input-socio-rate" className={inp}/>
+                  <input type="number" value={form.rate_per_event} onChange={set("rate_per_event")} placeholder="Q 2,000" min="0" data-testid="input-socio-rate" className={inp} style={dc.inpStyle}/>
                 </div>
               )}
               {sf.email !== false && (
                 <div>
                   <Label>Email</Label>
-                  <input type="email" value={form.email} onChange={set("email")} placeholder="correo@email.com" data-testid="input-socio-email" className={inp}/>
+                  <input type="email" value={form.email} onChange={set("email")} placeholder="correo@email.com" data-testid="input-socio-email" className={inp} style={dc.inpStyle}/>
                 </div>
               )}
             </div>
@@ -164,7 +168,7 @@ export default function SocioForm({ socio, onClose, onSaved }) {
             {sf.notes !== false && (
               <div>
                 <Label>Notas</Label>
-                <input value={form.notes} onChange={set("notes")} placeholder="Especialidades, equipo, disponibilidad…" data-testid="input-socio-notes" className={inp}/>
+                <input value={form.notes} onChange={set("notes")} placeholder="Especialidades, equipo, disponibilidad…" data-testid="input-socio-notes" className={inp} style={dc.inpStyle}/>
               </div>
             )}
 
@@ -173,8 +177,4 @@ export default function SocioForm({ socio, onClose, onSaved }) {
       </form>
     </motion.div>
   );
-}
-
-function Label({ children }) {
-  return <label className="block text-xs font-black text-slate-500 uppercase tracking-widest mb-2">{children}</label>;
 }

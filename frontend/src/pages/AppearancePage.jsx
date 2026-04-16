@@ -7,6 +7,7 @@ import {
 } from "lucide-react";
 import { useSettings, THEMES, PRESETS } from "@/context/SettingsContext";
 import { getEventConfig, getEventTypeName, AVAILABLE_ICONS, AVAILABLE_COLORS, EVENT_TYPES } from "@/lib/eventConfig";
+import { FORM_DESIGN_CONFIGS, FORM_DESIGN_ORDER } from "@/lib/formDesigns";
 import { useToast } from "@/hooks/use-toast";
 import { generateAllReservationsPDF, PDF_THEMES } from "@/lib/generatePDF";
 import { getReservations } from "@/lib/api";
@@ -164,6 +165,8 @@ export default function AppearancePage() {
     islandMargins, changeIslandMargins,
     formFieldsVisibility, changeFormFieldVisibility, resetFormFieldsVisibility,
     socioFieldsVisibility, changeSocioFieldVisibility, resetSocioFieldsVisibility,
+    reservationFormDesign, changeReservationFormDesign,
+    socioFormDesign, changeSocioFormDesign,
   } = useSettings();
 
   const { toast } = useToast();
@@ -1204,13 +1207,146 @@ export default function AppearancePage() {
         {/* ═══════════════════════════════════════════════════════════════
             CAMPOS DE FORMULARIO  ★ NUEVO
         ═══════════════════════════════════════════════════════════════ */}
-        <Section icon={ToggleLeft} isNew title={es ? "Campos de Formulario" : "Form Fields"} desc={es ? "Activa o desactiva campos en nuevas reservas y socios" : "Enable/disable fields in new reservations and partners"}>
-          <div className="space-y-6">
+        <Section icon={ToggleLeft} isNew title={es ? "Campos de Formulario" : "Form Fields"} desc={es ? "Diseños visuales y campos activos para reservas y socios" : "Visual designs and active fields for reservations and partners"}>
+          <div className="space-y-7">
 
-            {/* ── Nueva Reserva ── */}
+            {/* ── Diseño de Nueva Reserva ── */}
             <div>
               <p className="text-[11px] font-black text-slate-400 uppercase tracking-widest mb-3">
-                {es ? "Nueva Reserva" : "New Reservation"}
+                {es ? "Diseño — Nueva Reserva" : "Design — New Reservation"}
+              </p>
+              <div className="grid grid-cols-4 gap-2.5">
+                {FORM_DESIGN_ORDER.map(id => {
+                  const cfg = FORM_DESIGN_CONFIGS[id];
+                  const isActive = reservationFormDesign === id;
+                  return (
+                    <motion.button key={id} whileHover={{ y: -3, scale: 1.02 }} whileTap={{ scale: 0.97 }}
+                      onClick={() => { changeReservationFormDesign(id); toast({ title: `${es ? "Reserva" : "Reservation"}: ${cfg.name} ✓` }); }}
+                      data-testid={`reservation-design-${id}`}
+                      className="flex flex-col rounded-2xl overflow-hidden transition-all text-left"
+                      style={{ border: isActive ? "2px solid var(--t-from)" : "2px solid rgba(226,232,240,0.8)" }}>
+                      {/* Preview thumbnail */}
+                      <div className="relative h-24 w-full overflow-hidden" style={{ background: cfg.previewBg }}>
+                        {/* Header bar */}
+                        <div className="h-6 flex items-center px-2 gap-1.5 border-b border-white/10" style={{ background: cfg.previewBar }}>
+                          <div className="w-2 h-2 rounded-full" style={{ background: "rgba(148,163,184,0.5)" }} />
+                          <div className="flex-1 h-1 rounded" style={{ background: "rgba(148,163,184,0.3)" }} />
+                          <div className="w-8 h-3 rounded-full" style={{ background: "linear-gradient(90deg,var(--t-from),var(--t-to))" }} />
+                        </div>
+                        {/* Input rows */}
+                        <div className="px-2 pt-2 space-y-1.5">
+                          <div className="flex gap-1">
+                            {[1,2,3].map(i => (
+                              <div key={i} className="flex-1" style={{
+                                height: 14,
+                                borderRadius: cfg.previewUnderlineOnly ? 0 : 6,
+                                background: cfg.previewInp,
+                                border: cfg.previewUnderlineOnly ? "none" : `1.5px solid ${cfg.previewBorder}`,
+                                borderBottom: cfg.previewUnderlineOnly ? `2px solid ${cfg.previewBorder}` : undefined,
+                                boxShadow: cfg.previewGlow ? `0 0 6px 0 var(--t-from)66` : undefined,
+                              }} />
+                            ))}
+                          </div>
+                          <div className="flex gap-1">
+                            {[1,2,3,4].map(i => (
+                              <div key={i} className="flex-1" style={{
+                                height: 11,
+                                borderRadius: cfg.previewUnderlineOnly ? 0 : 6,
+                                background: cfg.previewInp,
+                                border: cfg.previewUnderlineOnly ? "none" : `1.5px solid ${cfg.previewBorder}`,
+                                borderBottom: cfg.previewUnderlineOnly ? `2px solid ${cfg.previewBorder}` : undefined,
+                                boxShadow: cfg.previewGlow ? `0 0 6px 0 var(--t-from)66` : undefined,
+                              }} />
+                            ))}
+                          </div>
+                          <div className="flex gap-1">
+                            {[1,2].map(i => (
+                              <div key={i} className="flex-1" style={{
+                                height: 11,
+                                borderRadius: cfg.previewUnderlineOnly ? 0 : 6,
+                                background: cfg.previewInp,
+                                border: cfg.previewUnderlineOnly ? "none" : `1.5px solid ${cfg.previewBorder}`,
+                                borderBottom: cfg.previewUnderlineOnly ? `2px solid ${cfg.previewBorder}` : undefined,
+                                boxShadow: cfg.previewGlow ? `0 0 6px 0 var(--t-from)66` : undefined,
+                              }} />
+                            ))}
+                          </div>
+                        </div>
+                        {isActive && <div className="absolute top-1.5 right-1.5 w-5 h-5 rounded-full btn-primary flex items-center justify-center shadow-md"><CheckCircle size={11} className="text-white" /></div>}
+                      </div>
+                      {/* Label */}
+                      <div className="p-2 bg-white/70">
+                        <p className="text-[11px] font-black text-slate-800">{cfg.name}</p>
+                        <p className="text-[9px] text-slate-400">{cfg.hint}</p>
+                      </div>
+                    </motion.button>
+                  );
+                })}
+              </div>
+            </div>
+
+            <div className="border-t border-white/40" />
+
+            {/* ── Diseño de Nuevo Socio ── */}
+            <div>
+              <p className="text-[11px] font-black text-slate-400 uppercase tracking-widest mb-3">
+                {es ? "Diseño — Nuevo Socio" : "Design — New Partner"}
+              </p>
+              <div className="grid grid-cols-4 gap-2.5">
+                {FORM_DESIGN_ORDER.map(id => {
+                  const cfg = FORM_DESIGN_CONFIGS[id];
+                  const isActive = socioFormDesign === id;
+                  return (
+                    <motion.button key={id} whileHover={{ y: -3, scale: 1.02 }} whileTap={{ scale: 0.97 }}
+                      onClick={() => { changeSocioFormDesign(id); toast({ title: `${es ? "Socio" : "Partner"}: ${cfg.name} ✓` }); }}
+                      data-testid={`socio-design-${id}`}
+                      className="flex flex-col rounded-2xl overflow-hidden transition-all text-left"
+                      style={{ border: isActive ? "2px solid var(--t-from)" : "2px solid rgba(226,232,240,0.8)" }}>
+                      {/* Preview thumbnail — same layout but with photo area */}
+                      <div className="relative h-24 w-full overflow-hidden" style={{ background: cfg.previewBg }}>
+                        <div className="h-6 flex items-center px-2 gap-1.5 border-b border-white/10" style={{ background: cfg.previewBar }}>
+                          <div className="w-2 h-2 rounded-full" style={{ background: "rgba(148,163,184,0.5)" }} />
+                          <div className="flex-1 h-1 rounded" style={{ background: "rgba(148,163,184,0.3)" }} />
+                          <div className="w-8 h-3 rounded-full" style={{ background: "linear-gradient(90deg,var(--t-from),var(--t-to))" }} />
+                        </div>
+                        <div className="flex gap-2 px-2 pt-2">
+                          {/* Photo placeholder */}
+                          <div className="w-10 h-[52px] rounded-xl flex-shrink-0" style={{
+                            background: cfg.isDark ? "rgba(255,255,255,0.12)" : "linear-gradient(135deg,var(--t-from)44,var(--t-to)44)",
+                            border: `1.5px solid ${cfg.previewBorder}`,
+                          }} />
+                          {/* Fields */}
+                          <div className="flex-1 space-y-1.5">
+                            {[14,11,11].map((h,i) => (
+                              <div key={i} style={{
+                                height: h,
+                                borderRadius: cfg.previewUnderlineOnly ? 0 : 6,
+                                background: cfg.previewInp,
+                                border: cfg.previewUnderlineOnly ? "none" : `1.5px solid ${cfg.previewBorder}`,
+                                borderBottom: cfg.previewUnderlineOnly ? `2px solid ${cfg.previewBorder}` : undefined,
+                                boxShadow: cfg.previewGlow ? `0 0 6px 0 var(--t-from)66` : undefined,
+                              }} />
+                            ))}
+                          </div>
+                        </div>
+                        {isActive && <div className="absolute top-1.5 right-1.5 w-5 h-5 rounded-full btn-primary flex items-center justify-center shadow-md"><CheckCircle size={11} className="text-white" /></div>}
+                      </div>
+                      <div className="p-2 bg-white/70">
+                        <p className="text-[11px] font-black text-slate-800">{cfg.name}</p>
+                        <p className="text-[9px] text-slate-400">{cfg.hint}</p>
+                      </div>
+                    </motion.button>
+                  );
+                })}
+              </div>
+            </div>
+
+            <div className="border-t border-white/40" />
+
+            {/* ── Campos visibles — Nueva Reserva ── */}
+            <div>
+              <p className="text-[11px] font-black text-slate-400 uppercase tracking-widest mb-3">
+                {es ? "Campos visibles — Reserva" : "Visible fields — Reservation"}
               </p>
               <div className="space-y-2">
                 {[
@@ -1243,10 +1379,10 @@ export default function AppearancePage() {
 
             <div className="border-t border-white/40" />
 
-            {/* ── Nuevo Socio ── */}
+            {/* ── Campos visibles — Nuevo Socio ── */}
             <div>
               <p className="text-[11px] font-black text-slate-400 uppercase tracking-widest mb-3">
-                {es ? "Nuevo Socio" : "New Partner"}
+                {es ? "Campos visibles — Socio" : "Visible fields — Partner"}
               </p>
               <div className="space-y-2">
                 {[
@@ -1278,7 +1414,7 @@ export default function AppearancePage() {
             <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}
               className="flex items-center gap-2 text-[10px] text-sky-600 bg-sky-50/80 px-3 py-2 rounded-xl border border-sky-200/60">
               <ToggleLeft size={11} />
-              {es ? "Los campos desactivados no aparecen en el formulario de creación" : "Disabled fields won't appear in the creation form"}
+              {es ? "Los diseños y campos se aplican en tiempo real al abrir los formularios" : "Designs and fields apply in real time when opening forms"}
             </motion.div>
 
           </div>

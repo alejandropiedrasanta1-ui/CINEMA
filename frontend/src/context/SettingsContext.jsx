@@ -348,6 +348,13 @@ export function SettingsProvider({ children }) {
     localStorage.removeItem("custom_statuses");
   };
 
+  // ── Form design styles ────────────────────────────────────────────────────
+  const [reservationFormDesign, setReservationFormDesign] = useState(() => localStorage.getItem("reservation_form_design") || "aurora");
+  const changeReservationFormDesign = (val) => { setReservationFormDesign(val); localStorage.setItem("reservation_form_design", val); };
+
+  const [socioFormDesign, setSocioFormDesign] = useState(() => localStorage.getItem("socio_form_design") || "aurora");
+  const changeSocioFormDesign = (val) => { setSocioFormDesign(val); localStorage.setItem("socio_form_design", val); };
+
   // ── Form fields visibility ────────────────────────────────────────────────
   const [formFieldsVisibility, setFormFieldsVisibility] = useState(() => {
     try { return JSON.parse(localStorage.getItem("form_fields_visibility") || "{}"); }
@@ -778,6 +785,9 @@ export function SettingsProvider({ children }) {
       // Form fields visibility
       formFieldsVisibility, changeFormFieldVisibility, resetFormFieldsVisibility,
       socioFieldsVisibility, changeSocioFieldVisibility, resetSocioFieldsVisibility,
+      // Form design styles
+      reservationFormDesign, changeReservationFormDesign,
+      socioFormDesign, changeSocioFormDesign,
     }}>
       {children}
     </SettingsContext.Provider>
