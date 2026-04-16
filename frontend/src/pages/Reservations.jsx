@@ -3,18 +3,13 @@ import { useNavigate } from "react-router-dom";
 import { getReservations, deleteReservation } from "@/lib/api";
 import { Plus, Trash2, Eye, Search, FileDown } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
-import { useSettings } from "@/context/SettingsContext";
+import { useSettings, STATUS_COLOR_CLASSES } from "@/context/SettingsContext";
 import ReservationForm from "@/components/ReservationForm";
 import { useToast } from "@/hooks/use-toast";
 import { generateReservationPDF } from "@/lib/generatePDF";
 import { getEventConfig, getEventTypeName } from "@/lib/eventConfig";
 
-const STATUS_COLORS = {
-  Pendiente: "bg-amber-100/80 text-amber-700 border-amber-200/60",
-  Confirmado: "bg-blue-100/80 text-blue-700 border-blue-200/60",
-  Completado: "bg-emerald-100/80 text-emerald-700 border-emerald-200/60",
-  Cancelado:  "bg-red-100/80 text-red-700 border-red-200/60",
-};
+const FALLBACK_COLOR = "bg-slate-100/80 text-slate-700 border-slate-200/60";
 
 export default function Reservations() {
   const [reservations, setReservations] = useState([]);
@@ -25,8 +20,13 @@ export default function Reservations() {
   const [showForm, setShowForm] = useState(false);
   const navigate = useNavigate();
   const { toast } = useToast();
-  const { tr, formatCurrency, logoUrl, pdfLogoUrl, usePdfLogo, useCustomPdfLogo, pdfTheme } = useSettings();
+  const { tr, formatCurrency, logoUrl, pdfLogoUrl, usePdfLogo, useCustomPdfLogo, pdfTheme, activeStatuses } = useSettings();
   const l = tr.list;
+
+  // Build dynamic status color lookup from activeStatuses
+  const statusColors = Object.fromEntries(
+    activeStatuses.map(s => [s.key, STATUS_COLOR_CLASSES[s.color] || FALLBACK_COLOR])
+  );
 
   const getEffectivePdfLogo = () => {
     if (!usePdfLogo) return null;
@@ -45,7 +45,6 @@ export default function Reservations() {
   };
 
   const EVENT_TYPES = ["Boda","Quinceañera","Fiesta Social","Evento Corporativo","Conferencia","Otro"];
-  const STATUSES_KEYS = ["Pendiente","Confirmado","Completado","Cancelado"];
 
   const load = async () => {
     setLoading(true);
@@ -102,7 +101,7 @@ export default function Reservations() {
         <select value={filterStatus} onChange={e => setFilterStatus(e.target.value)} data-testid="filter-status"
           className="text-sm glass rounded-2xl px-4 py-2.5 bg-transparent text-slate-700 focus:outline-none focus:ring-2 focus:ring-[var(--t-from)]/30 font-medium">
           <option value="all" className="bg-white">{l.all}</option>
-          {STATUSES_KEYS.map(s => <option key={s} value={s} className="bg-white">{tr.statuses[s]}</option>)}
+          {activeStatuses.map(s => <option key={s.key} value={s.key} className="bg-white">{s.label}</option>)}
         </select>
       </motion.div>
 
@@ -169,7 +168,7 @@ export default function Reservations() {
                       </div>
                     </td>
                     <td className="px-5 py-4">
-                      <span className={`text-xs px-3 py-1 rounded-full border font-bold ${STATUS_COLORS[r.status]||STATUS_COLORS.Pendiente}`}>{tr.statuses[r.status]||r.status}</span>
+                      <span className={`text-xs px-3 py-1 rounded-full border font-bold ${statusColors[r.status] || FALLBACK_COLOR}`}>{tr.statuses[r.status]||r.status}</span>
                     </td>
                     <td className="px-5 py-4">
                       <div className="flex items-center gap-1" onClick={e => e.stopPropagation()}>

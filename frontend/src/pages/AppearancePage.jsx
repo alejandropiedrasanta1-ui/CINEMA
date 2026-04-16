@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import {
   Palette, CheckCircle, Zap, Pencil, RotateCcw, Upload, ImageIcon, Trash2,
   Sparkles, Layers, SlidersHorizontal, Wind, Maximize2, Monitor, Type, Moon,
-  AlignJustify, BarChart2, LayoutGrid, Shield, MousePointer2, FileText, Columns, Tag,
+  AlignJustify, BarChart2, LayoutGrid, Shield, MousePointer2, FileText, Columns, Tag, Plus,
 } from "lucide-react";
 import { useSettings, THEMES, PRESETS } from "@/context/SettingsContext";
 import { getEventConfig, getEventTypeName, AVAILABLE_ICONS, AVAILABLE_COLORS, EVENT_TYPES } from "@/lib/eventConfig";
@@ -1092,6 +1092,13 @@ export default function AppearancePage() {
           changeCustomLabel={changeCustomLabel}
           resetCustomLabels={resetCustomLabels}
           toast={toast}
+          activeStatuses={activeStatuses}
+          customStatuses={customStatuses}
+          changeStatusLabel={changeStatusLabel}
+          changeStatusColor={changeStatusColor}
+          addCustomStatus={addCustomStatus}
+          removeCustomStatus={removeCustomStatus}
+          resetCustomStatuses={resetCustomStatuses}
         />
 
       </motion.div>
@@ -1099,8 +1106,131 @@ export default function AppearancePage() {
   );
 }
 
-// ── Sección de títulos del sitio ──────────────────────────────────────────────
-function SiteTitlesSection({ es, customLabels, changeCustomLabel, resetCustomLabels, toast }) {
+// ── Editor de estados/etiquetas ───────────────────────────────────────────────
+const COLOR_OPTIONS = [
+  { id: "amber",   dot: "bg-amber-400" },
+  { id: "blue",    dot: "bg-blue-400" },
+  { id: "emerald", dot: "bg-emerald-400" },
+  { id: "red",     dot: "bg-red-400" },
+  { id: "purple",  dot: "bg-purple-400" },
+  { id: "sky",     dot: "bg-sky-400" },
+  { id: "indigo",  dot: "bg-indigo-400" },
+  { id: "pink",    dot: "bg-pink-400" },
+  { id: "orange",  dot: "bg-orange-400" },
+  { id: "slate",   dot: "bg-slate-400" },
+];
+
+function StatusesEditor({ es, activeStatuses, customStatuses, changeStatusLabel, changeStatusColor, addCustomStatus, removeCustomStatus, resetCustomStatuses, toast }) {
+  const [newLabel, setNewLabel] = React.useState("");
+  const [newColor, setNewColor] = React.useState("blue");
+  const isCustomized = !!customStatuses;
+
+  const handleAdd = () => {
+    const trimmed = newLabel.trim();
+    if (!trimmed) return;
+    addCustomStatus(trimmed, trimmed, newColor);
+    setNewLabel("");
+    setNewColor("blue");
+    toast({ title: es ? `Estado "${trimmed}" agregado ✓` : `Status "${trimmed}" added ✓` });
+  };
+
+  return (
+    <motion.div initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} transition={{ duration: 0.2 }}>
+      <div className="flex items-center justify-between mb-3">
+        <p className="text-[10px] text-slate-400 font-semibold">
+          {es ? "Administra los estados de reserva disponibles" : "Manage available reservation statuses"}
+        </p>
+        {isCustomized && (
+          <motion.button whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}
+            onClick={() => { resetCustomStatuses(); toast({ title: es ? "Estados restaurados ✓" : "Statuses reset ✓" }); }}
+            data-testid="reset-statuses-btn"
+            className="flex items-center gap-1 px-2.5 py-1 rounded-xl bg-slate-100 hover:bg-red-50 hover:text-red-500 text-xs font-bold text-slate-500 transition-all">
+            <RotateCcw size={10} /> {es ? "Restaurar" : "Reset"}
+          </motion.button>
+        )}
+      </div>
+
+      {/* Status list */}
+      <div className="space-y-2 mb-4">
+        {activeStatuses.map(s => (
+          <motion.div key={s.key} layout initial={{ opacity: 0, x: -8 }} animate={{ opacity: 1, x: 0 }}
+            className="flex items-center gap-2.5 bg-white/60 border border-white/80 rounded-2xl px-3 py-2.5">
+            {/* Color picker */}
+            <div className="flex items-center gap-1 shrink-0">
+              {COLOR_OPTIONS.map(c => (
+                <button key={c.id} onClick={() => changeStatusColor(s.key, c.id)}
+                  data-testid={`status-color-${s.key}-${c.id}`}
+                  className={`w-4 h-4 rounded-full ${c.dot} transition-all ${s.color === c.id ? "ring-2 ring-offset-1 ring-slate-600 scale-125" : "opacity-50 hover:opacity-100"}`}
+                />
+              ))}
+            </div>
+            {/* Label input */}
+            <input
+              type="text"
+              value={s.label}
+              onChange={e => changeStatusLabel(s.key, e.target.value)}
+              data-testid={`status-label-${s.key}`}
+              className="flex-1 bg-transparent border-b border-slate-200/80 focus:border-[var(--t-from)] focus:outline-none text-sm font-bold text-slate-800 py-0.5 min-w-0 transition-colors"
+            />
+            {/* Internal key badge */}
+            <span className="text-[9px] text-slate-300 font-mono shrink-0 hidden sm:block">{s.key}</span>
+            {/* Delete */}
+            <motion.button whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.9 }}
+              onClick={() => {
+                if (activeStatuses.length <= 1) { toast({ title: es ? "Debe haber al menos 1 estado" : "At least 1 status required", variant: "destructive" }); return; }
+                removeCustomStatus(s.key);
+                toast({ title: es ? `Estado eliminado` : "Status deleted" });
+              }}
+              data-testid={`status-delete-${s.key}`}
+              disabled={activeStatuses.length <= 1}
+              className="p-1.5 rounded-xl hover:bg-red-50 hover:text-red-500 text-slate-300 transition-all disabled:opacity-30 shrink-0">
+              <Trash2 size={12} />
+            </motion.button>
+          </motion.div>
+        ))}
+      </div>
+
+      {/* Add new status */}
+      <div className="border-t border-white/50 pt-3">
+        <p className="text-[10px] font-bold text-slate-400 mb-2">{es ? "Agregar nuevo estado" : "Add new status"}</p>
+        <div className="flex gap-2 items-end">
+          <div className="flex-1">
+            <input
+              type="text"
+              value={newLabel}
+              onChange={e => setNewLabel(e.target.value)}
+              onKeyDown={e => e.key === "Enter" && handleAdd()}
+              placeholder={es ? "Nombre del estado…" : "Status name…"}
+              data-testid="new-status-label-input"
+              className="w-full bg-white/70 border border-white/80 rounded-xl px-3 py-2 text-sm text-slate-800 placeholder-slate-300 focus:outline-none focus:ring-2 focus:ring-[var(--t-from)]/40 transition-all"
+            />
+          </div>
+          <div className="flex items-center gap-1 bg-white/60 border border-white/80 rounded-xl px-2 py-2">
+            {COLOR_OPTIONS.map(c => (
+              <button key={c.id} onClick={() => setNewColor(c.id)}
+                data-testid={`new-status-color-${c.id}`}
+                className={`w-4 h-4 rounded-full ${c.dot} transition-all ${newColor === c.id ? "ring-2 ring-offset-1 ring-slate-600 scale-125" : "opacity-40 hover:opacity-90"}`}
+              />
+            ))}
+          </div>
+          <motion.button whileHover={{ scale: 1.04 }} whileTap={{ scale: 0.96 }}
+            onClick={handleAdd} disabled={!newLabel.trim()}
+            data-testid="add-status-btn"
+            className="px-4 py-2 rounded-xl btn-primary text-white text-xs font-bold disabled:opacity-40 whitespace-nowrap transition-all flex items-center gap-1.5">
+            <Plus size={12} /> {es ? "Agregar" : "Add"}
+          </motion.button>
+        </div>
+      </div>
+
+      <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="mt-3 flex items-center gap-2 text-[10px] text-emerald-600 bg-emerald-50/80 px-3 py-2 rounded-xl border border-emerald-200/60">
+        <CheckCircle size={11} />
+        {es ? "Los estados se aplican al formulario de reservas y a todos los filtros" : "Statuses apply to the reservation form and all filters"}
+      </motion.div>
+    </motion.div>
+  );
+}
+function SiteTitlesSection({ es, customLabels, changeCustomLabel, resetCustomLabels, toast,
+  activeStatuses, customStatuses, changeStatusLabel, changeStatusColor, addCustomStatus, removeCustomStatus, resetCustomStatuses }) {
   const LABEL_GROUPS = [
     {
       id: "nav",
@@ -1132,7 +1262,7 @@ function SiteTitlesSection({ es, customLabels, changeCustomLabel, resetCustomLab
     },
     {
       id: "pages",
-      title: es ? "Encabezados de Página" : "Page Headers",
+      title: es ? "Encabezados" : "Headers",
       desc: es ? "Subtítulos y descripciones de cada sección" : "Subtitles and descriptions of each section",
       fields: [
         { key: "settings.title",    label: es ? "Título: Ajustes" : "Title: Settings",            placeholder: es ? "Ajustes" : "Settings" },
@@ -1140,6 +1270,7 @@ function SiteTitlesSection({ es, customLabels, changeCustomLabel, resetCustomLab
         { key: "calendar.subtitle", label: es ? "Subtítulo: Calendario" : "Subtitle: Calendar",   placeholder: es ? "Vista mensual de eventos" : "Monthly event view" },
       ],
     },
+    { id: "statuses", title: es ? "Estados" : "Statuses", desc: "" },
   ];
 
   const [expandedGroup, setExpandedGroup] = React.useState("nav");
@@ -1172,19 +1303,19 @@ function SiteTitlesSection({ es, customLabels, changeCustomLabel, resetCustomLab
       </div>
 
       {/* Group tabs */}
-      <div className="flex gap-1.5 mb-4 bg-white/40 rounded-2xl p-1">
+      <div className="flex gap-1 mb-4 bg-white/40 rounded-2xl p-1">
         {LABEL_GROUPS.map(g => (
           <button key={g.id} onClick={() => setExpandedGroup(g.id)}
             data-testid={`labels-tab-${g.id}`}
-            className={`flex-1 py-2 rounded-xl text-xs font-bold transition-all ${expandedGroup === g.id ? "btn-primary text-white shadow-sm" : "text-slate-500 hover:text-slate-700 hover:bg-white/50"}`}>
+            className={`flex-1 py-2 rounded-xl text-[11px] font-bold transition-all ${expandedGroup === g.id ? "btn-primary text-white shadow-sm" : "text-slate-500 hover:text-slate-700 hover:bg-white/50"}`}>
             {g.title}
           </button>
         ))}
       </div>
 
-      {/* Fields */}
+      {/* Fields for nav / dashboard / pages */}
       <AnimatePresence mode="wait">
-        {LABEL_GROUPS.filter(g => g.id === expandedGroup).map(group => (
+        {LABEL_GROUPS.filter(g => g.id === expandedGroup && g.id !== "statuses" && g.fields).map(group => (
           <motion.div key={group.id} initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} transition={{ duration: 0.2 }}>
             <p className="text-[10px] text-slate-400 font-semibold mb-3">{group.desc}</p>
             <div className="space-y-2.5">
@@ -1218,7 +1349,6 @@ function SiteTitlesSection({ es, customLabels, changeCustomLabel, resetCustomLab
                 );
               })}
             </div>
-
             {hasChanges && (
               <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="mt-4 flex items-center gap-2 text-[10px] text-emerald-600 bg-emerald-50/80 px-3 py-2 rounded-xl border border-emerald-200/60">
                 <CheckCircle size={11} />
@@ -1227,6 +1357,22 @@ function SiteTitlesSection({ es, customLabels, changeCustomLabel, resetCustomLab
             )}
           </motion.div>
         ))}
+
+        {/* Estados tab */}
+        {expandedGroup === "statuses" && (
+          <StatusesEditor
+            key="statuses"
+            es={es}
+            activeStatuses={activeStatuses}
+            customStatuses={customStatuses}
+            changeStatusLabel={changeStatusLabel}
+            changeStatusColor={changeStatusColor}
+            addCustomStatus={addCustomStatus}
+            removeCustomStatus={removeCustomStatus}
+            resetCustomStatuses={resetCustomStatuses}
+            toast={toast}
+          />
+        )}
       </AnimatePresence>
     </motion.div>
   );

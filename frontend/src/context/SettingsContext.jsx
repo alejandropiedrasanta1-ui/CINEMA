@@ -40,6 +40,26 @@ export const CURRENCIES = [
   { code: "HNL", symbol: "L",  name: "Lempira Hondureño",    locale: "es-HN" },
 ];
 
+export const DEFAULT_STATUSES = [
+  { key: "Pendiente",  label: "Pendiente",  color: "amber"   },
+  { key: "Confirmado", label: "Confirmado", color: "blue"    },
+  { key: "Completado", label: "Completado", color: "emerald" },
+  { key: "Cancelado",  label: "Cancelado",  color: "red"     },
+];
+
+export const STATUS_COLOR_CLASSES = {
+  amber:   "bg-amber-100/80 text-amber-700 border-amber-200/60",
+  blue:    "bg-blue-100/80 text-blue-700 border-blue-200/60",
+  emerald: "bg-emerald-100/80 text-emerald-700 border-emerald-200/60",
+  red:     "bg-red-100/80 text-red-700 border-red-200/60",
+  purple:  "bg-purple-100/80 text-purple-700 border-purple-200/60",
+  sky:     "bg-sky-100/80 text-sky-700 border-sky-200/60",
+  indigo:  "bg-indigo-100/80 text-indigo-700 border-indigo-200/60",
+  pink:    "bg-pink-100/80 text-pink-700 border-pink-200/60",
+  slate:   "bg-slate-100/80 text-slate-700 border-slate-200/60",
+  orange:  "bg-orange-100/80 text-orange-700 border-orange-200/60",
+};
+
 const T = {
   es: {
     nav: { dashboard: "Dashboard", reservations: "Reservaciones", calendar: "Calendario", settings: "Ajustes", tagline: "Gestión de Reservas", socios: "Socios", database: "Base de Datos", appearance: "Apariencia" },
@@ -275,6 +295,57 @@ export function SettingsProvider({ children }) {
   const resetCustomLabels = () => {
     setCustomLabels({});
     localStorage.removeItem("custom_labels");
+  };
+
+  // ── Custom statuses ───────────────────────────────────────────────────
+  const [customStatuses, setCustomStatuses] = useState(() => {
+    try { return JSON.parse(localStorage.getItem("custom_statuses") || "null"); }
+    catch { return null; }
+  });
+
+  const activeStatuses = customStatuses || DEFAULT_STATUSES;
+
+  const changeStatusLabel = (key, label) => {
+    setCustomStatuses(prev => {
+      const base = prev || DEFAULT_STATUSES;
+      const next = base.map(s => s.key === key ? { ...s, label } : s);
+      localStorage.setItem("custom_statuses", JSON.stringify(next));
+      return next;
+    });
+  };
+
+  const changeStatusColor = (key, color) => {
+    setCustomStatuses(prev => {
+      const base = prev || DEFAULT_STATUSES;
+      const next = base.map(s => s.key === key ? { ...s, color } : s);
+      localStorage.setItem("custom_statuses", JSON.stringify(next));
+      return next;
+    });
+  };
+
+  const addCustomStatus = (key, label, color) => {
+    setCustomStatuses(prev => {
+      const base = prev || DEFAULT_STATUSES;
+      if (base.find(s => s.key === key)) return base;
+      const next = [...base, { key, label, color }];
+      localStorage.setItem("custom_statuses", JSON.stringify(next));
+      return next;
+    });
+  };
+
+  const removeCustomStatus = (key) => {
+    setCustomStatuses(prev => {
+      const base = prev || DEFAULT_STATUSES;
+      if (base.length <= 1) return base;
+      const next = base.filter(s => s.key !== key);
+      localStorage.setItem("custom_statuses", JSON.stringify(next));
+      return next;
+    });
+  };
+
+  const resetCustomStatuses = () => {
+    setCustomStatuses(null);
+    localStorage.removeItem("custom_statuses");
   };
 
   const changePdfTheme = (t) => { setPdfTheme(t); localStorage.setItem("pdf_theme", t); };
@@ -593,14 +664,21 @@ export function SettingsProvider({ children }) {
 
   const baseT = T[language] || T.es;
   const tr = (() => {
-    if (!Object.keys(customLabels).length) return baseT;
+    const noLabels = !Object.keys(customLabels).length;
+    const noStatuses = !customStatuses;
+    if (noLabels && noStatuses) return baseT;
     const merged = JSON.parse(JSON.stringify(baseT));
-    Object.entries(customLabels).forEach(([dotKey, val]) => {
-      if (!val) return;
-      const [section, ...rest] = dotKey.split(".");
-      const key = rest.join(".");
-      if (merged[section] && key) merged[section][key] = val;
-    });
+    if (!noLabels) {
+      Object.entries(customLabels).forEach(([dotKey, val]) => {
+        if (!val) return;
+        const [section, ...rest] = dotKey.split(".");
+        const key = rest.join(".");
+        if (merged[section] && key) merged[section][key] = val;
+      });
+    }
+    if (!noStatuses) {
+      merged.statuses = Object.fromEntries(customStatuses.map(s => [s.key, s.label]));
+    }
     return merged;
   })();
 
@@ -645,6 +723,9 @@ export function SettingsProvider({ children }) {
       logoUrl, pdfLogoUrl, logoSize, usePdfLogo, useCustomPdfLogo, updateLogoSettings,
       // Custom labels
       customLabels, changeCustomLabel, resetCustomLabels,
+      // Custom statuses
+      activeStatuses, customStatuses,
+      changeStatusLabel, changeStatusColor, addCustomStatus, removeCustomStatus, resetCustomStatuses,
     }}>
       {children}
     </SettingsContext.Provider>

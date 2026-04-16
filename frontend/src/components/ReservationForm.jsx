@@ -7,11 +7,10 @@ import { useSettings } from "@/context/SettingsContext";
 import { getEventTypeName } from "@/lib/eventConfig";
 
 const EVENT_TYPES = ["Boda","Quinceañera","Fiesta Social","Evento Corporativo","Conferencia","Otro"];
-const STATUSES   = ["Pendiente","Confirmado","Completado","Cancelado"];
 
 export default function ReservationForm({ reservation, onClose, onSaved }) {
   const { toast } = useToast();
-  const { tr } = useSettings();
+  const { tr, activeStatuses } = useSettings();
   const f = tr.form;
   const isEdit = !!reservation;
 
@@ -126,7 +125,7 @@ export default function ReservationForm({ reservation, onClose, onSaved }) {
           <div>
             <Label>{f.status}</Label>
             <select value={form.status} onChange={set("status")} data-testid="input-status" className={sel}>
-              {STATUSES.map(s => <option key={s} value={s} className="bg-white">{tr.statuses[s]||s}</option>)}
+              {activeStatuses.map(s => <option key={s.key} value={s.key} className="bg-white">{s.label}</option>)}
             </select>
           </div>
           <div>

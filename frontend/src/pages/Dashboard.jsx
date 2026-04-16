@@ -3,16 +3,11 @@ import { useNavigate } from "react-router-dom";
 import { getStats, getReservations } from "@/lib/api";
 import { CalendarDays, Clock, CreditCard, TrendingUp, Plus, ArrowRight, BarChart2, DollarSign } from "lucide-react";
 import { motion } from "framer-motion";
-import { useSettings } from "@/context/SettingsContext";
+import { useSettings, STATUS_COLOR_CLASSES } from "@/context/SettingsContext";
 import ReservationForm from "@/components/ReservationForm";
 import { getEventConfig } from "@/lib/eventConfig";
 
-const STATUS_COLORS = {
-  Pendiente:  "bg-amber-100/80 text-amber-700 border-amber-200/60",
-  Confirmado: "bg-blue-100/80 text-blue-700 border-blue-200/60",
-  Completado: "bg-emerald-100/80 text-emerald-700 border-emerald-200/60",
-  Cancelado:  "bg-red-100/80 text-red-700 border-red-200/60",
-};
+const FALLBACK_COLOR = "bg-slate-100/80 text-slate-700 border-slate-200/60";
 
 const STAT_GRADIENTS = [
   "linear-gradient(135deg,#6366f1,#8b5cf6)",
@@ -135,8 +130,13 @@ export default function Dashboard() {
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
   const navigate = useNavigate();
-  const { tr, formatCurrency, language } = useSettings();
+  const { tr, formatCurrency, language, activeStatuses } = useSettings();
   const d = tr.dashboard;
+
+  // Build dynamic status color lookup
+  const statusColors = Object.fromEntries(
+    activeStatuses.map(s => [s.key, STATUS_COLOR_CLASSES[s.color] || FALLBACK_COLOR])
+  );
 
   const load = async () => {
     setLoading(true);
@@ -296,7 +296,7 @@ export default function Dashboard() {
                   </div>
                   <div className="flex items-center gap-3 ml-4">
                     <span className="text-sm font-bold text-slate-700">{formatDate(r.event_date)}</span>
-                    <span className={`text-xs px-3 py-1 rounded-full border font-bold ${STATUS_COLORS[r.status] || STATUS_COLORS.Pendiente}`}>
+                    <span className={`text-xs px-3 py-1 rounded-full border font-bold ${statusColors[r.status] || FALLBACK_COLOR}`}>
                       {tr.statuses[r.status] || r.status}
                     </span>
                   </div>
