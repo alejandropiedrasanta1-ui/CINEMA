@@ -38,7 +38,11 @@ MONGO_URL = os.environ.get('MONGO_URL', 'embedded')
 DATA_FILE = ROOT_DIR / 'cinema_data.json'
 CUSTOM_DB_FILE = ROOT_DIR / '.db_override'
 
-_using_embedded = MONGO_URL.strip().lower() in ('embedded', '', 'local')
+# ── Determine effective MongoDB URL (override file takes priority) ────────────
+_override_url = CUSTOM_DB_FILE.read_text().strip() if CUSTOM_DB_FILE.exists() else None
+_effective_mongo_url = _override_url or MONGO_URL
+
+_using_embedded = _effective_mongo_url.strip().lower() in ('embedded', '', 'local')
 
 logging.basicConfig(level=logging.WARNING)
 logger = logging.getLogger(__name__)
@@ -48,12 +52,12 @@ if _using_embedded:
     _mongo_client = AsyncMongoMockClient()
     logger.warning("Usando base de datos embebida (cinema_data.json)")
 else:
-    from motor.motor_asyncio import AsyncIOMotorClient
-    _active_url = CUSTOM_DB_FILE.read_text().strip() if CUSTOM_DB_FILE.exists() else MONGO_URL
-    _mongo_client = AsyncIOMotorClient(_active_url)
+    from motor.motor_asyncio import AsyncIOMotorClient as _MotorClient
+    _mongo_client = _MotorClient(_effective_mongo_url)
+    logger.warning(f"Conectado a MongoDB: {_effective_mongo_url[:40]}...")
 
 db = _mongo_client[DB_NAME]
-client = _mongo_client  # alias for DB switcher
+client = _mongo_client  # alias
 
 
 # ─── Embedded DB persistence ─────────────────────────────
@@ -652,15 +656,51 @@ async def test_db_connection(req: DBConnectRequest):
 
 @api_router.post("/settings/database/connect")
 async def switch_database(req: DBConnectRequest):
-    CUSTOM_DB_FILE.write_text(req.url)
-    return {"success": True, "message": "URL guardada. Reinicia la app para aplicar el cambio."}
+    global db, client, _using_embedded
+    url = req.url.strip()
+
+    # Switch to embedded mode
+    if url.lower() in ('embedded', '', 'local'):
+        from mongomock_motor import AsyncMongoMockClient
+        new_client = AsyncMongoMockClient()
+        db = new_client[DB_NAME]
+        client = new_client
+        CUSTOM_DB_FILE.unlink(missing_ok=True)
+        _using_embedded = True
+        return {"success": True, "message": "Modo embebido activado. Los datos se guardan localmente."}
+
+    # Switch to MongoDB URL
+    try:
+        from motor.motor_asyncio import AsyncIOMotorClient as _MotorClient
+        new_client = _MotorClient(url, serverSelectionTimeoutMS=8000)
+        await new_client[DB_NAME].command("ping")
+        db = new_client[DB_NAME]
+        client = new_client
+        CUSTOM_DB_FILE.write_text(url)
+        _using_embedded = False
+        return {"success": True, "message": "Base de datos conectada correctamente"}
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=f"Error al conectar: {e}")
 
 
 @api_router.post("/settings/database/reset")
 async def reset_database():
+    global db, client, _using_embedded
     if CUSTOM_DB_FILE.exists():
         CUSTOM_DB_FILE.unlink()
-    return {"success": True, "message": "Restaurado. Reinicia la app para aplicar."}
+    # Fall back to default MONGO_URL from .env
+    default_url = MONGO_URL.strip()
+    if default_url.lower() in ('embedded', '', 'local'):
+        from mongomock_motor import AsyncMongoMockClient
+        new_client = AsyncMongoMockClient()
+        _using_embedded = True
+    else:
+        from motor.motor_asyncio import AsyncIOMotorClient as _MotorClient
+        new_client = _MotorClient(default_url)
+        _using_embedded = False
+    db = new_client[DB_NAME]
+    client = new_client
+    return {"success": True, "message": "Restaurado a la base de datos predeterminada."}
 
 
 @api_router.post("/data/clear-all")

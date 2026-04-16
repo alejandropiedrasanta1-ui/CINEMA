@@ -18,7 +18,7 @@ import {
 import { generateAllReservationsPDF } from "@/lib/generatePDF";
 import { useAutoBackup } from "@/hooks/useAutoBackup";
 
-const BASE = process.env.REACT_APP_BACKEND_URL;
+const BASE = window.__API_BASE_URL__ || process.env.REACT_APP_BACKEND_URL;
 
 // ─── Countdown helper ────────────────────────────────────────────────────────
 function useCountdown(targetDate) {
@@ -173,9 +173,10 @@ export default function DatabasePage() {
     setDbConnecting(true);
     try {
       await switchDatabase(newDbUrl.trim());
-      toast({ title: "Base de datos conectada ✓" });
+      toast({ title: "Base de datos conectada ✓ — Actualizando..." });
       setNewDbUrl(""); setDbTestResult(null);
-      setTimeout(loadDbStats, 500);
+      // Reload after 1.2s so the new DB is used for all subsequent requests
+      setTimeout(() => window.location.reload(), 1200);
     } catch (err) {
       toast({ title: err.response?.data?.detail || "Error al conectar", variant: "destructive" });
     } finally { setDbConnecting(false); }
@@ -185,9 +186,9 @@ export default function DatabasePage() {
     setDbResetting(true);
     try {
       await resetDatabase();
-      toast({ title: "Restaurado a base de datos local ✓" });
+      toast({ title: "Restaurado a base de datos predeterminada ✓ — Actualizando..." });
       setNewDbUrl(""); setDbTestResult(null);
-      setTimeout(loadDbStats, 500);
+      setTimeout(() => window.location.reload(), 1200);
     } catch { toast({ title: "Error", variant: "destructive" }); }
     finally { setDbResetting(false); }
   };
@@ -948,8 +949,8 @@ export default function DatabasePage() {
                               setNewDbUrl(p.url);
                               try {
                                 await switchDatabase(p.url);
-                                toast({ title: `Conectado a "${p.name}" ✓` });
-                                setTimeout(loadDbStats, 500);
+                                toast({ title: `Conectado a "${p.name}" ✓ — Actualizando...` });
+                                setTimeout(() => window.location.reload(), 1200);
                               } catch (e) { toast({ title: e.response?.data?.detail || "Error al conectar", variant: "destructive" }); }
                             }}
                             className="px-3 py-1.5 rounded-xl text-[10px] font-bold bg-white/80 hover:bg-white transition-colors border border-white/60">
