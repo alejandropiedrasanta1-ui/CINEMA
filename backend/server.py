@@ -2186,7 +2186,13 @@ async def _run_frontend_build():
             cwd=frontend_dir,
             stdout=asyncio.subprocess.PIPE,
             stderr=asyncio.subprocess.PIPE,
-            env={**dict(__import__("os").environ), "CI": "false", "GENERATE_SOURCEMAP": "false"},
+            env={
+                **dict(__import__("os").environ),
+                "CI": "false",
+                "GENERATE_SOURCEMAP": "false",
+                "REACT_APP_BACKEND_URL": "http://localhost:8001",
+                "PUBLIC_URL": "/",
+            },
         )
         stdout, stderr = await asyncio.wait_for(process.communicate(), timeout=300)
         if process.returncode == 0:

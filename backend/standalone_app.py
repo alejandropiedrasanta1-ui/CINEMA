@@ -214,11 +214,31 @@ class SocioUpdate(BaseModel):
 
 class NotificationSettingsModel(BaseModel):
     reminders_enabled: bool = False
-    reminder_days: int = 3
+    reminder_days: Optional[int] = 3
+    reminder_periods: Optional[list] = None
+    reminder_time: Optional[str] = "09:00"
+    reminder_hours_before: Optional[int] = 0
     admin_email: Optional[str] = None
     admin_whatsapp: Optional[str] = None
     notification_channel: str = "email"
     resend_api_key: Optional[str] = None
+    resend_sender_name: Optional[str] = None
+    resend_cc: Optional[str] = None
+    resend_subject_template: Optional[str] = None
+    notify_client: Optional[bool] = False
+    telegram_enabled: Optional[bool] = False
+    telegram_bot_token: Optional[str] = None
+    telegram_chat_id: Optional[str] = None
+    ntfy_enabled: Optional[bool] = False
+    ntfy_topic: Optional[str] = None
+    company_name: Optional[str] = None
+    company_address: Optional[str] = None
+    company_phone: Optional[str] = None
+    company_email: Optional[str] = None
+    company_logo: Optional[str] = None
+    currency: Optional[str] = "Q"
+    language: Optional[str] = "es"
+    timezone: Optional[str] = None
 
 
 class DBConnectRequest(BaseModel):
@@ -527,10 +547,14 @@ async def get_app_settings():
 
 @api_router.put("/settings")
 async def update_app_settings(settings: NotificationSettingsModel):
-    update_doc = settings.model_dump()
+    update_doc = {k: v for k, v in settings.model_dump().items() if v is not None}
+    # Don't overwrite the real key if frontend sends a masked placeholder
     key = update_doc.get("resend_api_key") or ""
     if "****" in key or key.startswith("re_" + "*"):
         update_doc.pop("resend_api_key", None)
+    telegram_token = update_doc.get("telegram_bot_token") or ""
+    if "•" in telegram_token or "****" in telegram_token:
+        update_doc.pop("telegram_bot_token", None)
     existing = await db.app_settings.find_one({}, {"_id": 0})
     if existing:
         await db.app_settings.update_one({}, {"$set": update_doc})
@@ -639,6 +663,16 @@ async def reset_database():
     return {"success": True, "message": "Restaurado. Reinicia la app para aplicar."}
 
 
+@api_router.post("/data/clear-all")
+async def clear_all_data():
+    await db.reservations.delete_many({})
+    await db.socios.delete_many({})
+    await db.app_settings.delete_many({})
+    if _using_embedded:
+        asyncio.create_task(_save_embedded_data())
+    return {"success": True, "message": "Todos los datos han sido eliminados."}
+
+
 @api_router.post("/reminders/send")
 async def trigger_reminders_manual():
     return {"success": True, "events_found": 0, "sent": 0,
@@ -658,6 +692,14 @@ app.add_middleware(
 
 # ─── Serve React build (SPA) ─────────────────────────────
 
+_LOCAL_INJECT = '<script>window.__API_BASE_URL__="http://localhost:8001";</script>'
+
+
+def _inject_local_url(html: str) -> str:
+    """Inject the local API URL so any build (old or new) works offline."""
+    return html.replace("</head>", _LOCAL_INJECT + "</head>", 1)
+
+
 BUILD_DIR = ROOT_DIR / "build"
 if BUILD_DIR.exists():
     app.mount("/static", StaticFiles(directory=str(BUILD_DIR / "static")), name="static")
@@ -674,14 +716,18 @@ if BUILD_DIR.exists():
 
     @app.get("/")
     async def serve_index():
-        return FileResponse(str(BUILD_DIR / "index.html"))
+        html_path = BUILD_DIR / "index.html"
+        html = _inject_local_url(html_path.read_text(encoding="utf-8"))
+        return Response(content=html, media_type="text/html; charset=utf-8")
 
     @app.get("/{path:path}")
     async def serve_spa(path: str):
         f = BUILD_DIR / path
         if f.exists() and f.is_file():
             return FileResponse(str(f))
-        return FileResponse(str(BUILD_DIR / "index.html"))
+        html_path = BUILD_DIR / "index.html"
+        html = _inject_local_url(html_path.read_text(encoding="utf-8"))
+        return Response(content=html, media_type="text/html; charset=utf-8")
 
 
 # ─── Entry point ─────────────────────────────────────────
