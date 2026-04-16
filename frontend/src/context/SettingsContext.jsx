@@ -348,6 +348,40 @@ export function SettingsProvider({ children }) {
     localStorage.removeItem("custom_statuses");
   };
 
+  // ── Form fields visibility ────────────────────────────────────────────────
+  const [formFieldsVisibility, setFormFieldsVisibility] = useState(() => {
+    try { return JSON.parse(localStorage.getItem("form_fields_visibility") || "{}"); }
+    catch { return {}; }
+  });
+  const changeFormFieldVisibility = (field, visible) => {
+    setFormFieldsVisibility(prev => {
+      const next = { ...prev, [field]: visible };
+      localStorage.setItem("form_fields_visibility", JSON.stringify(next));
+      return next;
+    });
+  };
+  const resetFormFieldsVisibility = () => {
+    setFormFieldsVisibility({});
+    localStorage.removeItem("form_fields_visibility");
+  };
+
+  // ── Socio fields visibility ───────────────────────────────────────────────
+  const [socioFieldsVisibility, setSocioFieldsVisibility] = useState(() => {
+    try { return JSON.parse(localStorage.getItem("socio_fields_visibility") || "{}"); }
+    catch { return {}; }
+  });
+  const changeSocioFieldVisibility = (field, visible) => {
+    setSocioFieldsVisibility(prev => {
+      const next = { ...prev, [field]: visible };
+      localStorage.setItem("socio_fields_visibility", JSON.stringify(next));
+      return next;
+    });
+  };
+  const resetSocioFieldsVisibility = () => {
+    setSocioFieldsVisibility({});
+    localStorage.removeItem("socio_fields_visibility");
+  };
+
   // ── Island sidebar margins ─────────────────────────────────────────────────
   const [islandMargins, setIslandMargins] = useState(() => {
     try { return JSON.parse(localStorage.getItem("island_margins") || "null") || { top: 14, bottom: 14, side: 14 }; }
@@ -741,6 +775,9 @@ export function SettingsProvider({ children }) {
       changeStatusLabel, changeStatusColor, addCustomStatus, removeCustomStatus, resetCustomStatuses,
       // Island margins
       islandMargins, changeIslandMargins,
+      // Form fields visibility
+      formFieldsVisibility, changeFormFieldVisibility, resetFormFieldsVisibility,
+      socioFieldsVisibility, changeSocioFieldVisibility, resetSocioFieldsVisibility,
     }}>
       {children}
     </SettingsContext.Provider>

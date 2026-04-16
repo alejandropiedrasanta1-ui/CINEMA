@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import {
   Palette, CheckCircle, Zap, Pencil, RotateCcw, Upload, ImageIcon, Trash2,
   Sparkles, Layers, SlidersHorizontal, Wind, Maximize2, Monitor, Type, Moon,
-  AlignJustify, BarChart2, LayoutGrid, Shield, MousePointer2, FileText, Columns, Tag, Plus,
+  AlignJustify, BarChart2, LayoutGrid, Shield, MousePointer2, FileText, Columns, Tag, Plus, ToggleLeft,
 } from "lucide-react";
 import { useSettings, THEMES, PRESETS } from "@/context/SettingsContext";
 import { getEventConfig, getEventTypeName, AVAILABLE_ICONS, AVAILABLE_COLORS, EVENT_TYPES } from "@/lib/eventConfig";
@@ -162,6 +162,8 @@ export default function AppearancePage() {
     customStatuses, activeStatuses,
     changeStatusLabel, changeStatusColor, addCustomStatus, removeCustomStatus, resetCustomStatuses,
     islandMargins, changeIslandMargins,
+    formFieldsVisibility, changeFormFieldVisibility, resetFormFieldsVisibility,
+    socioFieldsVisibility, changeSocioFieldVisibility, resetSocioFieldsVisibility,
   } = useSettings();
 
   const { toast } = useToast();
@@ -1196,6 +1198,89 @@ export default function AppearancePage() {
                 </motion.div>
               )}
             </div>
+          </div>
+        </Section>
+
+        {/* ═══════════════════════════════════════════════════════════════
+            CAMPOS DE FORMULARIO  ★ NUEVO
+        ═══════════════════════════════════════════════════════════════ */}
+        <Section icon={ToggleLeft} isNew title={es ? "Campos de Formulario" : "Form Fields"} desc={es ? "Activa o desactiva campos en nuevas reservas y socios" : "Enable/disable fields in new reservations and partners"}>
+          <div className="space-y-6">
+
+            {/* ── Nueva Reserva ── */}
+            <div>
+              <p className="text-[11px] font-black text-slate-400 uppercase tracking-widest mb-3">
+                {es ? "Nueva Reserva" : "New Reservation"}
+              </p>
+              <div className="space-y-2">
+                {[
+                  { key: "email",   label: es ? "Email del cliente"   : "Client email"      },
+                  { key: "phone",   label: es ? "Teléfono"            : "Phone"             },
+                  { key: "time",    label: es ? "Hora del evento"     : "Event time"        },
+                  { key: "venue",   label: es ? "Lugar del evento"    : "Event venue"       },
+                  { key: "guests",  label: es ? "N° de invitados"     : "No. of guests"     },
+                  { key: "advance", label: es ? "Anticipo pagado"     : "Deposit paid"      },
+                  { key: "notes",   label: es ? "Notas adicionales"   : "Additional notes"  },
+                ].map(field => (
+                  <div key={field.key}
+                    className="flex items-center justify-between px-4 py-3 bg-white/50 border border-white/70 rounded-2xl">
+                    <p className="text-sm font-semibold text-slate-700">{field.label}</p>
+                    <Toggle
+                      value={formFieldsVisibility[field.key] !== false}
+                      onChange={v => { changeFormFieldVisibility(field.key, v); toast({ title: `${field.label}: ${v ? (es ? "activado" : "enabled") : (es ? "desactivado" : "disabled")} ✓` }); }}
+                      testId={`ff-reservation-${field.key}`}
+                    />
+                  </div>
+                ))}
+              </div>
+              <motion.button whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.97 }}
+                onClick={() => { resetFormFieldsVisibility(); toast({ title: es ? "Campos de reserva restablecidos ✓" : "Reservation fields reset ✓" }); }}
+                data-testid="reset-reservation-fields-btn"
+                className="mt-2.5 flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-xs font-bold text-slate-600 transition-all">
+                <RotateCcw size={10} /> {es ? "Mostrar todos" : "Show all"}
+              </motion.button>
+            </div>
+
+            <div className="border-t border-white/40" />
+
+            {/* ── Nuevo Socio ── */}
+            <div>
+              <p className="text-[11px] font-black text-slate-400 uppercase tracking-widest mb-3">
+                {es ? "Nuevo Socio" : "New Partner"}
+              </p>
+              <div className="space-y-2">
+                {[
+                  { key: "photo",  label: es ? "Foto de perfil"     : "Profile photo"    },
+                  { key: "phone",  label: es ? "Teléfono"           : "Phone"            },
+                  { key: "email",  label: "Email"                                        },
+                  { key: "rate",   label: es ? "Tarifa por evento"  : "Rate per event"   },
+                  { key: "notes",  label: es ? "Notas"              : "Notes"            },
+                ].map(field => (
+                  <div key={field.key}
+                    className="flex items-center justify-between px-4 py-3 bg-white/50 border border-white/70 rounded-2xl">
+                    <p className="text-sm font-semibold text-slate-700">{field.label}</p>
+                    <Toggle
+                      value={socioFieldsVisibility[field.key] !== false}
+                      onChange={v => { changeSocioFieldVisibility(field.key, v); toast({ title: `${field.label}: ${v ? (es ? "activado" : "enabled") : (es ? "desactivado" : "disabled")} ✓` }); }}
+                      testId={`ff-socio-${field.key}`}
+                    />
+                  </div>
+                ))}
+              </div>
+              <motion.button whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.97 }}
+                onClick={() => { resetSocioFieldsVisibility(); toast({ title: es ? "Campos de socio restablecidos ✓" : "Partner fields reset ✓" }); }}
+                data-testid="reset-socio-fields-btn"
+                className="mt-2.5 flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-xs font-bold text-slate-600 transition-all">
+                <RotateCcw size={10} /> {es ? "Mostrar todos" : "Show all"}
+              </motion.button>
+            </div>
+
+            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}
+              className="flex items-center gap-2 text-[10px] text-sky-600 bg-sky-50/80 px-3 py-2 rounded-xl border border-sky-200/60">
+              <ToggleLeft size={11} />
+              {es ? "Los campos desactivados no aparecen en el formulario de creación" : "Disabled fields won't appear in the creation form"}
+            </motion.div>
+
           </div>
         </Section>
 

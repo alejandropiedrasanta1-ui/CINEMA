@@ -3,11 +3,14 @@ import { createSocio, updateSocio, uploadSocioPhoto } from "@/lib/api";
 import { ArrowLeft, Camera, Upload } from "lucide-react";
 import { motion } from "framer-motion";
 import { useToast } from "@/hooks/use-toast";
+import { useSettings } from "@/context/SettingsContext";
 
 const ROLES = ["Fotógrafo", "Videógrafo", "Asistente"];
 
 export default function SocioForm({ socio, onClose, onSaved }) {
   const { toast } = useToast();
+  const { socioFieldsVisibility } = useSettings();
+  const sf = socioFieldsVisibility || {};
   const isEdit = !!socio;
   const [saving, setSaving]           = useState(false);
   const [photoPreview, setPhotoPreview] = useState(null);
@@ -91,23 +94,25 @@ export default function SocioForm({ socio, onClose, onSaved }) {
         <div className="w-full max-w-3xl flex gap-10 items-start">
 
           {/* ── FOTO (izquierda) ── */}
-          <div className="flex-shrink-0 flex flex-col items-center gap-4">
-            <label className="relative cursor-pointer group">
-              <div className="w-40 h-40 rounded-3xl overflow-hidden ring-4 ring-white shadow-xl">
-                {photoPreview
-                  ? <img src={photoPreview} alt="foto" className="w-full h-full object-cover"/>
-                  : <div className="w-full h-full btn-primary flex flex-col items-center justify-center gap-2">
-                      <Camera size={40} className="text-white/80"/>
-                      <span className="text-white/70 text-xs font-bold">Agregar foto</span>
-                    </div>}
-              </div>
-              <div className="absolute bottom-2 right-2 w-9 h-9 rounded-full btn-primary flex items-center justify-center ring-2 ring-white opacity-0 group-hover:opacity-100 transition-opacity shadow-lg">
-                <Upload size={15} className="text-white"/>
-              </div>
-              <input type="file" accept="image/*" className="hidden" onChange={handlePhotoChange} data-testid="socio-photo-input"/>
-            </label>
-            <p className="text-xs text-slate-400 font-bold text-center">Foto de perfil<br/>(opcional)</p>
-          </div>
+          {sf.photo !== false && (
+            <div className="flex-shrink-0 flex flex-col items-center gap-4">
+              <label className="relative cursor-pointer group">
+                <div className="w-40 h-40 rounded-3xl overflow-hidden ring-4 ring-white shadow-xl">
+                  {photoPreview
+                    ? <img src={photoPreview} alt="foto" className="w-full h-full object-cover"/>
+                    : <div className="w-full h-full btn-primary flex flex-col items-center justify-center gap-2">
+                        <Camera size={40} className="text-white/80"/>
+                        <span className="text-white/70 text-xs font-bold">Agregar foto</span>
+                      </div>}
+                </div>
+                <div className="absolute bottom-2 right-2 w-9 h-9 rounded-full btn-primary flex items-center justify-center ring-2 ring-white opacity-0 group-hover:opacity-100 transition-opacity shadow-lg">
+                  <Upload size={15} className="text-white"/>
+                </div>
+                <input type="file" accept="image/*" className="hidden" onChange={handlePhotoChange} data-testid="socio-photo-input"/>
+              </label>
+              <p className="text-xs text-slate-400 font-bold text-center">Foto de perfil<br/>(opcional)</p>
+            </div>
+          )}
 
           {/* ── CAMPOS (derecha) ── */}
           <div className="flex-1 flex flex-col gap-6">
@@ -135,25 +140,33 @@ export default function SocioForm({ socio, onClose, onSaved }) {
 
             {/* Teléfono + Tarifa + Email */}
             <div className="grid grid-cols-3 gap-5">
-              <div>
-                <Label>Teléfono</Label>
-                <input value={form.phone} onChange={set("phone")} placeholder="+502 1234 5678" data-testid="input-socio-phone" className={inp}/>
-              </div>
-              <div>
-                <Label>Tarifa por evento</Label>
-                <input type="number" value={form.rate_per_event} onChange={set("rate_per_event")} placeholder="Q 2,000" min="0" data-testid="input-socio-rate" className={inp}/>
-              </div>
-              <div>
-                <Label>Email</Label>
-                <input type="email" value={form.email} onChange={set("email")} placeholder="correo@email.com" data-testid="input-socio-email" className={inp}/>
-              </div>
+              {sf.phone !== false && (
+                <div>
+                  <Label>Teléfono</Label>
+                  <input value={form.phone} onChange={set("phone")} placeholder="+502 1234 5678" data-testid="input-socio-phone" className={inp}/>
+                </div>
+              )}
+              {sf.rate !== false && (
+                <div>
+                  <Label>Tarifa por evento</Label>
+                  <input type="number" value={form.rate_per_event} onChange={set("rate_per_event")} placeholder="Q 2,000" min="0" data-testid="input-socio-rate" className={inp}/>
+                </div>
+              )}
+              {sf.email !== false && (
+                <div>
+                  <Label>Email</Label>
+                  <input type="email" value={form.email} onChange={set("email")} placeholder="correo@email.com" data-testid="input-socio-email" className={inp}/>
+                </div>
+              )}
             </div>
 
             {/* Notas */}
-            <div>
-              <Label>Notas</Label>
-              <input value={form.notes} onChange={set("notes")} placeholder="Especialidades, equipo, disponibilidad…" data-testid="input-socio-notes" className={inp}/>
-            </div>
+            {sf.notes !== false && (
+              <div>
+                <Label>Notas</Label>
+                <input value={form.notes} onChange={set("notes")} placeholder="Especialidades, equipo, disponibilidad…" data-testid="input-socio-notes" className={inp}/>
+              </div>
+            )}
 
           </div>
         </div>

@@ -10,8 +10,9 @@ const EVENT_TYPES = ["Boda","Quinceañera","Fiesta Social","Evento Corporativo",
 
 export default function ReservationForm({ reservation, onClose, onSaved }) {
   const { toast } = useToast();
-  const { tr, activeStatuses } = useSettings();
+  const { tr, activeStatuses, formFieldsVisibility } = useSettings();
   const f = tr.form;
+  const ff = formFieldsVisibility || {};
   const isEdit = !!reservation;
 
   const [form, setForm] = useState({
@@ -104,14 +105,18 @@ export default function ReservationForm({ reservation, onClose, onSaved }) {
             <Label>{f.clientName}</Label>
             <input value={form.client_name} onChange={set("client_name")} placeholder="Ej: María García" required data-testid="input-client-name" className={inp}/>
           </div>
-          <div>
-            <Label>{f.phone}</Label>
-            <input value={form.client_phone} onChange={set("client_phone")} placeholder="+502 1234 5678" data-testid="input-phone" className={inp}/>
-          </div>
-          <div>
-            <Label>{f.email}</Label>
-            <input type="email" value={form.client_email} onChange={set("client_email")} placeholder="correo@email.com" data-testid="input-email" className={inp}/>
-          </div>
+          {ff.phone !== false && (
+            <div>
+              <Label>{f.phone}</Label>
+              <input value={form.client_phone} onChange={set("client_phone")} placeholder="+502 1234 5678" data-testid="input-phone" className={inp}/>
+            </div>
+          )}
+          {ff.email !== false && (
+            <div>
+              <Label>{f.email}</Label>
+              <input type="email" value={form.client_email} onChange={set("client_email")} placeholder="correo@email.com" data-testid="input-email" className={inp}/>
+            </div>
+          )}
         </div>
 
         {/* Row 2 */}
@@ -132,22 +137,28 @@ export default function ReservationForm({ reservation, onClose, onSaved }) {
             <Label>{f.eventDate}</Label>
             <input type="date" value={form.event_date} onChange={set("event_date")} required data-testid="input-event-date" className={inp}/>
           </div>
-          <div>
-            <Label>{f.time}</Label>
-            <input type="time" value={form.event_time} onChange={set("event_time")} data-testid="input-event-time" className={inp}/>
-          </div>
+          {ff.time !== false && (
+            <div>
+              <Label>{f.time}</Label>
+              <input type="time" value={form.event_time} onChange={set("event_time")} data-testid="input-event-time" className={inp}/>
+            </div>
+          )}
         </div>
 
         {/* Row 3 */}
         <div className="grid grid-cols-4 gap-5">
-          <div className="col-span-2">
-            <Label>{f.venue}</Label>
-            <input value={form.venue} onChange={set("venue")} placeholder="Salón / Hotel / Iglesia…" data-testid="input-venue" className={inp}/>
-          </div>
-          <div>
-            <Label>{f.guests}</Label>
-            <input type="number" value={form.guests_count} onChange={set("guests_count")} placeholder="150" min="0" data-testid="input-guests" className={inp}/>
-          </div>
+          {ff.venue !== false && (
+            <div className="col-span-2">
+              <Label>{f.venue}</Label>
+              <input value={form.venue} onChange={set("venue")} placeholder="Salón / Hotel / Iglesia…" data-testid="input-venue" className={inp}/>
+            </div>
+          )}
+          {ff.guests !== false && (
+            <div>
+              <Label>{f.guests}</Label>
+              <input type="number" value={form.guests_count} onChange={set("guests_count")} placeholder="150" min="0" data-testid="input-guests" className={inp}/>
+            </div>
+          )}
           <div>
             <Label>{f.totalAmount}</Label>
             <input type="number" value={form.total_amount} onChange={set("total_amount")} placeholder="50,000" min="0" step="0.01" required data-testid="input-total" className={inp}/>
@@ -156,14 +167,18 @@ export default function ReservationForm({ reservation, onClose, onSaved }) {
 
         {/* Row 4 */}
         <div className="grid grid-cols-4 gap-5">
-          <div>
-            <Label>{f.advancePaid}</Label>
-            <input type="number" value={form.advance_paid} onChange={set("advance_paid")} placeholder="10,000" min="0" step="0.01" data-testid="input-advance" className={inp}/>
-          </div>
-          <div className="col-span-3">
-            <Label>{f.notes}</Label>
-            <input value={form.notes} onChange={set("notes")} placeholder="Detalles especiales, temas, requerimientos…" data-testid="input-notes" className={inp}/>
-          </div>
+          {ff.advance !== false && (
+            <div>
+              <Label>{f.advancePaid}</Label>
+              <input type="number" value={form.advance_paid} onChange={set("advance_paid")} placeholder="10,000" min="0" step="0.01" data-testid="input-advance" className={inp}/>
+            </div>
+          )}
+          {ff.notes !== false && (
+            <div className="col-span-3">
+              <Label>{f.notes}</Label>
+              <input value={form.notes} onChange={set("notes")} placeholder="Detalles especiales, temas, requerimientos…" data-testid="input-notes" className={inp}/>
+            </div>
+          )}
         </div>
 
       </form>
