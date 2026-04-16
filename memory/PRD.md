@@ -18,7 +18,8 @@ Empresas de producción de eventos (ej. Cinema Productions) que gestionan reserv
 ```
 /app/
 ├── backend/
-│   └── server.py          # FastAPI: settings, DB, export/import, reminders
+│   ├── server.py             # FastAPI principal (web)
+│   └── standalone_app.py     # FastAPI embebido en el ZIP (app local de escritorio)
 ├── frontend/src/
 │   ├── components/
 │   │   └── Layout.jsx     # Sidebar (Dashboard, Reservaciones, Calendario, Socios, Base de Datos, Apariencia, Ajustes)
@@ -134,3 +135,4 @@ Contiene claves de apariencia + configuración de negocio:
 - 2026: **Títulos del Sitio** en Apariencia — Editor de títulos en tiempo real: Barra Lateral (8 campos), Dashboard (6 tarjetas), Encabezados de Página (3 campos). CustomLabels mergeados sobre T[language] en SettingsContext.
 - 2026: **Campos de Formulario** en Apariencia — Toggles para activar/desactivar campos opcionales en formularios de Nueva Reserva (Email, Teléfono, Hora, Lugar, Invitados, Anticipo, Notas) y Nuevo Socio (Foto, Teléfono, Email, Tarifa, Notas). Persistido en localStorage. Botones "Mostrar todos" para restablecer.
 - 2026: **Diseños de Formulario** en Apariencia — 7 estilos visuales con thumbnails de preview para Nueva Reserva y Nuevo Socio (Aurora, Limpio, Compacto, Oscuro, Neón, Editorial, Cristal). Diseños separados para cada formulario. Aplicado en tiempo real a contenedor, barra, inputs y labels. Persistido en localStorage.
+- 2026-04-16: **Fix App de Escritorio (standalone_app.py)** — Agregados 10 endpoints faltantes que causaban pantalla en blanco en DatabasePage: `GET/POST/DELETE /backup/*`, `POST /backup/restore`, `POST /data/cleanup` (con preview), `POST /import/reservations`, `GET /export/reservations/xlsx`. Corregido método HTTP de `clear-all` (POST→DELETE). Agregados: `re`, `timedelta`, `BACKUP_DIR`, `BACKUP_COLLECTIONS`, helper `_create_backup()`. App local ahora funciona completamente con base embebida y permite conectar a MongoDB Atlas.

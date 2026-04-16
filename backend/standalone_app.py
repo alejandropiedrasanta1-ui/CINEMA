@@ -16,6 +16,7 @@ from dotenv import load_dotenv
 import csv
 import io
 import os
+import re
 import json
 import logging
 import base64
@@ -27,7 +28,7 @@ import asyncio
 from pathlib import Path
 from pydantic import BaseModel, Field
 from typing import Optional
-from datetime import datetime, timezone
+from datetime import datetime, timezone, timedelta
 from bson import ObjectId
 
 ROOT_DIR = Path(__file__).parent
@@ -37,6 +38,9 @@ DB_NAME = os.environ.get('DB_NAME', 'cinema_productions')
 MONGO_URL = os.environ.get('MONGO_URL', 'embedded')
 DATA_FILE = ROOT_DIR / 'cinema_data.json'
 CUSTOM_DB_FILE = ROOT_DIR / '.db_override'
+BACKUP_DIR = ROOT_DIR / 'backups'
+BACKUP_DIR.mkdir(exist_ok=True)
+BACKUP_COLLECTIONS = ['reservations', 'socios', 'app_settings']
 
 # ── Determine effective MongoDB URL (override file takes priority) ────────────
 _override_url = CUSTOM_DB_FILE.read_text().strip() if CUSTOM_DB_FILE.exists() else None
@@ -747,14 +751,333 @@ async def reset_database():
     return {"success": True, "message": "Restaurado a la base de datos predeterminada."}
 
 
-@api_router.post("/data/clear-all")
-async def clear_all_data():
-    await db.reservations.delete_many({})
-    await db.socios.delete_many({})
+@api_router.delete("/data/clear-all")
+async def clear_all_data_endpoint():
+    try:
+        await _create_backup(label="auto_pre_delete")
+    except Exception:
+        pass
+    res_result = await db.reservations.delete_many({})
+    soc_result = await db.socios.delete_many({})
     await db.app_settings.delete_many({})
     if _using_embedded:
         asyncio.create_task(_save_embedded_data())
-    return {"success": True, "message": "Todos los datos han sido eliminados."}
+    return {
+        "ok": True,
+        "deleted_reservations": res_result.deleted_count,
+        "deleted_socios": soc_result.deleted_count,
+        "auto_backup_created": True,
+    }
+
+
+@api_router.post("/data/cleanup")
+async def cleanup_data(action: str = "cancelled", months_old: int = 6):
+    if action == "preview":
+        cancelled_count = await db.reservations.count_documents({"status": "Cancelado"})
+        cutoff = datetime.now(timezone.utc) - timedelta(days=months_old * 30)
+        cutoff_str = cutoff.strftime("%Y-%m-%d")
+        docs = await db.reservations.find({"status": "Completado"}).to_list(100000)
+        old_completed = sum(1 for d in docs if d.get("event_date", "") < cutoff_str)
+        return {
+            "ok": True,
+            "cancelled_count": cancelled_count,
+            "old_completed_count": old_completed,
+            "months_threshold": months_old,
+        }
+
+    try:
+        await _create_backup(label="auto_pre_cleanup")
+    except Exception:
+        pass
+
+    if action == "cancelled":
+        result = await db.reservations.delete_many({"status": "Cancelado"})
+        if _using_embedded:
+            asyncio.create_task(_save_embedded_data())
+        return {"ok": True, "deleted": result.deleted_count, "message": f"{result.deleted_count} reservas canceladas eliminadas"}
+
+    if action == "old_completed":
+        cutoff = datetime.now(timezone.utc) - timedelta(days=months_old * 30)
+        cutoff_str = cutoff.strftime("%Y-%m-%d")
+        docs = await db.reservations.find({"status": "Completado"}).to_list(100000)
+        ids_to_delete = [d["_id"] for d in docs if d.get("event_date", "") < cutoff_str]
+        if ids_to_delete:
+            result = await db.reservations.delete_many({"_id": {"$in": ids_to_delete}})
+            if _using_embedded:
+                asyncio.create_task(_save_embedded_data())
+            return {"ok": True, "deleted": result.deleted_count, "message": f"{result.deleted_count} reservas completadas antiguas eliminadas"}
+        return {"ok": True, "deleted": 0, "message": "No hay reservas completadas antiguas para eliminar"}
+
+    return {"ok": False, "message": "Acción no reconocida"}
+
+
+# ─── Backup helper ─────────────────────────────────────────
+
+async def _create_backup(label: str = "manual") -> dict:
+    backup_data: dict = {"_meta": {"created_at": datetime.now(timezone.utc).isoformat(), "label": label}}
+    for cname in BACKUP_COLLECTIONS:
+        docs = await db[cname].find({}).to_list(100000)
+        backup_data[cname] = [doc_to_dict(d) for d in docs]
+    ts = datetime.now(timezone.utc).strftime("%Y%m%d_%H%M%S")
+    filename = f"backup_{label}_{ts}.json"
+    filepath = BACKUP_DIR / filename
+    filepath.write_text(json.dumps(backup_data, ensure_ascii=False, indent=2), encoding="utf-8")
+    # Keep only last 15 backups
+    existing = sorted(BACKUP_DIR.glob("backup_*.json"), key=lambda f: f.stat().st_mtime)
+    for old in existing[:-15]:
+        old.unlink(missing_ok=True)
+    total_docs = sum(len(v) for k, v in backup_data.items() if k != "_meta")
+    return {"filename": filename, "docs": total_docs}
+
+
+# ─── Backup endpoints ──────────────────────────────────────
+
+@api_router.get("/backup/download")
+async def download_full_backup():
+    backup_data: dict = {"_meta": {"created_at": datetime.now(timezone.utc).isoformat(), "app": "Cinema Productions"}}
+    for cname in BACKUP_COLLECTIONS:
+        docs = await db[cname].find({}).to_list(100000)
+        backup_data[cname] = [doc_to_dict(d) for d in docs]
+    ts = datetime.now(timezone.utc).strftime("%Y%m%d_%H%M%S")
+    filename = f"cinema_backup_{ts}.json"
+    content = json.dumps(backup_data, ensure_ascii=False, indent=2)
+    return Response(
+        content=content.encode("utf-8"),
+        media_type="application/json",
+        headers={"Content-Disposition": f'attachment; filename="{filename}"'},
+    )
+
+
+@api_router.post("/backup/create")
+async def create_server_backup():
+    try:
+        result = await _create_backup(label="manual")
+        return {"success": True, **result, "message": f"Respaldo creado: {result['docs']} documentos"}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error al crear respaldo: {e}")
+
+
+@api_router.get("/backup/history")
+async def list_backups():
+    files = sorted(BACKUP_DIR.glob("backup_*.json"), key=lambda f: f.stat().st_mtime, reverse=True)
+    result = []
+    for f in files:
+        stat = f.stat()
+        size_kb = stat.st_size / 1024
+        size_str = f"{size_kb:.0f} KB" if size_kb < 1024 else f"{size_kb / 1024:.1f} MB"
+        label = "auto" if "auto_" in f.name else "manual"
+        result.append({
+            "filename": f.name,
+            "size": size_str,
+            "label": label,
+            "created_at": datetime.fromtimestamp(stat.st_mtime, tz=timezone.utc).isoformat(),
+        })
+    return result
+
+
+@api_router.get("/backup/{filename}/download")
+async def download_backup_file(filename: str):
+    if not filename.endswith(".json") or "/" in filename or ".." in filename:
+        raise HTTPException(status_code=400, detail="Nombre de archivo inválido")
+    filepath = BACKUP_DIR / filename
+    if not filepath.exists():
+        raise HTTPException(status_code=404, detail="Respaldo no encontrado")
+    return Response(
+        content=filepath.read_bytes(),
+        media_type="application/json",
+        headers={"Content-Disposition": f'attachment; filename="{filename}"'},
+    )
+
+
+@api_router.delete("/backup/{filename}")
+async def delete_backup_file(filename: str):
+    if not filename.endswith(".json") or "/" in filename or ".." in filename:
+        raise HTTPException(status_code=400, detail="Nombre de archivo inválido")
+    filepath = BACKUP_DIR / filename
+    if not filepath.exists():
+        raise HTTPException(status_code=404, detail="Respaldo no encontrado")
+    filepath.unlink()
+    return {"success": True, "message": "Respaldo eliminado"}
+
+
+@api_router.post("/backup/restore")
+async def restore_backup(file: UploadFile = File(...)):
+    if not file.filename.endswith(".json"):
+        raise HTTPException(status_code=400, detail="El archivo debe ser .json")
+    try:
+        content = await file.read()
+        backup_data = json.loads(content)
+    except Exception:
+        raise HTTPException(status_code=400, detail="Archivo JSON inválido o corrupto")
+    try:
+        await _create_backup(label="auto_pre_restore")
+    except Exception:
+        pass
+    restored: dict = {}
+    errors: list = []
+    for cname in BACKUP_COLLECTIONS:
+        docs = backup_data.get(cname)
+        if docs is None or not isinstance(docs, list):
+            continue
+        try:
+            clean_docs = []
+            for d in docs:
+                d.pop("id", None)
+                d.pop("_id", None)
+                clean_docs.append(d)
+            await db[cname].delete_many({})
+            if clean_docs:
+                await db[cname].insert_many(clean_docs)
+            restored[cname] = len(clean_docs)
+        except Exception as e:
+            errors.append(f"{cname}: {e}")
+    if errors:
+        raise HTTPException(status_code=500, detail="Errores al restaurar: " + " | ".join(errors))
+    if _using_embedded:
+        asyncio.create_task(_save_embedded_data())
+    total = sum(restored.values())
+    return {"success": True, "restored": restored, "total": total,
+            "message": f"Restaurado correctamente: {total} documentos en {len(restored)} colecciones"}
+
+
+# ─── Import / Export adicionales ──────────────────────────
+
+@api_router.post("/import/reservations")
+async def import_reservations_csv(file: UploadFile = File(...)):
+    content = await file.read()
+    try:
+        text = content.decode("utf-8-sig")
+    except UnicodeDecodeError:
+        text = content.decode("latin-1")
+    reader = csv.DictReader(io.StringIO(text))
+    FIELD_MAP = {
+        "client_name":  ["client_name", "nombre", "cliente", "name"],
+        "client_phone": ["client_phone", "telefono", "teléfono", "phone"],
+        "client_email": ["client_email", "email", "correo"],
+        "event_type":   ["event_type", "tipo_evento", "tipo", "type"],
+        "event_date":   ["event_date", "fecha", "date", "fecha_evento"],
+        "event_time":   ["event_time", "hora", "time"],
+        "venue":        ["venue", "lugar", "location", "ubicacion"],
+        "guests_count": ["guests_count", "invitados", "guests"],
+        "total_amount": ["total_amount", "total", "monto_total"],
+        "advance_paid": ["advance_paid", "anticipo", "advance", "pago_anticipado"],
+        "status":       ["status", "estado"],
+        "notes":        ["notes", "notas", "note"],
+    }
+
+    def find_col(headers, candidates):
+        headers_lower = {h.lower().strip(): h for h in headers}
+        for c in candidates:
+            if c.lower() in headers_lower:
+                return headers_lower[c.lower()]
+        return None
+
+    imported = 0
+    errors = []
+    now_str = datetime.now(timezone.utc).isoformat()
+
+    for i, row in enumerate(reader, start=2):
+        try:
+            headers = list(row.keys())
+            def get(field):
+                col = find_col(headers, FIELD_MAP.get(field, [field]))
+                return row.get(col, "").strip() if col else ""
+            client_name = get("client_name")
+            if not client_name:
+                errors.append(f"Fila {i}: nombre vacío — omitida")
+                continue
+
+            def to_float(s):
+                s = re.sub(r"[^\d.]", "", s)
+                return float(s) if s else 0.0
+
+            doc = {
+                "client_name":   client_name,
+                "client_phone":  get("client_phone") or None,
+                "client_email":  get("client_email") or None,
+                "event_type":    get("event_type") or "Otro",
+                "event_date":    get("event_date") or "",
+                "event_time":    get("event_time") or None,
+                "venue":         get("venue") or None,
+                "guests_count":  int(get("guests_count")) if get("guests_count").isdigit() else None,
+                "total_amount":  to_float(get("total_amount") or "0"),
+                "advance_paid":  to_float(get("advance_paid") or "0"),
+                "status":        get("status") or "Pendiente",
+                "notes":         get("notes") or None,
+                "receipts":      [],
+                "locations":     [],
+                "assigned_partners": [],
+                "created_at":    now_str,
+                "imported_from_csv": True,
+            }
+            await db.reservations.insert_one(doc)
+            imported += 1
+        except Exception as e:
+            errors.append(f"Fila {i}: {str(e)}")
+
+    if _using_embedded:
+        asyncio.create_task(_save_embedded_data())
+    return {
+        "ok": True,
+        "imported": imported,
+        "errors": errors[:10],
+        "message": f"{imported} reservas importadas correctamente" + (f" ({len(errors)} errores)" if errors else ""),
+    }
+
+
+@api_router.get("/export/reservations/xlsx")
+async def export_reservations_xlsx():
+    try:
+        import openpyxl
+        from openpyxl.styles import Font, PatternFill, Alignment
+        from openpyxl.utils import get_column_letter
+        import io as _io
+
+        docs = await db.reservations.find({}, {"receipt_images": 0, "assigned_partners": 0}).to_list(100000)
+        data = [doc_to_dict(d) for d in docs]
+
+        wb = openpyxl.Workbook()
+        ws = wb.active
+        ws.title = "Reservas"
+        headers = ["Nombre", "Teléfono", "Email", "Tipo Evento", "Fecha", "Hora",
+                   "Lugar", "Invitados", "Total", "Anticipo", "Saldo", "Estado", "Notas", "Creado"]
+        keys = ["client_name", "client_phone", "client_email", "event_type", "event_date",
+                "event_time", "venue", "guests_count", "total_amount", "advance_paid",
+                None, "status", "notes", "created_at"]
+        header_fill = PatternFill("solid", fgColor="4F46E5")
+        header_font = Font(color="FFFFFF", bold=True, size=11)
+        for col, header in enumerate(headers, start=1):
+            cell = ws.cell(row=1, column=col, value=header)
+            cell.fill = header_fill
+            cell.font = header_font
+            cell.alignment = Alignment(horizontal="center")
+        alt_fill = PatternFill("solid", fgColor="F8F7FF")
+        for row_idx, doc in enumerate(data, start=2):
+            fill = alt_fill if row_idx % 2 == 0 else None
+            for col_idx, key in enumerate(keys, start=1):
+                if key is None:
+                    value = (doc.get("total_amount") or 0) - (doc.get("advance_paid") or 0)
+                else:
+                    value = doc.get(key, "")
+                cell = ws.cell(row=row_idx, column=col_idx, value=value)
+                if fill:
+                    cell.fill = fill
+        for col in ws.columns:
+            max_len = max((len(str(c.value or "")) for c in col), default=8)
+            ws.column_dimensions[get_column_letter(col[0].column)].width = min(max_len + 4, 40)
+        buf = _io.BytesIO()
+        wb.save(buf)
+        buf.seek(0)
+        ts = datetime.now(timezone.utc).strftime("%Y%m%d_%H%M")
+        return Response(
+            content=buf.getvalue(),
+            media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            headers={"Content-Disposition": f'attachment; filename="reservaciones_{ts}.xlsx"'},
+        )
+    except ImportError:
+        return JSONResponse({"error": "openpyxl no instalado. Ejecuta: pip install openpyxl"}, status_code=500)
+    except Exception as e:
+        return JSONResponse({"error": str(e)}, status_code=500)
 
 
 @api_router.post("/reminders/send")
