@@ -165,6 +165,7 @@ export default function AppearancePage() {
     islandMargins, changeIslandMargins,
     formFieldsVisibility, changeFormFieldVisibility, resetFormFieldsVisibility,
     socioFieldsVisibility, changeSocioFieldVisibility, resetSocioFieldsVisibility,
+    swapNameEventType, changeSwapNameEventType,
     reservationFormDesign, changeReservationFormDesign,
     socioFormDesign, changeSocioFormDesign,
   } = useSettings();
@@ -1386,6 +1387,38 @@ export default function AppearancePage() {
                     </motion.button>
                   );
                 })}
+              </div>
+            </div>
+
+            <div className="border-t border-white/40" />
+
+            {/* ── Vista de Lista — Reservaciones ── */}
+            <div>
+              <p className="text-[11px] font-black text-slate-400 uppercase tracking-widest mb-3">
+                {es ? "Vista de lista — Reservaciones" : "Reservation list view"}
+              </p>
+              <div className="flex items-center justify-between p-3 rounded-xl glass border border-white/50">
+                <div>
+                  <p className="text-sm font-bold text-slate-700">
+                    {es ? "Mostrar Tipo de Evento primero" : "Show Event Type first"}
+                  </p>
+                  <p className="text-[11px] text-slate-400 mt-0.5">
+                    {es
+                      ? swapNameEventType
+                        ? "Col. principal: Tipo de evento · Col. secundaria: Nombre"
+                        : "Col. principal: Nombre cliente · Col. secundaria: Tipo"
+                      : swapNameEventType
+                        ? "Main col: Event type · Secondary: Client name"
+                        : "Main col: Client name · Secondary: Event type"}
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => changeSwapNameEventType(!swapNameEventType)}
+                  data-testid="toggle-swap-name-event"
+                  className={`relative w-11 h-6 rounded-full transition-all flex-shrink-0 ${swapNameEventType ? "btn-primary" : "bg-slate-200"}`}>
+                  <span className={`absolute top-0.5 w-5 h-5 rounded-full bg-white shadow transition-all ${swapNameEventType ? "left-[22px]" : "left-0.5"}`} />
+                </button>
               </div>
             </div>
 

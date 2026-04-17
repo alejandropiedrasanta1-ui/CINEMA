@@ -356,6 +356,14 @@ export function SettingsProvider({ children }) {
   });
   const changeReservationFormDesign = (val) => { setReservationFormDesign(val); localStorage.setItem("reservation_form_design", val); };
 
+  const [swapNameEventType, setSwapNameEventType] = useState(() =>
+    localStorage.getItem("swap_name_event_type") === "true"
+  );
+  const changeSwapNameEventType = (val) => {
+    setSwapNameEventType(val);
+    localStorage.setItem("swap_name_event_type", val ? "true" : "false");
+  };
+
   const [socioFormDesign, setSocioFormDesign] = useState(() => {
     const saved = localStorage.getItem("socio_form_design") || "aurora";
     return VALID_FORM_DESIGNS.includes(saved) ? saved : "aurora";
@@ -799,6 +807,7 @@ export function SettingsProvider({ children }) {
       // Form design styles
       reservationFormDesign, changeReservationFormDesign,
       socioFormDesign, changeSocioFormDesign,
+      swapNameEventType, changeSwapNameEventType,
     }}>
       {children}
     </SettingsContext.Provider>

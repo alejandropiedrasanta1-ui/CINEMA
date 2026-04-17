@@ -1,0 +1,26 @@
+{
+  "summary": "Tested phone search in Reservaciones and swap-name-event toggle in Apariencia. All features working correctly.",
+  "backend_issues": { "critical": [], "minor": [] },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": []
+  },
+  "test_report_links": [],
+  "action_items": [],
+  "critical_code_review_comments": [],
+  "updated_files": [],
+  "success_rate": { "backend": "N/A", "frontend": "100%" },
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "Phone search (+502 -> 1 result for Ana Martinez), event type search (Quinceañera -> 1 result) both work. Toggle data-testid=toggle-swap-name-event in Apariencia > Completo tab works: enables swap showing event type (Boda/Quinceañera with icon) in primary column and client name secondary. localStorage key 'swap_name_event_type' persists across reloads (true/false). Disabling toggle returns to normal (client name primary).",
+  "test_results": {
+    "1_search_placeholder": "PASS - 'Buscar por nombre, teléfono, evento, lugar…'",
+    "2_phone_search": "PASS - Searching '+502' returns 1 result (Ana Martinez +502 1234-5678)",
+    "3_event_search": "PASS - Searching 'Quinceañera' returns 1 result",
+    "4_toggle_found": "PASS - Toggle found at data-testid='toggle-swap-name-event' in Apariencia > Completo tab",
+    "5_toggle_enabled": "PASS - When enabled, primary column shows event type (Boda/Quinceañera with icon), secondary shows client name",
+    "6_toggle_disabled": "PASS - When disabled, returns to normal (client name primary, event type in TIPO column)",
+    "7_localstorage_persistence": "PASS - localStorage key 'swap_name_event_type' = 'true'/'false', persists across page reloads"
+  }
+}

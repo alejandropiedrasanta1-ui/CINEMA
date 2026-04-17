@@ -20,8 +20,9 @@ export default function Reservations() {
   const [showForm, setShowForm] = useState(false);
   const navigate = useNavigate();
   const { toast } = useToast();
-  const { tr, formatCurrency, logoUrl, pdfLogoUrl, usePdfLogo, useCustomPdfLogo, pdfTheme, activeStatuses } = useSettings();
+  const { tr, formatCurrency, logoUrl, pdfLogoUrl, usePdfLogo, useCustomPdfLogo, pdfTheme, activeStatuses, swapNameEventType } = useSettings();
   const l = tr.list;
+  const es = l.colClient !== "Client";
 
   // Build dynamic status color lookup from activeStatuses
   const statusColors = Object.fromEntries(
@@ -67,7 +68,11 @@ export default function Reservations() {
   const formatDate = (d) => { if (!d) return "-"; const [y,m,day] = d.split("-"); return `${day}/${m}/${y}`; };
 
   const filtered = reservations.filter(r => {
-    const ms = r.client_name?.toLowerCase().includes(search.toLowerCase()) || r.event_type?.toLowerCase().includes(search.toLowerCase()) || (r.venue||"").toLowerCase().includes(search.toLowerCase());
+    const q = search.toLowerCase();
+    const ms = r.client_name?.toLowerCase().includes(q)
+      || r.event_type?.toLowerCase().includes(q)
+      || (r.venue||"").toLowerCase().includes(q)
+      || (r.client_phone||"").toLowerCase().includes(q);
     const mt = filterType === "all" || r.event_type === filterType;
     const ms2 = filterStatus === "all" || r.status === filterStatus;
     return ms && mt && ms2;
@@ -89,7 +94,8 @@ export default function Reservations() {
       <motion.div initial={{ opacity:0, y:10 }} animate={{ opacity:1, y:0 }} transition={{ duration:0.35, delay:0.1 }} className="flex flex-col sm:flex-row gap-3 mb-6">
         <div className="relative flex-1">
           <Search size={14} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" />
-          <input value={search} onChange={e => setSearch(e.target.value)} placeholder={l.search}
+          <input value={search} onChange={e => setSearch(e.target.value)}
+            placeholder={es ? "Buscar por nombre, teléfono, evento, lugar…" : "Search by name, phone, event, venue…"}
             className="w-full pl-10 pr-4 py-2.5 text-sm glass rounded-2xl border-white/50 bg-transparent focus:outline-none focus:ring-2 focus:ring-[var(--t-from)]/30 placeholder-slate-400 text-slate-700"
             data-testid="search-input" />
         </div>
@@ -132,28 +138,56 @@ export default function Reservations() {
                     onClick={() => navigate(`/reservaciones/${r.id}`)} data-testid={`reservation-row-${r.id}`}>
                     <td className="px-5 py-4">
                       <div className="flex items-center gap-3">
-                        <div className="w-8 h-8 rounded-2xl flex items-center justify-center flex-shrink-0" style={{ backgroundColor:"color-mix(in srgb, var(--t-from) 12%, white)" }}>
-                          <span className="text-xs font-black" style={{ color:"var(--t-from)" }}>{r.client_name?.charAt(0).toUpperCase()}</span>
-                        </div>
-                        <div>
-                          <p className="font-bold text-slate-900">{r.client_name}</p>
-                          {r.client_phone && <p className="text-xs text-slate-400">{r.client_phone}</p>}
-                        </div>
+                        {swapNameEventType ? (
+                          // Swap ON: mostrar tipo de evento en la columna principal
+                          (() => {
+                            const cfg = getEventConfig(r.event_type);
+                            const EvIcon = cfg.icon;
+                            return (
+                              <>
+                                <div className="w-8 h-8 rounded-2xl flex items-center justify-center flex-shrink-0" style={{ background: cfg.fg + "18" }}>
+                                  <EvIcon size={14} style={{ color: cfg.fg }} strokeWidth={1.8} />
+                                </div>
+                                <div>
+                                  <p className="font-bold text-slate-900">{getEventTypeName(r.event_type)}</p>
+                                  <p className="text-xs text-slate-400">{r.client_name}</p>
+                                </div>
+                              </>
+                            );
+                          })()
+                        ) : (
+                          // Default: mostrar nombre del cliente
+                          <>
+                            <div className="w-8 h-8 rounded-2xl flex items-center justify-center flex-shrink-0" style={{ backgroundColor:"color-mix(in srgb, var(--t-from) 12%, white)" }}>
+                              <span className="text-xs font-black" style={{ color:"var(--t-from)" }}>{r.client_name?.charAt(0).toUpperCase()}</span>
+                            </div>
+                            <div>
+                              <p className="font-bold text-slate-900">{r.client_name}</p>
+                              {r.client_phone && <p className="text-xs text-slate-400">{r.client_phone}</p>}
+                            </div>
+                          </>
+                        )}
                       </div>
                     </td>
                     <td className="px-5 py-4 text-slate-600 hidden sm:table-cell">
-                      {(() => {
-                        const cfg = getEventConfig(r.event_type);
-                        const EvIcon = cfg.icon;
-                        return (
-                          <span className="flex items-center gap-1.5">
-                            <span className="inline-flex w-6 h-6 rounded-lg items-center justify-center flex-shrink-0" style={{ background: cfg.fg + "18" }}>
-                              <EvIcon size={12} style={{ color: cfg.fg }} strokeWidth={1.8} />
+                      {swapNameEventType ? (
+                        // Swap ON: mostrar nombre del cliente en columna tipo
+                        <span className="font-medium text-slate-700">{r.client_name}</span>
+                      ) : (
+                        // Default: mostrar tipo de evento
+                        (() => {
+                          const cfg = getEventConfig(r.event_type);
+                          const EvIcon = cfg.icon;
+                          return (
+                            <span className="flex items-center gap-1.5">
+                              <span className="inline-flex w-6 h-6 rounded-lg items-center justify-center flex-shrink-0" style={{ background: cfg.fg + "18" }}>
+                                <EvIcon size={12} style={{ color: cfg.fg }} strokeWidth={1.8} />
+                              </span>
+                              <span className="font-medium">{getEventTypeName(r.event_type)}</span>
                             </span>
-                            <span className="font-medium">{getEventTypeName(r.event_type)}</span>
-                          </span>
-                        );
-                      })()}
+                          );
+                        })()
+                      )}
                     </td>
                     <td className="px-5 py-4 font-bold text-slate-800">{formatDate(r.event_date)}</td>
                     <td className="px-5 py-4 font-bold text-slate-800 hidden md:table-cell">{formatCurrency(r.total_amount)}</td>
