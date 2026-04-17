@@ -133,7 +133,7 @@ export default function CalendarView() {
   const [direction, setDirection] = useState(1);
   const [showSearch, setShowSearch] = useState(false);
   const navigate = useNavigate();
-  const { tr, language } = useSettings();
+  const { tr, language, swapNameEventType } = useSettings();
 
   useEffect(() => { getCalendarEvents().then(setEvents).catch(console.error); }, []);
 
@@ -341,7 +341,7 @@ export default function CalendarView() {
                           >
                             <EvIcon size={9} style={{ color: c.fg }} strokeWidth={2.2} className="flex-shrink-0" />
                             <span className="text-[10px] font-bold truncate leading-tight" style={{ color: c.fg }}>
-                              {ev.client_name}
+                              {swapNameEventType ? ev.event_type : ev.client_name}
                             </span>
                           </motion.div>
                         );

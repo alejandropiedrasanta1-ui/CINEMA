@@ -130,7 +130,7 @@ export default function Dashboard() {
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
   const navigate = useNavigate();
-  const { tr, formatCurrency, language, activeStatuses } = useSettings();
+  const { tr, formatCurrency, language, activeStatuses, swapNameEventType } = useSettings();
   const d = tr.dashboard;
 
   // Build dynamic status color lookup
@@ -290,8 +290,12 @@ export default function Dashboard() {
                       <EvIcon size={14} style={{ color: cfg.fg }} strokeWidth={1.8} />
                     </div>
                     <div className="min-w-0">
-                      <p className="text-sm font-bold text-slate-900 truncate">{r.client_name}</p>
-                      <p className="text-xs text-slate-400">{r.event_type}</p>
+                      <p className="text-sm font-bold text-slate-900 truncate">
+                        {swapNameEventType ? r.event_type : r.client_name}
+                      </p>
+                      <p className="text-xs text-slate-400">
+                        {swapNameEventType ? r.client_name : r.event_type}
+                      </p>
                     </div>
                   </div>
                   <div className="flex items-center gap-3 ml-4">
