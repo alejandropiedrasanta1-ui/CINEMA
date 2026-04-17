@@ -15,13 +15,9 @@ export default function SocioForm({ socio, onClose, onSaved }) {
   const dc = FORM_DESIGN_CONFIGS[socioFormDesign] || FORM_DESIGN_CONFIGS.aurora;
   const isEdit = !!socio;
 
-  const Label = ({ children }) => (
-    <label className={dc.labelClass} style={dc.labelStyle}>{children}</label>
-  );
-
-  const [saving, setSaving]           = useState(false);
+  const [saving, setSaving]             = useState(false);
   const [photoPreview, setPhotoPreview] = useState(null);
-  const [photoFile, setPhotoFile]     = useState(null);
+  const [photoFile, setPhotoFile]       = useState(null);
   const [form, setForm] = useState({
     name:"", role:"Fotógrafo", phone:"", email:"", notes:"", rate_per_event:"",
   });
@@ -34,7 +30,7 @@ export default function SocioForm({ socio, onClose, onSaved }) {
     }
   }, [socio]);
 
-  const set = (f) => (e) => setForm(p => ({ ...p, [f]: e.target.value }));
+  const set = (field) => (e) => setForm(p => ({ ...p, [field]: e.target.value }));
 
   const handlePhotoChange = (e) => {
     const file = e.target.files[0];
@@ -46,7 +42,7 @@ export default function SocioForm({ socio, onClose, onSaved }) {
   };
 
   const handleSubmit = async (e) => {
-    e.preventDefault();
+    if (e && e.preventDefault) e.preventDefault();
     if (!form.name.trim()) { toast({ title:"Nombre requerido", variant:"destructive" }); return; }
     setSaving(true);
     try {
@@ -67,11 +63,13 @@ export default function SocioForm({ socio, onClose, onSaved }) {
   };
 
   const inp = dc.inp;
+  const lbl = dc.labelClass;
+  const ls  = dc.labelStyle;
   const title = isEdit ? "Editar Socio" : "Nuevo Socio";
   const submitLabel = saving ? "Guardando…" : isEdit ? "Guardar cambios" : "Crear socio";
 
-  // ── Photo component (reused in both layouts) ──────────────────────────────
-  const PhotoBlock = () => sf.photo !== false ? (
+  // ── Bloque de foto (JSX inlineado — no sub-componente) ────────────────────
+  const photoBlock = sf.photo !== false ? (
     <div className="flex-shrink-0 flex flex-col items-center gap-3">
       <label className="relative cursor-pointer group">
         <div className="w-32 h-32 rounded-2xl overflow-hidden ring-4 ring-white/40 shadow-lg">
@@ -91,6 +89,67 @@ export default function SocioForm({ socio, onClose, onSaved }) {
     </div>
   ) : null;
 
+  // ── Campos del socio (inlineados) ─────────────────────────────────────────
+  const socioFields = (
+    <div className="flex gap-6 items-start">
+      {photoBlock}
+      <div className="flex-1 space-y-3">
+        {/* Nombre */}
+        <div>
+          <label className={lbl} style={ls}>Nombre completo *</label>
+          <input value={form.name} onChange={set("name")} placeholder="Ej: Carlos Pérez" required
+            data-testid="input-socio-name" className={inp} style={dc.inpStyle}/>
+        </div>
+        {/* Rol */}
+        <div>
+          <label className={lbl} style={ls}>Rol *</label>
+          <div className="grid grid-cols-3 gap-2">
+            {ROLES.map(r => (
+              <motion.button key={r} type="button" whileHover={{ scale:1.02 }} whileTap={{ scale:0.97 }}
+                onClick={() => setForm(p => ({ ...p, role:r }))}
+                className={`py-3 rounded-xl text-xs font-bold transition-all ${form.role===r ? "btn-primary text-white shadow-md" : dc.isDark ? "bg-white/10 border border-white/20 text-white/80 hover:bg-white/15" : "bg-white border border-slate-200 text-slate-600 hover:bg-slate-50"}`}
+                data-testid={`role-${r.toLowerCase()}`}>
+                {r==="Fotógrafo"?"📷":r==="Videógrafo"?"🎥":"👤"} {r}
+              </motion.button>
+            ))}
+          </div>
+        </div>
+        {/* Phone + Rate + Email */}
+        <div className="flex flex-wrap gap-3">
+          {sf.phone !== false && (
+            <div className="flex-1 min-w-[120px]">
+              <label className={lbl} style={ls}>Teléfono</label>
+              <input value={form.phone} onChange={set("phone")} placeholder="+502…"
+                data-testid="input-socio-phone" className={inp} style={dc.inpStyle}/>
+            </div>
+          )}
+          {sf.rate !== false && (
+            <div className="flex-1 min-w-[110px]">
+              <label className={lbl} style={ls}>Tarifa</label>
+              <input type="number" value={form.rate_per_event} onChange={set("rate_per_event")} placeholder="Q 2,000" min="0"
+                data-testid="input-socio-rate" className={inp} style={dc.inpStyle}/>
+            </div>
+          )}
+          {sf.email !== false && (
+            <div className="flex-1 min-w-[130px]">
+              <label className={lbl} style={ls}>Email</label>
+              <input type="email" value={form.email} onChange={set("email")} placeholder="correo@…"
+                data-testid="input-socio-email" className={inp} style={dc.inpStyle}/>
+            </div>
+          )}
+        </div>
+        {/* Notes */}
+        {sf.notes !== false && (
+          <div>
+            <label className={lbl} style={ls}>Notas</label>
+            <input value={form.notes} onChange={set("notes")} placeholder="Especialidades, equipo, disponibilidad…"
+              data-testid="input-socio-notes" className={inp} style={dc.inpStyle}/>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+
   // ── FLOATING LAYOUT ───────────────────────────────────────────────────────
   if (dc.layout === "floating") {
     return (
@@ -109,11 +168,11 @@ export default function SocioForm({ socio, onClose, onSaved }) {
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.94, y: 16 }}
             transition={{ duration: 0.3, ease: [0.22,1,0.36,1] }}
-            className={`w-full ${dc.cardMaxWidth || "max-w-2xl"} ${dc.cardRadius || "rounded-3xl"} overflow-hidden ${dc.cardShadow || "shadow-2xl"}`}
+            className={`w-full ${dc.cardMaxWidth||"max-w-2xl"} ${dc.cardRadius||"rounded-3xl"} overflow-hidden ${dc.cardShadow||"shadow-2xl"}`}
             style={{ background: dc.cardBg, backdropFilter: dc.cardBackdrop||"none", WebkitBackdropFilter: dc.cardBackdrop||"none", isolation:"isolate" }}
             onClick={(e) => e.stopPropagation()}
           >
-            {/* Accent bar (Tarjeta / App) */}
+            {/* Accent bar */}
             {dc.accentBar && (
               <div className="flex items-center gap-3 px-6 py-3.5" style={{ background: dc.accentBar }}>
                 <button type="button" onClick={onClose} data-testid="cancel-socio-btn"
@@ -131,15 +190,13 @@ export default function SocioForm({ socio, onClose, onSaved }) {
                 </motion.button>
               </div>
             )}
-
-            {/* Top bar */}
+            {/* Top bar (no accent) */}
             {!dc.accentBar && (
               <div className={`flex items-center justify-between px-6 py-4 border-b ${dc.barClass}`}>
                 <div className="flex items-center gap-3">
-                  <button type="button" onClick={onClose}
-                    className={`flex items-center gap-1.5 text-sm font-bold px-3 py-2 rounded-full transition-all ${dc.cancelClass}`}
-                    data-testid="cancel-socio-btn">
-                    <ArrowLeft size={14}/> Cerrar
+                  <button type="button" onClick={onClose} data-testid="cancel-socio-btn"
+                    className={`flex items-center gap-1.5 text-sm font-bold px-3 py-2 rounded-full transition-all ${dc.cancelClass}`}>
+                    <ArrowLeft size={13}/> Cerrar
                   </button>
                   <h2 className={`text-lg font-black ${dc.titleClass}`} style={{ fontFamily:"Cabinet Grotesk, sans-serif" }}>
                     {title}
@@ -159,72 +216,8 @@ export default function SocioForm({ socio, onClose, onSaved }) {
                 </div>
               </div>
             )}
-
-            {/* Form body */}
             <form onSubmit={handleSubmit} className="px-6 py-5">
-              <div className="flex gap-6 items-start">
-                <PhotoBlock />
-                <div className="flex-1 space-y-3">
-                  {/* Nombre */}
-                  <div>
-                    <Label>Nombre completo *</Label>
-                    <input value={form.name} onChange={set("name")} placeholder="Ej: Carlos Pérez" required data-testid="input-socio-name" className={inp} style={dc.inpStyle}/>
-                  </div>
-                  {/* Rol */}
-                  <div>
-                    <Label>Rol *</Label>
-                    <div className="grid grid-cols-3 gap-2">
-                      {ROLES.map(r => (
-                        <motion.button key={r} type="button" whileHover={{ scale:1.02 }} whileTap={{ scale:0.97 }}
-                          onClick={() => setForm(p => ({ ...p, role:r }))}
-                          className={`py-3 rounded-xl text-xs font-bold transition-all ${form.role===r ? "btn-primary text-white shadow-md" : dc.isDark ? "bg-white/10 border border-white/20 text-white/80 hover:bg-white/15" : "bg-white border border-slate-200 text-slate-600 hover:bg-slate-50"}`}
-                          data-testid={`role-${r.toLowerCase()}`}>
-                          {r==="Fotógrafo"?"📷":r==="Videógrafo"?"🎥":"👤"} {r}
-                        </motion.button>
-                      ))}
-                    </div>
-                  </div>
-                  {/* Phone + Rate + Email */}
-                  <div className="grid grid-cols-3 gap-3">
-                    {sf.phone !== false && (
-                      <div>
-                        <Label>Teléfono</Label>
-                        <input value={form.phone} onChange={set("phone")} placeholder="+502…" data-testid="input-socio-phone" className={inp} style={dc.inpStyle}/>
-                      </div>
-                    )}
-                    {sf.rate !== false && (
-                      <div>
-                        <Label>Tarifa</Label>
-                        <input type="number" value={form.rate_per_event} onChange={set("rate_per_event")} placeholder="Q 2,000" min="0" data-testid="input-socio-rate" className={inp} style={dc.inpStyle}/>
-                      </div>
-                    )}
-                    {sf.email !== false && (
-                      <div>
-                        <Label>Email</Label>
-                        <input type="email" value={form.email} onChange={set("email")} placeholder="correo@…" data-testid="input-socio-email" className={inp} style={dc.inpStyle}/>
-                      </div>
-                    )}
-                  </div>
-                  {/* Notes */}
-                  {sf.notes !== false && (
-                    <div>
-                      <Label>Notas</Label>
-                      <input value={form.notes} onChange={set("notes")} placeholder="Especialidades, equipo, disponibilidad…" data-testid="input-socio-notes" className={inp} style={dc.inpStyle}/>
-                    </div>
-                  )}
-                  {/* Submit for accentBar designs */}
-                  {dc.accentBar && (
-                    <div className="flex justify-end pt-1">
-                      <motion.button whileHover={{ scale:1.03 }} whileTap={{ scale:0.97 }} type="button" onClick={handleSubmit}
-                        disabled={saving}
-                        className="px-8 py-3 rounded-full btn-primary text-white font-bold text-sm disabled:opacity-60 shadow-md"
-                        data-testid="submit-socio-btn">
-                        {submitLabel}
-                      </motion.button>
-                    </div>
-                  )}
-                </div>
-              </div>
+              {socioFields}
             </form>
           </motion.div>
         </motion.div>
@@ -248,7 +241,7 @@ export default function SocioForm({ socio, onClose, onSaved }) {
             data-testid="cancel-socio-btn">
             <ArrowLeft size={16}/> Cancelar
           </motion.button>
-          <h1 className={`text-2xl font-black ${dc.titleClass}`} style={{ fontFamily:'Cabinet Grotesk, sans-serif' }}>
+          <h1 className={`text-2xl font-black ${dc.titleClass}`} style={{ fontFamily:"Cabinet Grotesk, sans-serif" }}>
             {title}
           </h1>
         </div>
@@ -259,55 +252,9 @@ export default function SocioForm({ socio, onClose, onSaved }) {
           {submitLabel}
         </motion.button>
       </div>
-
       <form onSubmit={handleSubmit} className="flex-1 flex items-center justify-center px-10 py-8">
-        <div className="w-full max-w-3xl flex gap-10 items-start">
-          <PhotoBlock />
-          <div className="flex-1 flex flex-col gap-6">
-            <div>
-              <Label>Nombre completo *</Label>
-              <input value={form.name} onChange={set("name")} placeholder="Ej: Carlos Pérez" required data-testid="input-socio-name" className={inp} style={dc.inpStyle}/>
-            </div>
-            <div>
-              <Label>Rol *</Label>
-              <div className="grid grid-cols-3 gap-3">
-                {ROLES.map(r => (
-                  <motion.button key={r} type="button" whileHover={{ scale:1.02 }} whileTap={{ scale:0.97 }}
-                    onClick={() => setForm(p => ({ ...p, role:r }))}
-                    className={`py-4 rounded-2xl text-sm font-bold transition-all ${form.role===r ? "btn-primary text-white shadow-md" : dc.isDark ? "bg-white/10 border border-white/20 text-white/80 hover:bg-white/20" : "bg-white/70 border-2 border-white/80 text-slate-600 hover:bg-white"}`}
-                    data-testid={`role-${r.toLowerCase()}`}>
-                    {r==="Fotógrafo"?"📷":r==="Videógrafo"?"🎥":"👤"} {r}
-                  </motion.button>
-                ))}
-              </div>
-            </div>
-            <div className="grid grid-cols-3 gap-5">
-              {sf.phone !== false && (
-                <div>
-                  <Label>Teléfono</Label>
-                  <input value={form.phone} onChange={set("phone")} placeholder="+502 1234 5678" data-testid="input-socio-phone" className={inp} style={dc.inpStyle}/>
-                </div>
-              )}
-              {sf.rate !== false && (
-                <div>
-                  <Label>Tarifa por evento</Label>
-                  <input type="number" value={form.rate_per_event} onChange={set("rate_per_event")} placeholder="Q 2,000" min="0" data-testid="input-socio-rate" className={inp} style={dc.inpStyle}/>
-                </div>
-              )}
-              {sf.email !== false && (
-                <div>
-                  <Label>Email</Label>
-                  <input type="email" value={form.email} onChange={set("email")} placeholder="correo@email.com" data-testid="input-socio-email" className={inp} style={dc.inpStyle}/>
-                </div>
-              )}
-            </div>
-            {sf.notes !== false && (
-              <div>
-                <Label>Notas</Label>
-                <input value={form.notes} onChange={set("notes")} placeholder="Especialidades, equipo, disponibilidad…" data-testid="input-socio-notes" className={inp} style={dc.inpStyle}/>
-              </div>
-            )}
-          </div>
+        <div className="w-full max-w-3xl">
+          {socioFields}
         </div>
       </form>
     </motion.div>

@@ -1,0 +1,27 @@
+{
+  "summary": "Tested the critical bug fix: selections (event type dropdown, role buttons) no longer reset when typing in other fields. Both ReservationForm and SocioForm use inlined JSX variables instead of sub-components, preventing React unmount/remount. All 10 test scenarios passed.",
+  "backend_issues": { "critical": [], "minor": [] },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": []
+  },
+  "test_report_links": [],
+  "action_items": [],
+  "critical_code_review_comments": [],
+  "updated_files": [],
+  "success_rate": { "backend": "N/A", "frontend": "100%" },
+  "seed_data_creation": "Created test reservation 'Ana Martinez' Quinceañera Q5000 Confirmado 2026-06-15",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "Bug fix verified: formFields in ReservationForm.jsx and socioFields/photoBlock in SocioForm.jsx are now inlined JSX variables (not sub-components). Selections persist across keystrokes. Design is 'Glass Aurora' fullscreen layout.",
+  "test_results": {
+    "event_type_persists_after_name_input": "PASS - Quinceañera stays after typing Ana Martinez",
+    "event_type_persists_after_phone_input": "PASS - Quinceañera stays after typing phone",
+    "status_persists_after_date_input": "PASS - Confirmado stays after filling date",
+    "reservation_creation": "PASS - Toast 'Reserva creada' shown",
+    "videografo_role_persists_after_name_input": "PASS - Videógrafo btn-primary after typing Pedro Gomez",
+    "videografo_role_persists_after_phone_input": "PASS - Videógrafo btn-primary after typing phone",
+    "fotografo_not_highlighted": "PASS - Fotógrafo not selected when Videógrafo is chosen"
+  }
+}

@@ -17,10 +17,6 @@ export default function ReservationForm({ reservation, onClose, onSaved }) {
   const dc = FORM_DESIGN_CONFIGS[reservationFormDesign] || FORM_DESIGN_CONFIGS.aurora;
   const isEdit = !!reservation;
 
-  const Label = ({ children }) => (
-    <label className={dc.labelClass} style={dc.labelStyle}>{children}</label>
-  );
-
   const [form, setForm] = useState({
     client_name:"", client_phone:"", client_email:"",
     event_type:"Boda", event_date:"", event_time:"",
@@ -73,30 +69,32 @@ export default function ReservationForm({ reservation, onClose, onSaved }) {
 
   const inp = dc.inp;
   const sel = `${dc.inp} cursor-pointer`;
+  const lbl = dc.labelClass;
+  const ls  = dc.labelStyle;
   const title = isEdit ? "Editar Reserva" : "Nueva Reserva";
   const submitLabel = saving ? "Guardando…" : isEdit ? "Guardar cambios" : "Crear reserva";
 
-  // ── Filas de campos con flex-wrap (distribución automática) ──────────────
-  const FieldRows = () => (
+  // ── Campos del formulario (JSX inlineado — sin sub-componentes para evitar re-mount) ──
+  const formFields = (
     <div className="space-y-4">
 
       {/* Fila 1 — Cliente */}
       <div className="flex flex-wrap gap-3">
         <div className="flex-[2] min-w-[180px]">
-          <Label>{f.clientName} *</Label>
+          <label className={lbl} style={ls}>{f.clientName} *</label>
           <input value={form.client_name} onChange={set("client_name")} placeholder="Ej: María García" required
             data-testid="input-client-name" className={inp} style={dc.inpStyle}/>
         </div>
         {ff.phone !== false && (
           <div className="flex-1 min-w-[140px]">
-            <Label>{f.phone}</Label>
+            <label className={lbl} style={ls}>{f.phone}</label>
             <input value={form.client_phone} onChange={set("client_phone")} placeholder="+502 1234…"
               data-testid="input-phone" className={inp} style={dc.inpStyle}/>
           </div>
         )}
         {ff.email !== false && (
           <div className="flex-1 min-w-[150px]">
-            <Label>{f.email}</Label>
+            <label className={lbl} style={ls}>{f.email}</label>
             <input type="email" value={form.client_email} onChange={set("client_email")} placeholder="correo@email.com"
               data-testid="input-email" className={inp} style={dc.inpStyle}/>
           </div>
@@ -106,27 +104,27 @@ export default function ReservationForm({ reservation, onClose, onSaved }) {
       {/* Fila 2 — Evento */}
       <div className="flex flex-wrap gap-3">
         <div className="flex-1 min-w-[140px]">
-          <Label>{f.eventType}</Label>
+          <label className={lbl} style={ls}>{f.eventType}</label>
           <select value={form.event_type} onChange={set("event_type")} required
             data-testid="input-event-type" className={sel} style={dc.inpStyle}>
             {EVENT_TYPES.map(t => <option key={t} value={t} className="bg-white text-slate-800">{getEventTypeName(t)}</option>)}
           </select>
         </div>
         <div className="flex-1 min-w-[130px]">
-          <Label>{f.status}</Label>
+          <label className={lbl} style={ls}>{f.status}</label>
           <select value={form.status} onChange={set("status")}
             data-testid="input-status" className={sel} style={dc.inpStyle}>
             {activeStatuses.map(s => <option key={s.key} value={s.key} className="bg-white text-slate-800">{s.label}</option>)}
           </select>
         </div>
         <div className="flex-1 min-w-[140px]">
-          <Label>{f.eventDate} *</Label>
+          <label className={lbl} style={ls}>{f.eventDate} *</label>
           <input type="date" value={form.event_date} onChange={set("event_date")} required
             data-testid="input-event-date" className={inp} style={dc.inpStyle}/>
         </div>
         {ff.time !== false && (
           <div className="flex-1 min-w-[110px]">
-            <Label>{f.time}</Label>
+            <label className={lbl} style={ls}>{f.time}</label>
             <input type="time" value={form.event_time} onChange={set("event_time")}
               data-testid="input-event-time" className={inp} style={dc.inpStyle}/>
           </div>
@@ -137,20 +135,20 @@ export default function ReservationForm({ reservation, onClose, onSaved }) {
       <div className="flex flex-wrap gap-3">
         {ff.venue !== false && (
           <div className="flex-[2] min-w-[180px]">
-            <Label>{f.venue}</Label>
+            <label className={lbl} style={ls}>{f.venue}</label>
             <input value={form.venue} onChange={set("venue")} placeholder="Salón / Hotel…"
               data-testid="input-venue" className={inp} style={dc.inpStyle}/>
           </div>
         )}
         {ff.guests !== false && (
           <div className="flex-1 min-w-[110px]">
-            <Label>{f.guests}</Label>
+            <label className={lbl} style={ls}>{f.guests}</label>
             <input type="number" value={form.guests_count} onChange={set("guests_count")} placeholder="150" min="0"
               data-testid="input-guests" className={inp} style={dc.inpStyle}/>
           </div>
         )}
         <div className="flex-1 min-w-[130px]">
-          <Label>{f.totalAmount} *</Label>
+          <label className={lbl} style={ls}>{f.totalAmount} *</label>
           <input type="number" value={form.total_amount} onChange={set("total_amount")} placeholder="50,000" min="0" step="0.01" required
             data-testid="input-total" className={inp} style={dc.inpStyle}/>
         </div>
@@ -161,14 +159,14 @@ export default function ReservationForm({ reservation, onClose, onSaved }) {
         <div className="flex flex-wrap gap-3">
           {ff.advance !== false && (
             <div className="flex-1 min-w-[130px]">
-              <Label>{f.advancePaid}</Label>
+              <label className={lbl} style={ls}>{f.advancePaid}</label>
               <input type="number" value={form.advance_paid} onChange={set("advance_paid")} placeholder="10,000" min="0" step="0.01"
                 data-testid="input-advance" className={inp} style={dc.inpStyle}/>
             </div>
           )}
           {ff.notes !== false && (
             <div className="flex-[3] min-w-[200px]">
-              <Label>{f.notes}</Label>
+              <label className={lbl} style={ls}>{f.notes}</label>
               <input value={form.notes} onChange={set("notes")} placeholder="Detalles especiales, temas, requerimientos…"
                 data-testid="input-notes" className={inp} style={dc.inpStyle}/>
             </div>
@@ -176,54 +174,6 @@ export default function ReservationForm({ reservation, onClose, onSaved }) {
         </div>
       )}
     </div>
-  );
-
-  // ── TOP BAR compartido para floating ──────────────────────────────────────
-  const FloatingTopBar = () => (
-    <>
-      {dc.accentBar && (
-        <div className="flex items-center gap-3 px-6 py-3.5" style={{ background: dc.accentBar }}>
-          <button type="button" onClick={onClose} data-testid="cancel-form-btn"
-            className={`flex items-center gap-1.5 text-sm font-bold px-3 py-1.5 rounded-full transition-all ${dc.cancelClass}`}>
-            <ArrowLeft size={13}/>
-          </button>
-          <h2 className={`flex-1 text-base font-black ${dc.titleClass}`} style={{ fontFamily:"Cabinet Grotesk, sans-serif" }}>
-            {title}
-          </h2>
-          <motion.button whileHover={{ scale:1.03 }} whileTap={{ scale:0.97 }} type="button" onClick={handleSubmit}
-            disabled={saving}
-            className="px-5 py-2 rounded-full bg-white/20 border border-white/30 text-white font-bold text-sm disabled:opacity-60 hover:bg-white/30 transition-all"
-            data-testid="submit-form-btn">
-            {submitLabel}
-          </motion.button>
-        </div>
-      )}
-      {!dc.accentBar && (
-        <div className={`flex items-center justify-between px-6 py-4 border-b ${dc.barClass}`}>
-          <div className="flex items-center gap-3">
-            <button type="button" onClick={onClose} data-testid="cancel-form-btn"
-              className={`flex items-center gap-1.5 text-sm font-bold px-3 py-2 rounded-full transition-all ${dc.cancelClass}`}>
-              <ArrowLeft size={13}/> Cancelar
-            </button>
-            <h2 className={`text-lg font-black ${dc.titleClass}`} style={{ fontFamily:"Cabinet Grotesk, sans-serif" }}>
-              {title}
-            </h2>
-          </div>
-          <div className="flex items-center gap-2">
-            <motion.button whileHover={{ scale:1.03 }} whileTap={{ scale:0.97 }} type="button" onClick={handleSubmit}
-              disabled={saving}
-              className="px-6 py-2.5 rounded-full btn-primary text-white font-bold text-sm disabled:opacity-60 shadow-md"
-              data-testid="submit-form-btn">
-              {submitLabel}
-            </motion.button>
-            <button type="button" onClick={onClose}
-              className={`w-9 h-9 rounded-full flex items-center justify-center transition-all ${dc.cancelClass}`}>
-              <X size={15}/>
-            </button>
-          </div>
-        </div>
-      )}
-    </>
   );
 
   // ── FLOATING LAYOUT ───────────────────────────────────────────────────────
@@ -248,9 +198,52 @@ export default function ReservationForm({ reservation, onClose, onSaved }) {
             style={{ background: dc.cardBg, backdropFilter: dc.cardBackdrop||"none", WebkitBackdropFilter: dc.cardBackdrop||"none", isolation:"isolate" }}
             onClick={(e) => e.stopPropagation()}
           >
-            <FloatingTopBar />
+            {/* Accent bar */}
+            {dc.accentBar && (
+              <div className="flex items-center gap-3 px-6 py-3.5" style={{ background: dc.accentBar }}>
+                <button type="button" onClick={onClose} data-testid="cancel-form-btn"
+                  className={`flex items-center gap-1.5 text-sm font-bold px-3 py-1.5 rounded-full transition-all ${dc.cancelClass}`}>
+                  <ArrowLeft size={13}/>
+                </button>
+                <h2 className={`flex-1 text-base font-black ${dc.titleClass}`} style={{ fontFamily:"Cabinet Grotesk, sans-serif" }}>
+                  {title}
+                </h2>
+                <motion.button whileHover={{ scale:1.03 }} whileTap={{ scale:0.97 }} type="button" onClick={handleSubmit}
+                  disabled={saving}
+                  className="px-5 py-2 rounded-full bg-white/20 border border-white/30 text-white font-bold text-sm disabled:opacity-60 hover:bg-white/30 transition-all"
+                  data-testid="submit-form-btn">
+                  {submitLabel}
+                </motion.button>
+              </div>
+            )}
+            {/* Top bar (no accent) */}
+            {!dc.accentBar && (
+              <div className={`flex items-center justify-between px-6 py-4 border-b ${dc.barClass}`}>
+                <div className="flex items-center gap-3">
+                  <button type="button" onClick={onClose} data-testid="cancel-form-btn"
+                    className={`flex items-center gap-1.5 text-sm font-bold px-3 py-2 rounded-full transition-all ${dc.cancelClass}`}>
+                    <ArrowLeft size={13}/> Cancelar
+                  </button>
+                  <h2 className={`text-lg font-black ${dc.titleClass}`} style={{ fontFamily:"Cabinet Grotesk, sans-serif" }}>
+                    {title}
+                  </h2>
+                </div>
+                <div className="flex items-center gap-2">
+                  <motion.button whileHover={{ scale:1.03 }} whileTap={{ scale:0.97 }} type="button" onClick={handleSubmit}
+                    disabled={saving}
+                    className="px-6 py-2.5 rounded-full btn-primary text-white font-bold text-sm disabled:opacity-60 shadow-md"
+                    data-testid="submit-form-btn">
+                    {submitLabel}
+                  </motion.button>
+                  <button type="button" onClick={onClose}
+                    className={`w-9 h-9 rounded-full flex items-center justify-center transition-all ${dc.cancelClass}`}>
+                    <X size={15}/>
+                  </button>
+                </div>
+              </div>
+            )}
             <form onSubmit={handleSubmit} className="px-6 py-5">
-              <FieldRows />
+              {formFields}
             </form>
           </motion.div>
         </motion.div>
@@ -287,7 +280,7 @@ export default function ReservationForm({ reservation, onClose, onSaved }) {
       </div>
       <form onSubmit={handleSubmit} className="flex-1 flex flex-col justify-center px-10 py-8">
         <div className="w-full max-w-5xl mx-auto">
-          <FieldRows />
+          {formFields}
         </div>
       </form>
     </motion.div>
