@@ -290,22 +290,36 @@ async def root():
 async def get_stats():
     total = await db.reservations.count_documents({})
     today_str = datetime.now(timezone.utc).strftime("%Y-%m-%d")
+    # Fetch all active reservations (include assigned_partners for real_income)
     all_res = await db.reservations.find(
-        {}, {"event_date": 1, "status": 1, "total_amount": 1, "advance_paid": 1, "_id": 0}
+        {},
+        {"event_date": 1, "status": 1, "total_amount": 1, "advance_paid": 1,
+         "assigned_partners": 1, "_id": 0}
     ).to_list(10000)
-    upcoming = sum(1 for d in all_res
-                   if d.get("event_date", "") >= today_str
-                   and d.get("status") not in ("Cancelado", "Completado"))
+
+    upcoming = sum(
+        1 for d in all_res
+        if d.get("event_date", "") >= today_str
+        and d.get("status") not in ("Cancelado", "Completado")
+    )
+    active_docs = [d for d in all_res if d.get("status") not in ("Cancelado",)]
+
     total_pending = sum(
         max(0, (d.get("total_amount") or 0) - (d.get("advance_paid") or 0))
-        for d in all_res if d.get("status") not in ("Cancelado",)
+        for d in active_docs
     )
-    confirmed = sum(1 for d in all_res if d.get("status") == "Confirmado")
+    total_event_amount = sum((d.get("total_amount") or 0) for d in active_docs)
+    total_partner_cost = sum(
+        p.get("payment", 0) or 0
+        for d in active_docs
+        for p in (d.get("assigned_partners") or [])
+    )
+
     return {
         "total_reservations": total,
         "upcoming_events": upcoming,
         "pending_payment": round(total_pending, 2),
-        "confirmed": confirmed
+        "real_income": round(total_event_amount - total_partner_cost, 2),
     }
 
 
