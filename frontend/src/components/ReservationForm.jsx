@@ -18,7 +18,7 @@ export default function ReservationForm({ reservation, onClose, onSaved }) {
   const isEdit = !!reservation;
 
   const [form, setForm] = useState({
-    client_name:"", client_phone:"", client_email:"",
+    client_name:"Desconocido", client_phone:"", client_email:"",
     event_type:"Boda", event_date:"", event_time:"",
     venue:"", guests_count:"", total_amount:"",
     advance_paid:"0", status:"Pendiente", notes:"",
@@ -43,6 +43,18 @@ export default function ReservationForm({ reservation, onClose, onSaved }) {
   }, [reservation]);
 
   const set = (field) => (e) => setForm(p => ({ ...p, [field]: e.target.value }));
+
+  // Al cambiar a "Completado" → auto-llenar anticipo = total (saldo = 0)
+  const setStatus = (e) => {
+    const newStatus = e.target.value;
+    setForm(prev => ({
+      ...prev,
+      status: newStatus,
+      advance_paid: newStatus === "Completado"
+        ? String(prev.total_amount || prev.advance_paid)
+        : prev.advance_paid,
+    }));
+  };
 
   const handleSubmit = async (e) => {
     if (e && e.preventDefault) e.preventDefault();
@@ -112,7 +124,7 @@ export default function ReservationForm({ reservation, onClose, onSaved }) {
         </div>
         <div className="flex-1 min-w-[130px]">
           <label className={lbl} style={ls}>{f.status}</label>
-          <select value={form.status} onChange={set("status")}
+          <select value={form.status} onChange={setStatus}
             data-testid="input-status" className={sel} style={dc.inpStyle}>
             {activeStatuses.map(s => <option key={s.key} value={s.key} className="bg-white text-slate-800">{s.label}</option>)}
           </select>

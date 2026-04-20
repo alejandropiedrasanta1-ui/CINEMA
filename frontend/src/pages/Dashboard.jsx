@@ -167,6 +167,7 @@ export default function Dashboard() {
   const dateStr = new Date().toLocaleDateString(language === "es" ? "es-MX" : "en-US", { weekday: "long", year: "numeric", month: "long", day: "numeric" });
 
   const active = all.filter(r => r.status !== "Cancelado");
+  const totalEventAmount = active.reduce((sum, r) => sum + (r.total_amount || 0), 0);
   const typeData = active.reduce((acc, r) => {
     acc[r.event_type || "Otro"] = (acc[r.event_type || "Otro"] || 0) + 1;
     return acc;
@@ -219,7 +220,7 @@ export default function Dashboard() {
         >
           <StatCard icon={CalendarDays} label={d.upcoming} value={recent.length} sub={currentMonthName} gradient={STAT_GRADIENTS[0]} />
           <StatCard icon={Clock} label={d.total} value={stats?.total_reservations ?? 0} sub={d.totalSub} gradient={STAT_GRADIENTS[3]} />
-          <StatCard icon={CreditCard} label={d.pending} value={formatCurrency(stats?.pending_payment)} sub={d.pendingSub} gradient={STAT_GRADIENTS[2]} />
+          <StatCard icon={CreditCard} label={language === "es" ? "Total Eventos" : "Total Events"} value={formatCurrency(totalEventAmount)} sub={language === "es" ? "Suma total activos" : "All active events"} gradient={STAT_GRADIENTS[2]} />
           <StatCard icon={DollarSign} label={d.realIncome} value={formatCurrency(stats?.real_income)} sub={d.realIncomeSub} gradient={STAT_GRADIENTS[1]} />
         </motion.div>
       )}
