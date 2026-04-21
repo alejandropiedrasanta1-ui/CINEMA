@@ -130,7 +130,7 @@ export default function Dashboard() {
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
   const navigate = useNavigate();
-  const { tr, formatCurrency, language, activeStatuses, swapNameEventType } = useSettings();
+  const { tr, formatCurrency, language, activeStatuses, swapNameEventType, dashboardWidgets } = useSettings();
   const d = tr.dashboard;
 
   // Build dynamic status color lookup
@@ -168,11 +168,30 @@ export default function Dashboard() {
 
   const active = all.filter(r => r.status !== "Cancelado");
   const totalEventAmount = active.reduce((sum, r) => sum + (r.total_amount || 0), 0);
+  const completedIncome  = all.filter(r => r.status === "Completado").reduce((sum, r) => sum + (r.total_amount || 0), 0);
+  const advanceIncome    = active.reduce((sum, r) => sum + (r.advance_paid || 0), 0);
+  const pendingBalance   = active.reduce((sum, r) => sum + ((r.total_amount || 0) - (r.advance_paid || 0)), 0);
+  const monthlyIncome    = recent.reduce((sum, r) => sum + (r.total_amount || 0), 0);
+
   const typeData = active.reduce((acc, r) => {
     acc[r.event_type || "Otro"] = (acc[r.event_type || "Otro"] || 0) + 1;
     return acc;
   }, {});
   const typeEntries = Object.entries(typeData).sort((a, b) => b[1] - a[1]);
+
+  // Build ordered, enabled widget list
+  const WIDGET_DATA = {
+    upcoming:      { icon: CalendarDays, label: d.upcoming,                                                value: recent.length,                  sub: currentMonthName,                                                   gradient: STAT_GRADIENTS[0] },
+    total_res:     { icon: Clock,        label: d.total,                                                   value: stats?.total_reservations ?? 0, sub: d.totalSub,                                                         gradient: STAT_GRADIENTS[3] },
+    total_events:  { icon: CreditCard,   label: language === "es" ? "Total Eventos"  : "Total Events",    value: formatCurrency(totalEventAmount), sub: language === "es" ? "Suma total activos"    : "All active events",  gradient: STAT_GRADIENTS[2] },
+    real_income:   { icon: DollarSign,   label: d.realIncome,                                             value: formatCurrency(stats?.real_income), sub: d.realIncomeSub,                                                  gradient: STAT_GRADIENTS[1] },
+    completed_inc: { icon: TrendingUp,   label: language === "es" ? "Ingreso Completadas" : "Completed Income", value: formatCurrency(completedIncome),  sub: language === "es" ? "Etiquetas Completado" : "Completed labels", gradient: "linear-gradient(135deg,#22c55e,#16a34a)" },
+    advance_inc:   { icon: CreditCard,   label: language === "es" ? "Anticipos Cobrados" : "Advances Collected", value: formatCurrency(advanceIncome),    sub: language === "es" ? "Total anticipo activos" : "Active advances", gradient: "linear-gradient(135deg,#0ea5e9,#0284c7)" },
+    monthly_inc:   { icon: BarChart2,    label: language === "es" ? "Ingreso del Mes"   : "Monthly Income",  value: formatCurrency(monthlyIncome),    sub: currentMonthName,                                                 gradient: "linear-gradient(135deg,#f43f5e,#e11d48)" },
+    pending_bal:   { icon: Clock,        label: language === "es" ? "Saldo Pendiente"   : "Pending Balance",  value: formatCurrency(pendingBalance),   sub: language === "es" ? "Por cobrar activos"    : "Outstanding balance", gradient: "linear-gradient(135deg,#f97316,#ea580c)" },
+  };
+
+  const visibleWidgets = (dashboardWidgets || []).filter(w => w.enabled && WIDGET_DATA[w.id]);
 
   return (
     <div className="px-6 py-8 max-w-7xl mx-auto">
@@ -218,10 +237,10 @@ export default function Dashboard() {
           className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8"
           data-testid="stats-grid"
         >
-          <StatCard icon={CalendarDays} label={d.upcoming} value={recent.length} sub={currentMonthName} gradient={STAT_GRADIENTS[0]} />
-          <StatCard icon={Clock} label={d.total} value={stats?.total_reservations ?? 0} sub={d.totalSub} gradient={STAT_GRADIENTS[3]} />
-          <StatCard icon={CreditCard} label={language === "es" ? "Total Eventos" : "Total Events"} value={formatCurrency(totalEventAmount)} sub={language === "es" ? "Suma total activos" : "All active events"} gradient={STAT_GRADIENTS[2]} />
-          <StatCard icon={DollarSign} label={d.realIncome} value={formatCurrency(stats?.real_income)} sub={d.realIncomeSub} gradient={STAT_GRADIENTS[1]} />
+          {visibleWidgets.map(w => {
+            const cfg = WIDGET_DATA[w.id];
+            return <StatCard key={w.id} icon={cfg.icon} label={cfg.label} value={cfg.value} sub={cfg.sub} gradient={cfg.gradient} />;
+          })}
         </motion.div>
       )}
 

@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import {
   Palette, CheckCircle, Zap, Pencil, RotateCcw, Upload, ImageIcon, Trash2,
   Sparkles, Layers, SlidersHorizontal, Wind, Maximize2, Monitor, Type, Moon,
-  AlignJustify, BarChart2, LayoutGrid, Shield, MousePointer2, FileText, Columns, Tag, Plus, ToggleLeft,
+  AlignJustify, BarChart2, LayoutGrid, Shield, MousePointer2, FileText, Columns, Tag, Plus, ToggleLeft, GripVertical, LayoutDashboard,
 } from "lucide-react";
 import { useSettings, THEMES, PRESETS } from "@/context/SettingsContext";
 import { getEventConfig, getEventTypeName, AVAILABLE_ICONS, AVAILABLE_COLORS, EVENT_TYPES } from "@/lib/eventConfig";
@@ -165,6 +165,7 @@ export default function AppearancePage() {
     islandMargins, changeIslandMargins,
     formFieldsVisibility, changeFormFieldVisibility, resetFormFieldsVisibility,
     socioFieldsVisibility, changeSocioFieldVisibility, resetSocioFieldsVisibility,
+    dashboardWidgets, changeDashboardWidgets, resetDashboardWidgets,
     swapNameEventType, changeSwapNameEventType,
     reservationFormDesign, changeReservationFormDesign,
     socioFormDesign, changeSocioFormDesign,
@@ -1492,6 +1493,17 @@ export default function AppearancePage() {
               </motion.button>
             </div>
 
+            <div className="border-t border-white/40" />
+
+            {/* ── Tarjetas del Dashboard ── */}
+            <DashboardWidgetsSection
+              es={es}
+              dashboardWidgets={dashboardWidgets}
+              changeDashboardWidgets={changeDashboardWidgets}
+              resetDashboardWidgets={resetDashboardWidgets}
+              toast={toast}
+            />
+
             <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}
               className="flex items-center gap-2 text-[10px] text-sky-600 bg-sky-50/80 px-3 py-2 rounded-xl border border-sky-200/60">
               <ToggleLeft size={11} />
@@ -1520,6 +1532,99 @@ export default function AppearancePage() {
         />
 
       </motion.div>
+    </div>
+  );
+}
+
+// ── Dashboard Widgets Section ────────────────────────────────────────────────
+function DashboardWidgetsSection({ es, dashboardWidgets, changeDashboardWidgets, resetDashboardWidgets, toast }) {
+  const dragIdRef = React.useRef(null);
+  const [dragOverId, setDragOverId] = React.useState(null);
+
+  const handleToggle = (id) => {
+    const next = dashboardWidgets.map(w => w.id === id ? { ...w, enabled: !w.enabled } : w);
+    changeDashboardWidgets(next);
+  };
+
+  const handleDragStart = (e, id) => {
+    dragIdRef.current = id;
+    e.dataTransfer.effectAllowed = "move";
+  };
+  const handleDragOver = (e, id) => {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = "move";
+    setDragOverId(id);
+  };
+  const handleDrop = (e, targetId) => {
+    e.preventDefault();
+    const fromId = dragIdRef.current;
+    if (!fromId || fromId === targetId) { setDragOverId(null); return; }
+    const ids = dashboardWidgets.map(w => w.id);
+    const fromIdx = ids.indexOf(fromId);
+    const toIdx = ids.indexOf(targetId);
+    const next = [...dashboardWidgets];
+    next.splice(fromIdx, 1);
+    next.splice(toIdx, 0, dashboardWidgets[fromIdx]);
+    changeDashboardWidgets(next);
+    setDragOverId(null);
+    dragIdRef.current = null;
+  };
+  const handleDragEnd = () => { setDragOverId(null); dragIdRef.current = null; };
+
+  const enabledCount = dashboardWidgets.filter(w => w.enabled).length;
+
+  return (
+    <div>
+      <div className="flex items-center justify-between mb-3">
+        <div className="flex items-center gap-2">
+          <LayoutDashboard size={12} className="text-slate-400" />
+          <p className="text-[11px] font-black text-slate-400 uppercase tracking-widest">
+            {es ? "Tarjetas del Dashboard" : "Dashboard Cards"}
+          </p>
+          <span className="text-[9px] font-bold px-2 py-0.5 rounded-full bg-indigo-100 text-indigo-600">
+            {enabledCount} {es ? "activas" : "active"}
+          </span>
+        </div>
+        <button onClick={() => { resetDashboardWidgets(); toast({ title: es ? "Tarjetas restablecidas ✓" : "Cards reset ✓" }); }}
+          className="flex items-center gap-1 px-2.5 py-1 rounded-lg bg-slate-100 hover:bg-slate-200 text-[10px] font-bold text-slate-600 transition-all">
+          <RotateCcw size={9} /> {es ? "Restablecer" : "Reset"}
+        </button>
+      </div>
+
+      <p className="text-[10px] text-slate-400 mb-3">
+        {es ? "Arrastra para reordenar · Activa o desactiva las tarjetas" : "Drag to reorder · Toggle cards on/off"}
+      </p>
+
+      <div className="space-y-1.5">
+        {dashboardWidgets.map((w) => (
+          <div key={w.id}
+            draggable
+            onDragStart={e => handleDragStart(e, w.id)}
+            onDragOver={e => handleDragOver(e, w.id)}
+            onDrop={e => handleDrop(e, w.id)}
+            onDragEnd={handleDragEnd}
+            className={`flex items-center gap-3 px-3 py-2.5 rounded-2xl border transition-all cursor-grab select-none ${
+              dragOverId === w.id
+                ? "ring-2 ring-indigo-400 bg-indigo-50/60 border-indigo-200"
+                : w.enabled
+                  ? "bg-white/70 border-white/70 hover:bg-white/90"
+                  : "bg-slate-50/40 border-slate-100 opacity-60"
+            }`}
+            data-testid={`dash-widget-${w.id}`}
+          >
+            <GripVertical size={13} className="text-slate-300 hover:text-slate-500 transition-colors shrink-0" />
+            <p className={`text-sm font-semibold flex-1 ${w.enabled ? "text-slate-700" : "text-slate-400 line-through"}`}>
+              {w.label}
+            </p>
+            <button type="button"
+              onClick={() => { handleToggle(w.id); toast({ title: `${w.label}: ${!w.enabled ? (es ? "activada ✓" : "enabled ✓") : (es ? "desactivada" : "disabled")}` }); }}
+              data-testid={`dash-widget-toggle-${w.id}`}
+              className={`relative w-10 h-5 rounded-full transition-all flex-shrink-0 ${w.enabled ? "btn-primary" : "bg-slate-200"}`}>
+              <span className={`absolute top-0.5 w-4 h-4 rounded-full bg-white shadow transition-all ${w.enabled ? "left-[22px]" : "left-0.5"}`} />
+            </button>
+          </div>
+        ))}
+      </div>
     </div>
   );
 }

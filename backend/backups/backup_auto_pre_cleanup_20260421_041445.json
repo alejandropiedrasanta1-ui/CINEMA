@@ -1,6 +1,6 @@
 {
   "_meta": {
-    "created_at": "2026-04-21T00:23:02.707519+00:00",
+    "created_at": "2026-04-21T04:14:45.771188+00:00",
     "label": "auto_pre_cleanup"
   },
   "reservations": [
@@ -19,7 +19,7 @@
       "notes": "",
       "receipt_images": [],
       "created_at": "2026-04-15T03:35:04.823990+00:00",
-      "id": "69df0768d3e5f3b0da841164"
+      "id": "69e6ef83e84ab7ee1b20dc9a"
     },
     {
       "client_name": "Test Flotante",
@@ -36,7 +36,7 @@
       "notes": "",
       "receipt_images": [],
       "created_at": "2026-04-16T21:31:55.882979+00:00",
-      "id": "69e1554bb5065cefc4e40157"
+      "id": "69e6ef83e84ab7ee1b20dc9b"
     },
     {
       "client_name": "Test Cristal",
@@ -53,7 +53,7 @@
       "notes": "",
       "receipt_images": [],
       "created_at": "2026-04-16T22:01:41.376710+00:00",
-      "id": "69e15c45b5065cefc4e40158"
+      "id": "69e6ef83e84ab7ee1b20dc9c"
     },
     {
       "client_name": "Ana Martinez",
@@ -70,7 +70,7 @@
       "notes": "",
       "receipt_images": [],
       "created_at": "2026-04-16T23:59:43.601377+00:00",
-      "id": "69e177efabd5b3f5fb5bc375"
+      "id": "69e6ef83e84ab7ee1b20dc9d"
     },
     {
       "client_name": "hdfghfg",
@@ -82,12 +82,12 @@
       "venue": "",
       "guests_count": null,
       "total_amount": 7000.0,
-      "advance_paid": 1.0,
-      "status": "Pendiente",
+      "advance_paid": 7000.0,
+      "status": "Completado",
       "notes": "",
       "receipt_images": [],
       "created_at": "2026-04-17T00:27:29.065364+00:00",
-      "id": "69e17e71abd5b3f5fb5bc376"
+      "id": "69e6ef83e84ab7ee1b20dc9e"
     },
     {
       "client_name": "Desconocido",
@@ -104,7 +104,7 @@
       "notes": "",
       "receipt_images": [],
       "created_at": "2026-04-20T23:57:49.016310+00:00",
-      "id": "69e6bd7dce134a78312a2377"
+      "id": "69e6ef83e84ab7ee1b20dc9f"
     },
     {
       "client_name": "Desconocido",
@@ -121,7 +121,7 @@
       "notes": "",
       "receipt_images": [],
       "created_at": "2026-04-20T23:59:51.427110+00:00",
-      "id": "69e6bdf7ce134a78312a2378"
+      "id": "69e6ef83e84ab7ee1b20dca0"
     }
   ],
   "socios": [
@@ -135,7 +135,7 @@
       "photo": null,
       "photo_content_type": null,
       "created_at": "2026-04-15T03:37:19.392357+00:00",
-      "id": "69df07efd3e5f3b0da841165"
+      "id": "69e6ef83e84ab7ee1b20dca1"
     },
     {
       "name": "pp",
@@ -147,7 +147,7 @@
       "photo": null,
       "photo_content_type": null,
       "created_at": "2026-04-15T17:30:27.487831+00:00",
-      "id": "69dfcb33c2dd2790b51605bd"
+      "id": "69e6ef83e84ab7ee1b20dca2"
     }
   ],
   "app_settings": [
@@ -169,7 +169,7 @@
       "telegram_bot_token": "",
       "telegram_chat_id": "",
       "telegram_enabled": true,
-      "id": "69deb5edc8b6e81f5b7e2b00"
+      "id": "69e6ef83e84ab7ee1b20dca3"
     }
   ]
 }

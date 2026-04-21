@@ -1,0 +1,21 @@
+{
+  "summary": "Tested new Dashboard Widgets configuration feature in AppearancePage. All 8 test scenarios passed: section exists, default states correct, toggle/enable/disable works, dashboard reflects changes, Reset (Restablecer) works.",
+  "backend_issues": {
+    "critical": [],
+    "minor": []
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": []
+  },
+  "test_report_links": ["/app/test_reports/iteration_32.json"],
+  "action_items": [],
+  "critical_code_review_comments": [],
+  "updated_files": [],
+  "success_rate": {"backend": "N/A", "frontend": "100%"},
+  "seed_data_creation": "",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "Dashboard widgets config fully working: (1) Apariencia → Campos Visibles has 'Tarjetas del Dashboard' section with 8 widgets ✓, (2) 4 default enabled (upcoming, total_res, total_events, real_income) ✓, (3) 4 default disabled (completed_inc, advance_inc, monthly_inc, pending_bal) ✓, (4) Toggle enables/disables widgets and Dashboard reflects changes in real-time ✓, (5) Ingreso Completadas shows currency value Q 22,000 ✓, (6) Restablecer resets to 4 default enabled ✓, (7) data-testid='dash-widget-{id}' and 'dash-widget-toggle-{id}' selectors work correctly ✓. HTML5 drag-and-drop is implemented (same pattern as Socios). localStorage key: 'dashboard_widgets'."
+}

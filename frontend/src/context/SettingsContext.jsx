@@ -408,6 +408,37 @@ export function SettingsProvider({ children }) {
     localStorage.removeItem("socio_fields_visibility");
   };
 
+  // ── Dashboard widgets ─────────────────────────────────────────────────────
+  const DASHBOARD_WIDGETS_DEFAULT = [
+    { id: "upcoming",      label: "Próximos Eventos",              enabled: true  },
+    { id: "total_res",     label: "Total Reservas",                enabled: true  },
+    { id: "total_events",  label: "Total Eventos",                 enabled: true  },
+    { id: "real_income",   label: "Ingreso Real",                  enabled: true  },
+    { id: "completed_inc", label: "Ingreso Etiquetas Completas",   enabled: false },
+    { id: "advance_inc",   label: "Ingreso en Reservas",           enabled: false },
+    { id: "monthly_inc",   label: "Ingreso por Mes",               enabled: false },
+    { id: "pending_bal",   label: "Saldo Pendiente Total",         enabled: false },
+  ];
+  const [dashboardWidgets, setDashboardWidgets] = useState(() => {
+    try {
+      const saved = localStorage.getItem("dashboard_widgets");
+      if (!saved) return DASHBOARD_WIDGETS_DEFAULT;
+      const parsed = JSON.parse(saved);
+      // Merge: preserve saved order/enabled, add any new defaults
+      const savedIds = parsed.map(w => w.id);
+      const merged = [...parsed, ...DASHBOARD_WIDGETS_DEFAULT.filter(d => !savedIds.includes(d.id))];
+      return merged;
+    } catch { return DASHBOARD_WIDGETS_DEFAULT; }
+  });
+  const changeDashboardWidgets = (widgets) => {
+    setDashboardWidgets(widgets);
+    localStorage.setItem("dashboard_widgets", JSON.stringify(widgets));
+  };
+  const resetDashboardWidgets = () => {
+    setDashboardWidgets(DASHBOARD_WIDGETS_DEFAULT);
+    localStorage.removeItem("dashboard_widgets");
+  };
+
   // ── Island sidebar margins ─────────────────────────────────────────────────
   const [islandMargins, setIslandMargins] = useState(() => {
     try { return JSON.parse(localStorage.getItem("island_margins") || "null") || { top: 14, bottom: 14, side: 14 }; }
@@ -804,6 +835,7 @@ export function SettingsProvider({ children }) {
       // Form fields visibility
       formFieldsVisibility, changeFormFieldVisibility, resetFormFieldsVisibility,
       socioFieldsVisibility, changeSocioFieldVisibility, resetSocioFieldsVisibility,
+      dashboardWidgets, changeDashboardWidgets, resetDashboardWidgets,
       // Form design styles
       reservationFormDesign, changeReservationFormDesign,
       socioFormDesign, changeSocioFormDesign,
