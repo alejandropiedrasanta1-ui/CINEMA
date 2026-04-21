@@ -298,6 +298,8 @@ export default function Dashboard() {
               const partners = (r.assigned_partners || [])
                 .map(p => ({ ...p, socio: socioMap[p.socio_id] }))
                 .filter(p => p.socio);
+              const firstPartner = partners[0];
+              const isPaid = firstPartner?.payment_status === "Pagado";
               return (
                 <motion.div
                   key={r.id}
@@ -305,58 +307,54 @@ export default function Dashboard() {
                   animate={{ opacity: 1, x: 0 }}
                   transition={{ delay: 0.35 + idx * 0.05 }}
                   whileHover={{ backgroundColor: "rgba(255,255,255,0.35)" }}
-                  className="grid grid-cols-[1fr_1fr_auto] items-center gap-4 px-6 py-5 cursor-pointer transition-colors"
+                  className="flex items-center gap-5 px-6 py-5 cursor-pointer transition-colors"
                   onClick={() => navigate(`/reservaciones/${r.id}`)}
                   data-testid={`recent-row-${r.id}`}
                 >
                   {/* ── IZQUIERDA: Tipo de evento ── */}
-                  <div className="flex items-center gap-3 min-w-0">
-                    <div className="w-10 h-10 rounded-2xl flex items-center justify-center flex-shrink-0"
+                  <div className="flex items-center gap-3 w-[30%] min-w-0">
+                    <div className="w-11 h-11 rounded-2xl flex items-center justify-center flex-shrink-0"
                       style={{ background: cfg.fg + "18" }}>
-                      <EvIcon size={17} style={{ color: cfg.fg }} strokeWidth={1.8} />
+                      <EvIcon size={20} style={{ color: cfg.fg }} strokeWidth={1.8} />
                     </div>
-                    <p className="text-xl font-black truncate leading-none"
+                    <p className="text-2xl font-black truncate leading-none"
                       style={{ fontFamily: "Cabinet Grotesk, sans-serif", color: cfg.fg }}>
                       {r.event_type || "Evento"}
                     </p>
                   </div>
 
                   {/* ── CENTRO: Fotógrafo + pago ── */}
-                  <div className="min-w-0">
-                    {partners.length > 0 ? (
-                      <div className="space-y-1">
-                        {partners.map((p, pi) => {
-                          const isPaid = p.payment_status === "Pagado";
-                          return (
-                            <div key={pi} className="flex items-center gap-2">
-                              <Camera size={11} className="text-slate-400 flex-shrink-0" />
-                              <span className="text-sm font-bold text-slate-700 truncate">{p.socio.name}</span>
-                              {p.payment > 0 && (
-                                <span className={`text-xs font-black flex-shrink-0 ${isPaid ? "text-emerald-600" : "text-amber-600"}`}>
-                                  {formatCurrency(p.payment)}
-                                </span>
-                              )}
-                              <span className={`text-[9px] font-black px-1.5 py-0.5 rounded-full flex-shrink-0 ${isPaid ? "bg-emerald-100 text-emerald-700" : "bg-amber-100 text-amber-700"}`}>
-                                {isPaid ? (language === "es" ? "Pagado" : "Paid") : (language === "es" ? "Pendiente" : "Pending")}
-                              </span>
-                            </div>
-                          );
-                        })}
-                      </div>
-                    ) : (
-                      <div className="flex items-center gap-1.5">
-                        <User size={11} className="text-slate-300" />
-                        <span className="text-xs text-slate-300 font-medium">
-                          {language === "es" ? "Sin fotógrafo" : "No photographer"}
+                  <div className="flex items-center gap-2.5 flex-1 min-w-0">
+                    {firstPartner ? (
+                      <>
+                        <Camera size={14} className="text-slate-400 flex-shrink-0" />
+                        <span className="text-base font-bold text-slate-700 truncate">{firstPartner.socio.name}</span>
+                        {firstPartner.payment > 0 && (
+                          <span className={`text-base font-black flex-shrink-0 ${isPaid ? "text-emerald-600" : "text-amber-600"}`}>
+                            {formatCurrency(firstPartner.payment)}
+                          </span>
+                        )}
+                        <span className={`text-xs font-black px-2.5 py-1 rounded-full flex-shrink-0 ${isPaid ? "bg-emerald-100 text-emerald-700" : "bg-amber-100 text-amber-700"}`}>
+                          {isPaid ? (language === "es" ? "Pagado" : "Paid") : (language === "es" ? "Pendiente" : "Pending")}
                         </span>
-                      </div>
+                        {partners.length > 1 && (
+                          <span className="text-xs font-bold text-slate-400 flex-shrink-0">+{partners.length - 1}</span>
+                        )}
+                      </>
+                    ) : (
+                      <>
+                        <User size={14} className="text-slate-300 flex-shrink-0" />
+                        <span className="text-sm text-slate-300 font-medium">
+                          {language === "es" ? "Sin fotógrafo asignado" : "No photographer assigned"}
+                        </span>
+                      </>
                     )}
                   </div>
 
-                  {/* ── DERECHA: Fecha + etiqueta ── */}
-                  <div className="flex flex-col items-end gap-1.5 flex-shrink-0">
-                    <span className="text-sm font-bold text-slate-700 whitespace-nowrap">{formatDate(r.event_date)}</span>
-                    <span className={`text-[10px] px-2.5 py-1 rounded-full border font-bold whitespace-nowrap ${statusColors[r.status] || FALLBACK_COLOR}`}>
+                  {/* ── DERECHA: Fecha + etiqueta en una línea ── */}
+                  <div className="flex items-center gap-3 flex-shrink-0">
+                    <span className="text-base font-bold text-slate-700 whitespace-nowrap">{formatDate(r.event_date)}</span>
+                    <span className={`text-xs px-3 py-1.5 rounded-full border font-bold whitespace-nowrap ${statusColors[r.status] || FALLBACK_COLOR}`}>
                       {tr.statuses[r.status] || r.status}
                     </span>
                   </div>
