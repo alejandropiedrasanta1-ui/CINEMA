@@ -295,75 +295,71 @@ export default function Dashboard() {
             {recent.map((r, idx) => {
               const cfg = getEventConfig(r.event_type);
               const EvIcon = cfg.icon;
-              const partners = (r.assigned_partners || []).map(p => ({
-                ...p,
-                socio: socioMap[p.socio_id],
-              })).filter(p => p.socio);
+              const partners = (r.assigned_partners || [])
+                .map(p => ({ ...p, socio: socioMap[p.socio_id] }))
+                .filter(p => p.socio);
               return (
                 <motion.div
                   key={r.id}
                   initial={{ opacity: 0, x: -10 }}
                   animate={{ opacity: 1, x: 0 }}
                   transition={{ delay: 0.35 + idx * 0.05 }}
-                  whileHover={{ backgroundColor: "rgba(255,255,255,0.4)" }}
-                  className="flex items-center gap-4 px-6 py-4 cursor-pointer transition-colors"
+                  whileHover={{ backgroundColor: "rgba(255,255,255,0.35)" }}
+                  className="grid grid-cols-[1fr_1fr_auto] items-center gap-4 px-6 py-5 cursor-pointer transition-colors"
                   onClick={() => navigate(`/reservaciones/${r.id}`)}
                   data-testid={`recent-row-${r.id}`}
                 >
-                  {/* Event type icon */}
-                  <div className="w-11 h-11 rounded-2xl flex items-center justify-center flex-shrink-0"
-                    style={{ background: cfg.fg + "18" }}>
-                    <EvIcon size={18} style={{ color: cfg.fg }} strokeWidth={1.8} />
-                  </div>
-
-                  {/* Main info */}
-                  <div className="flex-1 min-w-0">
-                    {/* Event type LARGE */}
-                    <p className="text-base font-black text-slate-900 leading-tight" style={{ fontFamily: "Cabinet Grotesk, sans-serif", color: cfg.fg }}>
+                  {/* ── IZQUIERDA: Tipo de evento ── */}
+                  <div className="flex items-center gap-3 min-w-0">
+                    <div className="w-10 h-10 rounded-2xl flex items-center justify-center flex-shrink-0"
+                      style={{ background: cfg.fg + "18" }}>
+                      <EvIcon size={17} style={{ color: cfg.fg }} strokeWidth={1.8} />
+                    </div>
+                    <p className="text-xl font-black truncate leading-none"
+                      style={{ fontFamily: "Cabinet Grotesk, sans-serif", color: cfg.fg }}>
                       {r.event_type || "Evento"}
                     </p>
-                    {/* Date + status */}
-                    <div className="flex items-center gap-2 mt-0.5">
-                      <span className="text-xs font-semibold text-slate-500">{formatDate(r.event_date)}</span>
-                      <span className={`text-[10px] px-2 py-0.5 rounded-full border font-bold ${statusColors[r.status] || FALLBACK_COLOR}`}>
-                        {tr.statuses[r.status] || r.status}
-                      </span>
-                    </div>
+                  </div>
 
-                    {/* Photographers */}
+                  {/* ── CENTRO: Fotógrafo + pago ── */}
+                  <div className="min-w-0">
                     {partners.length > 0 ? (
-                      <div className="flex flex-wrap gap-2 mt-1.5">
+                      <div className="space-y-1">
                         {partners.map((p, pi) => {
                           const isPaid = p.payment_status === "Pagado";
                           return (
-                            <div key={pi} className={`flex items-center gap-1.5 px-2 py-1 rounded-xl text-[10px] font-bold border ${isPaid ? "bg-emerald-50 border-emerald-200/60 text-emerald-700" : "bg-amber-50 border-amber-200/60 text-amber-700"}`}>
-                              <Camera size={9} />
-                              <span>{p.socio.name}</span>
+                            <div key={pi} className="flex items-center gap-2">
+                              <Camera size={11} className="text-slate-400 flex-shrink-0" />
+                              <span className="text-sm font-bold text-slate-700 truncate">{p.socio.name}</span>
                               {p.payment > 0 && (
-                                <>
-                                  <span className="opacity-50">·</span>
-                                  <span>{formatCurrency(p.payment)}</span>
-                                </>
+                                <span className={`text-xs font-black flex-shrink-0 ${isPaid ? "text-emerald-600" : "text-amber-600"}`}>
+                                  {formatCurrency(p.payment)}
+                                </span>
                               )}
-                              {isPaid
-                                ? <CheckCircle size={9} className="text-emerald-500" />
-                                : <AlertCircle size={9} className="text-amber-500" />}
+                              <span className={`text-[9px] font-black px-1.5 py-0.5 rounded-full flex-shrink-0 ${isPaid ? "bg-emerald-100 text-emerald-700" : "bg-amber-100 text-amber-700"}`}>
+                                {isPaid ? (language === "es" ? "Pagado" : "Paid") : (language === "es" ? "Pendiente" : "Pending")}
+                              </span>
                             </div>
                           );
                         })}
                       </div>
                     ) : (
-                      <div className="flex items-center gap-1 mt-1.5">
-                        <User size={10} className="text-slate-300" />
-                        <span className="text-[10px] text-slate-300 font-medium">
-                          {language === "es" ? "Sin fotógrafo asignado" : "No photographer assigned"}
+                      <div className="flex items-center gap-1.5">
+                        <User size={11} className="text-slate-300" />
+                        <span className="text-xs text-slate-300 font-medium">
+                          {language === "es" ? "Sin fotógrafo" : "No photographer"}
                         </span>
                       </div>
                     )}
                   </div>
 
-                  {/* Arrow */}
-                  <ArrowRight size={14} className="text-slate-300 flex-shrink-0" />
+                  {/* ── DERECHA: Fecha + etiqueta ── */}
+                  <div className="flex flex-col items-end gap-1.5 flex-shrink-0">
+                    <span className="text-sm font-bold text-slate-700 whitespace-nowrap">{formatDate(r.event_date)}</span>
+                    <span className={`text-[10px] px-2.5 py-1 rounded-full border font-bold whitespace-nowrap ${statusColors[r.status] || FALLBACK_COLOR}`}>
+                      {tr.statuses[r.status] || r.status}
+                    </span>
+                  </div>
                 </motion.div>
               );
             })}
