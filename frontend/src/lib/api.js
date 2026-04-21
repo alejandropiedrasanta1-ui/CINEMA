@@ -15,9 +15,7 @@ export const getCalendarEvents = () => api.get("/calendar").then(r => r.data);
 export const uploadReceipt = (id, file) => {
   const form = new FormData();
   form.append("file", file);
-  return api.post(`/reservations/${id}/receipts`, form, {
-    headers: { "Content-Type": "multipart/form-data" }
-  }).then(r => r.data);
+  return api.post(`/reservations/${id}/receipts`, form).then(r => r.data);
 };
 
 export const deleteReceipt = (id, receiptId) =>
@@ -32,7 +30,7 @@ export const deleteSocio = (id) => api.delete(`/socios/${id}`).then(r => r.data)
 export const uploadSocioPhoto = (id, file) => {
   const form = new FormData();
   form.append("file", file);
-  return api.post(`/socios/${id}/photo`, form, { headers: { "Content-Type": "multipart/form-data" } }).then(r => r.data);
+  return api.post(`/socios/${id}/photo`, form).then(r => r.data);
 };
 export const deleteSocioPhoto = (id) => api.delete(`/socios/${id}/photo`).then(r => r.data);
 export const getFinancials = () => api.get("/financials").then(r => r.data);
@@ -63,5 +61,5 @@ export const downloadBackupFileUrl = (filename) => `${BASE}/backup/${encodeURICo
 export const restoreBackup = (file) => {
   const form = new FormData();
   form.append("file", file);
-  return api.post("/backup/restore", form, { headers: { "Content-Type": "multipart/form-data" } }).then(r => r.data);
+  return api.post("/backup/restore", form).then(r => r.data);
 };

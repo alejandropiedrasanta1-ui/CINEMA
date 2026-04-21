@@ -111,7 +111,8 @@ export default function DatabasePage() {
   const [backupCreating, setBackupCreating] = useState(false);
   const [restoreLoading, setRestoreLoading] = useState(false);
   const [restoreResult, setRestoreResult]   = useState(null);
-  const restoreInputRef = useRef(null);
+  const restoreInputRef     = useRef(null);
+  const restoreAutoInputRef = useRef(null);
 
   const [pdfLoading, setPdfLoading] = useState(false);
 
@@ -233,12 +234,13 @@ export default function DatabasePage() {
       toast({ title: r.message });
       loadAll();
     } catch (err) {
-      const msg = err.response?.data?.detail || "Error al restaurar";
+      const msg = err.response?.data?.detail || "Error al restaurar el archivo";
       setRestoreResult({ ok: false, msg });
       toast({ title: msg, variant: "destructive" });
     } finally {
       setRestoreLoading(false);
       if (restoreInputRef.current) restoreInputRef.current.value = "";
+      if (restoreAutoInputRef.current) restoreAutoInputRef.current.value = "";
     }
   };
 
@@ -534,6 +536,40 @@ export default function DatabasePage() {
                   : <><Download size={14} /> Guardar respaldo ahora</>}
               </motion.button>
 
+              {/* ── Contenido del respaldo ── */}
+              <div className="flex items-center gap-2 flex-wrap">
+                <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Incluye:</span>
+                {["Reservas", "Socios", "Apariencia"].map((tag) => (
+                  <span key={tag} className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-700 flex items-center gap-1">
+                    <CheckCircle size={8} /> {tag}
+                  </span>
+                ))}
+              </div>
+
+              {/* ── Restaurar desde archivo ── */}
+              <div className="rounded-2xl border border-emerald-200/60 bg-emerald-50/30 overflow-hidden">
+                <div className="flex items-center gap-2 px-4 py-3 border-b border-emerald-100/60">
+                  <Upload size={13} className="text-emerald-600" />
+                  <p className="text-xs font-black text-emerald-800">Restaurar respaldo</p>
+                  <span className="text-[10px] text-emerald-500 ml-auto">Sube un archivo .json guardado</span>
+                </div>
+                <div className="p-3 space-y-2">
+                  <input ref={restoreAutoInputRef} type="file" accept=".json"
+                    onChange={handleRestoreFile} className="hidden" id="restore-file-auto-input" data-testid="restore-file-auto-input" />
+                  <label htmlFor="restore-file-auto-input"
+                    className={`flex items-center justify-center gap-2 w-full py-2.5 rounded-xl text-xs font-bold cursor-pointer transition-all border-2 border-dashed ${restoreLoading ? "border-emerald-200 bg-emerald-50 text-emerald-300" : "border-emerald-300 bg-white hover:bg-emerald-50 text-emerald-700"}`}>
+                    {restoreLoading ? <Loader2 size={13} className="animate-spin" /> : <Upload size={13} />}
+                    {restoreLoading ? "Restaurando datos..." : "Seleccionar archivo .json para restaurar"}
+                  </label>
+                  {restoreResult && (
+                    <div className={`flex items-center gap-2 text-xs font-semibold px-3 py-2 rounded-xl ${restoreResult.ok ? "bg-emerald-50 text-emerald-700" : "bg-red-50 text-red-600"}`}>
+                      {restoreResult.ok ? <CheckCircle size={12} /> : <XCircle size={12} />}
+                      {restoreResult.msg}
+                    </div>
+                  )}
+                </div>
+              </div>
+
               {/* ── Info note ── */}
               <div className="flex items-start gap-2.5 bg-amber-50/60 rounded-2xl px-4 py-3 border border-amber-200/50">
                 <AlertCircle size={13} className="text-amber-500 shrink-0 mt-0.5" />
@@ -633,6 +669,13 @@ export default function DatabasePage() {
               <div>
                 <p className="text-sm font-black text-slate-900" style={{ fontFamily: "Cabinet Grotesk, sans-serif" }}>Respaldos</p>
                 <p className="text-[11px] text-slate-400">Descarga, guarda y restaura todos tus datos</p>
+              </div>
+              <div className="ml-auto flex items-center gap-1.5 flex-wrap justify-end">
+                {["Reservas", "Socios", "Apariencia"].map((tag) => (
+                  <span key={tag} className="text-[9px] font-bold px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-700">
+                    {tag}
+                  </span>
+                ))}
               </div>
             </div>
             <div className="p-5 space-y-4">
