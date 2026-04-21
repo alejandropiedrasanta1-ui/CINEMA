@@ -1,7 +1,7 @@
 import { useEffect, useState, useRef } from "react";
 import { useNavigate } from "react-router-dom";
-import { getStats, getReservations } from "@/lib/api";
-import { CalendarDays, Clock, CreditCard, TrendingUp, Plus, ArrowRight, BarChart2, DollarSign } from "lucide-react";
+import { getStats, getReservations, getSocios } from "@/lib/api";
+import { CalendarDays, Clock, CreditCard, TrendingUp, Plus, ArrowRight, BarChart2, DollarSign, Camera, User, CheckCircle, AlertCircle } from "lucide-react";
 import { motion } from "framer-motion";
 import { useSettings, STATUS_COLOR_CLASSES } from "@/context/SettingsContext";
 import ReservationForm from "@/components/ReservationForm";
@@ -127,6 +127,7 @@ export default function Dashboard() {
   const [stats, setStats] = useState(null);
   const [recent, setRecent] = useState([]);
   const [all, setAll] = useState([]);
+  const [socios, setSocios] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
   const navigate = useNavigate();
@@ -138,13 +139,16 @@ export default function Dashboard() {
     activeStatuses.map(s => [s.key, STATUS_COLOR_CLASSES[s.color] || FALLBACK_COLOR])
   );
 
+  // Socio lookup map: id → socio
+  const socioMap = Object.fromEntries(socios.map(s => [s.id, s]));
+
   const load = async () => {
     setLoading(true);
     try {
-      const [s, r] = await Promise.all([getStats(), getReservations()]);
+      const [s, r, sc] = await Promise.all([getStats(), getReservations(), getSocios()]);
       setStats(s);
+      setSocios(sc);
       setAll(r);
-      // Filter events for the current month
       const now = new Date();
       const cm = now.getMonth();
       const cy = now.getFullYear();
@@ -291,6 +295,10 @@ export default function Dashboard() {
             {recent.map((r, idx) => {
               const cfg = getEventConfig(r.event_type);
               const EvIcon = cfg.icon;
+              const partners = (r.assigned_partners || []).map(p => ({
+                ...p,
+                socio: socioMap[p.socio_id],
+              })).filter(p => p.socio);
               return (
                 <motion.div
                   key={r.id}
@@ -298,32 +306,64 @@ export default function Dashboard() {
                   animate={{ opacity: 1, x: 0 }}
                   transition={{ delay: 0.35 + idx * 0.05 }}
                   whileHover={{ backgroundColor: "rgba(255,255,255,0.4)" }}
-                  className="flex items-center justify-between px-6 py-4 cursor-pointer transition-colors"
+                  className="flex items-center gap-4 px-6 py-4 cursor-pointer transition-colors"
                   onClick={() => navigate(`/reservaciones/${r.id}`)}
                   data-testid={`recent-row-${r.id}`}
                 >
-                  <div className="flex items-center gap-3 flex-1 min-w-0">
-                    <div
-                      className="w-9 h-9 rounded-2xl flex items-center justify-center flex-shrink-0"
-                      style={{ background: cfg.fg + "18" }}
-                    >
-                      <EvIcon size={14} style={{ color: cfg.fg }} strokeWidth={1.8} />
-                    </div>
-                    <div className="min-w-0">
-                      <p className="text-sm font-bold text-slate-900 truncate">
-                        {swapNameEventType ? r.event_type : r.client_name}
-                      </p>
-                      <p className="text-xs text-slate-400">
-                        {swapNameEventType ? r.client_name : r.event_type}
-                      </p>
-                    </div>
+                  {/* Event type icon */}
+                  <div className="w-11 h-11 rounded-2xl flex items-center justify-center flex-shrink-0"
+                    style={{ background: cfg.fg + "18" }}>
+                    <EvIcon size={18} style={{ color: cfg.fg }} strokeWidth={1.8} />
                   </div>
-                  <div className="flex items-center gap-3 ml-4">
-                    <span className="text-sm font-bold text-slate-700">{formatDate(r.event_date)}</span>
-                    <span className={`text-xs px-3 py-1 rounded-full border font-bold ${statusColors[r.status] || FALLBACK_COLOR}`}>
-                      {tr.statuses[r.status] || r.status}
-                    </span>
+
+                  {/* Main info */}
+                  <div className="flex-1 min-w-0">
+                    {/* Event type LARGE */}
+                    <p className="text-base font-black text-slate-900 leading-tight" style={{ fontFamily: "Cabinet Grotesk, sans-serif", color: cfg.fg }}>
+                      {r.event_type || "Evento"}
+                    </p>
+                    {/* Date + status */}
+                    <div className="flex items-center gap-2 mt-0.5">
+                      <span className="text-xs font-semibold text-slate-500">{formatDate(r.event_date)}</span>
+                      <span className={`text-[10px] px-2 py-0.5 rounded-full border font-bold ${statusColors[r.status] || FALLBACK_COLOR}`}>
+                        {tr.statuses[r.status] || r.status}
+                      </span>
+                    </div>
+
+                    {/* Photographers */}
+                    {partners.length > 0 ? (
+                      <div className="flex flex-wrap gap-2 mt-1.5">
+                        {partners.map((p, pi) => {
+                          const isPaid = p.payment_status === "Pagado";
+                          return (
+                            <div key={pi} className={`flex items-center gap-1.5 px-2 py-1 rounded-xl text-[10px] font-bold border ${isPaid ? "bg-emerald-50 border-emerald-200/60 text-emerald-700" : "bg-amber-50 border-amber-200/60 text-amber-700"}`}>
+                              <Camera size={9} />
+                              <span>{p.socio.name}</span>
+                              {p.payment > 0 && (
+                                <>
+                                  <span className="opacity-50">·</span>
+                                  <span>{formatCurrency(p.payment)}</span>
+                                </>
+                              )}
+                              {isPaid
+                                ? <CheckCircle size={9} className="text-emerald-500" />
+                                : <AlertCircle size={9} className="text-amber-500" />}
+                            </div>
+                          );
+                        })}
+                      </div>
+                    ) : (
+                      <div className="flex items-center gap-1 mt-1.5">
+                        <User size={10} className="text-slate-300" />
+                        <span className="text-[10px] text-slate-300 font-medium">
+                          {language === "es" ? "Sin fotógrafo asignado" : "No photographer assigned"}
+                        </span>
+                      </div>
+                    )}
                   </div>
+
+                  {/* Arrow */}
+                  <ArrowRight size={14} className="text-slate-300 flex-shrink-0" />
                 </motion.div>
               );
             })}
