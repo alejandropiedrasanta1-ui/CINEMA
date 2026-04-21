@@ -69,7 +69,16 @@ export default function ReservationDetail() {
   };
 
   const handleStatusChange = async (newStatus) => {
-    try { const updated = await updateReservation(id, { status: newStatus }); setReservation(updated); toast({ title: `${tr.statuses[newStatus] || newStatus}` }); }
+    try {
+      const payload = { status: newStatus };
+      // Al marcar Completado → saldo = 0 (anticipo = total)
+      if (newStatus === "Completado" && reservation.total_amount) {
+        payload.advance_paid = reservation.total_amount;
+      }
+      const updated = await updateReservation(id, payload);
+      setReservation(updated);
+      toast({ title: `${tr.statuses[newStatus] || newStatus}` });
+    }
     catch { toast({ title: "Error", variant: "destructive" }); }
   };
 
