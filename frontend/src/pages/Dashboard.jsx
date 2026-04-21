@@ -323,14 +323,8 @@ export default function Dashboard() {
                     </p>
                   </div>
 
-                  {/* ── CENTRO: Monto total + Fotógrafo + pago ── */}
+                  {/* ── CENTRO: Fotógrafo + pago ── */}
                   <div className="flex items-center gap-2.5 flex-1 min-w-0">
-                    {r.total_amount > 0 && (
-                      <>
-                        <span className="text-base font-black text-slate-800 flex-shrink-0">{formatCurrency(r.total_amount)}</span>
-                        <span className="text-slate-300 flex-shrink-0">·</span>
-                      </>
-                    )}
                     {firstPartner ? (
                       <>
                         <Camera size={14} className="text-slate-400 flex-shrink-0" />
@@ -357,9 +351,12 @@ export default function Dashboard() {
                     )}
                   </div>
 
-                  {/* ── DERECHA: Fecha + etiqueta en una línea ── */}
+                  {/* ── DERECHA: Monto total + Fecha + etiqueta en una línea ── */}
                   <div className="flex items-center gap-3 flex-shrink-0">
-                    <span className="text-base font-bold text-slate-700 whitespace-nowrap">{formatDate(r.event_date)}</span>
+                    {r.total_amount > 0 && (
+                      <span className="text-base font-black text-slate-800 whitespace-nowrap">{formatCurrency(r.total_amount)}</span>
+                    )}
+                    <span className="text-base font-bold text-slate-500 whitespace-nowrap">{formatDate(r.event_date)}</span>
                     <span className={`text-xs px-3 py-1.5 rounded-full border font-bold whitespace-nowrap ${statusColors[r.status] || FALLBACK_COLOR}`}>
                       {tr.statuses[r.status] || r.status}
                     </span>
