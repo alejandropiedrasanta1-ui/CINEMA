@@ -570,12 +570,55 @@ export default function DatabasePage() {
                 </div>
               </div>
 
+              {/* ── Guardar en servidor ── */}
+              <div className="grid grid-cols-2 gap-3">
+                <motion.button whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}
+                  onClick={handleCreateServerBackup} disabled={backupCreating} data-testid="backup-server-btn"
+                  className="flex flex-col items-center gap-1.5 py-3 rounded-2xl bg-white/70 border border-emerald-200/60 text-emerald-700 disabled:opacity-60 hover:bg-emerald-50 transition-all">
+                  {backupCreating ? <Loader2 size={16} className="animate-spin" /> : <Save size={16} />}
+                  <span className="text-xs font-bold">Guardar en servidor</span>
+                  <span className="text-[9px] opacity-60">Historial 15 respaldos</span>
+                </motion.button>
+                <div className="flex flex-col items-center gap-1.5 py-3 rounded-2xl bg-white/50 border border-slate-100">
+                  <HardDrive size={16} className="text-slate-400" />
+                  <span className="text-xs font-bold text-slate-600">{backupHistory.length} respaldo(s)</span>
+                  <button onClick={loadBackupHistory} className="text-[9px] text-indigo-500 font-bold hover:underline">Actualizar lista</button>
+                </div>
+              </div>
+
+              {/* ── Backup history list ── */}
+              {backupHistory.length > 0 && (
+                <div className="space-y-1.5 max-h-44 overflow-y-auto pr-0.5">
+                  {backupHistory.map((b, i) => {
+                    const isAuto = b.label === "auto";
+                    return (
+                      <div key={b.filename} className="flex items-center gap-2.5 bg-white/60 border border-slate-100 rounded-xl px-3 py-2 hover:bg-white/80 transition-all">
+                        <div className={`w-6 h-6 rounded-lg flex items-center justify-center shrink-0 ${isAuto ? "bg-slate-100" : "bg-indigo-100"}`}>
+                          {isAuto ? <Clock size={10} className="text-slate-400" /> : <ShieldCheck size={10} className="text-indigo-500" />}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-[10px] font-bold text-slate-700 truncate">{b.filename}</p>
+                          <span className="text-[9px] text-slate-400">{b.size} · {fmtDate(b.created_at)}</span>
+                        </div>
+                        <a href={downloadBackupFileUrl(b.filename)} download data-testid={`backup-dl-${b.filename}`}
+                          className="w-6 h-6 rounded-lg bg-indigo-50 hover:bg-indigo-100 flex items-center justify-center transition-colors">
+                          <Download size={10} className="text-indigo-600" />
+                        </a>
+                        <button onClick={() => handleDeleteBackup(b.filename)} data-testid={`backup-del-${b.filename}`}
+                          className="w-6 h-6 rounded-lg bg-red-50 hover:bg-red-100 flex items-center justify-center transition-colors">
+                          <Trash2 size={10} className="text-red-400" />
+                        </button>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+
               {/* ── Info note ── */}
               <div className="flex items-start gap-2.5 bg-amber-50/60 rounded-2xl px-4 py-3 border border-amber-200/50">
                 <AlertCircle size={13} className="text-amber-500 shrink-0 mt-0.5" />
                 <p className="text-[10px] text-amber-700 leading-relaxed">
-                  El respaldo automático funciona mientras esta página esté abierta en el navegador.
-                  Para máxima seguridad, usa también "Guardar en servidor" que funciona en segundo plano.
+                  El respaldo automático funciona mientras esta página esté abierta. Para respaldos en segundo plano usa "Guardar en servidor".
                 </p>
               </div>
 
@@ -583,25 +626,25 @@ export default function DatabasePage() {
           </div>
         </motion.div>
 
-        {/* ── ESTADÍSTICAS ── */}
+        {/* ── CONEXIÓN MONGODB (UNIFICADO) ── */}
         <motion.div variants={fadeUp}>
           <div className="glass rounded-3xl overflow-hidden">
-            {/* Card header */}
+            {/* Header */}
             <div className="flex items-center justify-between px-5 py-4 border-b border-white/40">
               <div className="flex items-center gap-3">
                 <div className="w-9 h-9 rounded-xl bg-indigo-100 flex items-center justify-center">
-                  <BarChart3 size={16} className="text-indigo-600" />
+                  <Database size={16} className="text-indigo-600" />
                 </div>
                 <div>
-                  <p className="text-sm font-black text-slate-900" style={{ fontFamily: "Cabinet Grotesk, sans-serif" }}>{s.dbTitle || "Estado de la Base de Datos"}</p>
-                  <p className="text-[11px] text-slate-400">{s.dbDesc || "Estadísticas y conexión actual"}</p>
+                  <p className="text-sm font-black text-slate-900" style={{ fontFamily: "Cabinet Grotesk, sans-serif" }}>Base de Datos MongoDB</p>
+                  <p className="text-[11px] text-slate-400">Estado, conexión y bases guardadas</p>
                 </div>
               </div>
               <div className="flex items-center gap-2">
                 {dbStats && (
                   <span className={`flex items-center gap-1.5 text-[10px] font-black px-3 py-1 rounded-full ${dbStats.is_custom ? "bg-amber-100 text-amber-700" : "bg-emerald-100 text-emerald-700"}`}>
                     {dbStats.is_custom ? <WifiOff size={10} /> : <Wifi size={10} />}
-                    {dbStats.is_custom ? (s.dbCustomLabel || "BD Personalizada") : (s.dbDefaultLabel || "BD Local")}
+                    {dbStats.is_custom ? "BD Personalizada" : "BD Local"}
                   </span>
                 )}
                 <button onClick={loadDbStats} className="w-8 h-8 rounded-xl hover:bg-white/60 flex items-center justify-center text-slate-400 hover:text-slate-700 transition-all">
@@ -610,30 +653,30 @@ export default function DatabasePage() {
               </div>
             </div>
 
-            {/* Stats */}
-            <div className="p-5">
+            <div className="p-5 space-y-5">
+
+              {/* ── Stats ── */}
               {dbLoading ? (
-                <div className="flex items-center justify-center py-8 gap-3 text-slate-400">
+                <div className="flex items-center justify-center py-6 gap-3 text-slate-400">
                   <Loader2 size={18} className="animate-spin" />
                   <span className="text-sm">Cargando estadísticas...</span>
                 </div>
               ) : dbStats ? (
-                <div className="space-y-4">
-                  {/* Connection error banner */}
+                <div className="space-y-3">
                   {dbStats.connection_error && (
                     <div className="flex items-start gap-3 bg-red-50 border border-red-200 rounded-2xl px-4 py-3">
                       <WifiOff size={14} className="text-red-500 mt-0.5 shrink-0" />
                       <div>
                         <p className="text-xs font-bold text-red-700">Sin conexión a MongoDB Atlas</p>
-                        <p className="text-[10px] text-red-500 mt-0.5">Verifica tu internet y que el URL sea correcto, luego usa "Cambiar conexión" para reconectar.</p>
+                        <p className="text-[10px] text-red-500 mt-0.5">Verifica tu internet y que el URL sea correcto.</p>
                       </div>
                     </div>
                   )}
                   <div className="grid grid-cols-3 gap-3">
                     {[
-                      { label: s.dbCollections || "Colecciones", value: dbStats.collections, color: "bg-indigo-50 text-indigo-700", accent: "bg-indigo-500" },
-                      { label: s.dbObjects || "Documentos", value: dbStats.objects?.toLocaleString(), color: "bg-emerald-50 text-emerald-700", accent: "bg-emerald-500" },
-                      { label: s.dbTotal || "Tamaño total", value: dbStats.total_size, color: "bg-violet-50 text-violet-700", accent: "bg-violet-500" },
+                      { label: "Colecciones", value: dbStats.collections, color: "bg-indigo-50 text-indigo-700" },
+                      { label: "Documentos",  value: dbStats.objects?.toLocaleString(), color: "bg-emerald-50 text-emerald-700" },
+                      { label: "Tamaño",      value: dbStats.total_size, color: "bg-violet-50 text-violet-700" },
                     ].map((item) => (
                       <div key={item.label} className={`rounded-2xl p-4 ${item.color}`}>
                         <div className="text-xl font-black" style={{ fontFamily: "Cabinet Grotesk, sans-serif" }}>{item.value}</div>
@@ -644,7 +687,7 @@ export default function DatabasePage() {
                   <div className="flex items-center gap-3 bg-slate-50/80 rounded-2xl px-4 py-3">
                     <Link2 size={13} className="text-slate-400 shrink-0" />
                     <div className="flex-1 min-w-0">
-                      <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-0.5">{s.dbCurrentConn || "Conexión activa"}</p>
+                      <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-0.5">Conexión activa</p>
                       <p className="text-xs font-mono text-slate-600 truncate">{dbStats.current_url}</p>
                     </div>
                   </div>
@@ -655,379 +698,170 @@ export default function DatabasePage() {
                   <button onClick={loadDbStats} className="text-xs text-indigo-500 font-bold hover:underline">Reintentar</button>
                 </div>
               )}
-            </div>
-          </div>
-        </motion.div>
 
-        {/* ── RESPALDOS ── */}
-        <motion.div variants={fadeUp}>
-          <div className="glass rounded-3xl overflow-hidden">
-            <div className="flex items-center gap-3 px-5 py-4 border-b border-white/40">
-              <div className="w-9 h-9 rounded-xl bg-emerald-100 flex items-center justify-center">
-                <ShieldCheck size={16} className="text-emerald-600" />
-              </div>
-              <div>
-                <p className="text-sm font-black text-slate-900" style={{ fontFamily: "Cabinet Grotesk, sans-serif" }}>Respaldos</p>
-                <p className="text-[11px] text-slate-400">Descarga, guarda y restaura todos tus datos</p>
-              </div>
-              <div className="ml-auto flex items-center gap-1.5 flex-wrap justify-end">
-                {["Reservas", "Socios", "Apariencia"].map((tag) => (
-                  <span key={tag} className="text-[9px] font-bold px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-700">
-                    {tag}
-                  </span>
-                ))}
-              </div>
-            </div>
-            <div className="p-5 space-y-4">
-
-              {/* Quick actions */}
-              <div className="grid grid-cols-2 gap-3">
-                <motion.button whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}
-                  onClick={handleDownloadBackup} data-testid="backup-download-btn"
-                  className="flex flex-col items-center gap-2 py-4 rounded-2xl btn-primary text-white group">
-                  <Download size={18} className="group-hover:scale-110 transition-transform" />
-                  <span className="text-xs font-bold">Descargar a mi PC</span>
-                  <span className="text-[10px] opacity-70">Archivo .json completo</span>
-                </motion.button>
-                <motion.button whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}
-                  onClick={handleCreateServerBackup} disabled={backupCreating} data-testid="backup-server-btn"
-                  className="flex flex-col items-center gap-2 py-4 rounded-2xl bg-emerald-50 border border-emerald-200/60 text-emerald-700 group disabled:opacity-60 hover:bg-emerald-100 transition-all">
-                  {backupCreating ? <Loader2 size={18} className="animate-spin" /> : <Save size={18} className="group-hover:scale-110 transition-transform" />}
-                  <span className="text-xs font-bold">Guardar en servidor</span>
-                  <span className="text-[10px] opacity-70">Historial de 15 respaldos</span>
-                </motion.button>
-              </div>
-
-              {/* Restore */}
-              <div className="rounded-2xl border border-amber-200/60 bg-amber-50/40 overflow-hidden">
-                <div className="flex items-center gap-2 px-4 py-3 border-b border-amber-100/60">
-                  <Upload size={14} className="text-amber-600" />
-                  <p className="text-xs font-black text-amber-800">Restaurar desde archivo</p>
-                  <span className="text-[10px] text-amber-500 ml-auto flex items-center gap-1">
-                    <ShieldCheck size={10} /> Auto-respaldo antes de restaurar
-                  </span>
-                </div>
-                <div className="p-4 space-y-2">
-                  <input ref={restoreInputRef} type="file" accept=".json"
-                    onChange={handleRestoreFile} className="hidden" id="restore-file-input-db" data-testid="restore-file-input" />
-                  <label htmlFor="restore-file-input-db"
-                    className={`flex items-center justify-center gap-2 w-full py-2.5 rounded-xl text-xs font-bold cursor-pointer transition-all border-2 border-dashed ${restoreLoading ? "border-amber-200 bg-amber-50 text-amber-300" : "border-amber-300 bg-white hover:bg-amber-50 text-amber-700"}`}>
-                    {restoreLoading ? <Loader2 size={13} className="animate-spin" /> : <Upload size={13} />}
-                    {restoreLoading ? "Restaurando datos..." : "Seleccionar archivo .json para restaurar"}
-                  </label>
-                  {restoreResult && (
-                    <div className={`flex items-center gap-2 text-xs font-semibold px-3 py-2 rounded-xl ${restoreResult.ok ? "bg-emerald-50 text-emerald-700" : "bg-red-50 text-red-600"}`}>
-                      {restoreResult.ok ? <CheckCircle size={12} /> : <XCircle size={12} />}
-                      {restoreResult.msg}
-                    </div>
+              {/* ── Cambiar conexión ── */}
+              <div className="border-t border-white/30 pt-4 space-y-3">
+                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Cambiar conexión</p>
+                {dbStats?.connection_error && (
+                  <motion.button whileHover={{ scale: 1.01 }} whileTap={{ scale: 0.98 }}
+                    onClick={() => setNewDbUrl(dbStats.current_url?.includes("***") ? "" : (dbStats.current_url || ""))}
+                    className="w-full flex items-center gap-2 px-4 py-2.5 rounded-xl bg-amber-50 border border-amber-200 text-amber-700 text-xs font-bold hover:bg-amber-100 transition-all">
+                    <Wifi size={12} /> Reintentar con URL actual
+                  </motion.button>
+                )}
+                <input type="text" value={newDbUrl}
+                  onChange={e => { setNewDbUrl(e.target.value); setDbTestResult(null); }}
+                  placeholder="mongodb+srv://usuario:contraseña@cluster.mongodb.net"
+                  data-testid="db-url-input"
+                  className="w-full bg-white/60 border border-slate-200/80 rounded-xl px-4 py-3 text-sm font-mono text-slate-800 placeholder-slate-300 focus:outline-none focus:ring-2 focus:ring-sky-300 focus:border-transparent" />
+                {dbTestResult && (
+                  <div className={`flex items-center gap-2 text-xs font-semibold px-3 py-2.5 rounded-xl ${dbTestResult.ok ? "bg-emerald-50 text-emerald-700 border border-emerald-200/60" : "bg-red-50 text-red-600 border border-red-200/60"}`}>
+                    {dbTestResult.ok ? <CheckCircle size={13} /> : <XCircle size={13} />}
+                    {dbTestResult.msg}
+                  </div>
+                )}
+                <div className="flex gap-2">
+                  <motion.button whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.97 }}
+                    onClick={handleDbTest} disabled={!newDbUrl.trim() || dbTesting} data-testid="db-test-btn"
+                    className="flex items-center gap-2 px-4 py-2.5 rounded-xl border border-slate-200 bg-white text-slate-700 text-xs font-bold hover:bg-slate-50 transition-all disabled:opacity-40">
+                    {dbTesting ? <Loader2 size={12} className="animate-spin" /> : <Wifi size={12} />}
+                    Probar
+                  </motion.button>
+                  <motion.button whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.97 }}
+                    onClick={handleDbConnect} disabled={!newDbUrl.trim() || dbConnecting} data-testid="db-connect-btn"
+                    className="flex items-center gap-2 px-4 py-2.5 rounded-xl btn-primary text-white text-xs font-bold disabled:opacity-40">
+                    {dbConnecting ? <Loader2 size={12} className="animate-spin" /> : <ArrowRight size={12} />}
+                    Conectar
+                  </motion.button>
+                  {dbStats?.is_custom && (
+                    <motion.button whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.97 }}
+                      onClick={handleDbReset} disabled={dbResetting} data-testid="db-reset-btn"
+                      className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-red-50 text-red-600 text-xs font-bold hover:bg-red-100 transition-all border border-red-200/60 disabled:opacity-40">
+                      {dbResetting ? <Loader2 size={12} className="animate-spin" /> : <RefreshCw size={12} />}
+                      Restaurar local
+                    </motion.button>
                   )}
                 </div>
               </div>
 
-              {/* Backup history */}
-              <div>
-                <div className="flex items-center justify-between mb-2">
-                  <p className="text-[11px] font-black text-slate-400 uppercase tracking-widest">
-                    Historial — {backupHistory.length} respaldo(s)
-                  </p>
-                  <button onClick={loadBackupHistory} className="text-[10px] text-indigo-500 font-bold hover:underline">Actualizar</button>
+              {/* ── Conexiones guardadas ── */}
+              <div className="border-t border-white/30 pt-4 space-y-3">
+                <div className="flex items-center justify-between">
+                  <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Conexiones guardadas</p>
+                  <motion.button whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}
+                    onClick={() => setShowAddPreset(p => !p)} data-testid="add-preset-btn"
+                    className="flex items-center gap-1.5 px-3 py-1 rounded-xl text-xs font-bold bg-amber-100 text-amber-700 hover:bg-amber-200 transition-colors">
+                    <Plus size={11} /> Agregar
+                  </motion.button>
                 </div>
-                {backupHistory.length === 0 ? (
-                  <div className="flex items-center justify-center py-6 text-slate-300 gap-2">
-                    <HardDrive size={16} />
-                    <span className="text-xs">No hay respaldos guardados en servidor</span>
+
+                <AnimatePresence>
+                  {showAddPreset && (
+                    <motion.div key="add-form" initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }} exit={{ opacity: 0, height: 0 }}
+                      className="space-y-2 pb-3 border-b border-white/40">
+                      <input type="text" value={presetName}
+                        onChange={e => setPresetName(e.target.value)}
+                        placeholder="Nombre (ej: Atlas Producción)"
+                        data-testid="preset-name-input"
+                        className="w-full bg-white/60 border border-slate-200/80 rounded-xl px-4 py-2.5 text-sm text-slate-800 placeholder-slate-300 focus:outline-none focus:ring-2 focus:ring-amber-300" />
+                      <div className="flex gap-2">
+                        <input type="text" value={newDbUrl}
+                          onChange={e => { setNewDbUrl(e.target.value); setDbTestResult(null); }}
+                          placeholder="mongodb://... o mongodb+srv://..."
+                          className="flex-1 bg-white/60 border border-slate-200/80 rounded-xl px-3 py-2.5 text-xs font-mono text-slate-800 placeholder-slate-300 focus:outline-none focus:ring-2 focus:ring-amber-300" />
+                        <motion.button whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.97 }}
+                          data-testid="save-preset-btn"
+                          disabled={!presetName.trim() || !newDbUrl.trim()}
+                          onClick={() => {
+                            const newPreset = { name: presetName.trim(), url: newDbUrl.trim(), color: ["indigo","emerald","sky","amber","rose","violet"][presets.length % 6] };
+                            savePresets([...presets, newPreset]);
+                            setPresetName(""); setNewDbUrl(""); setShowAddPreset(false);
+                            toast({ title: `Preset "${newPreset.name}" guardado ✓` });
+                          }}
+                          className="px-4 py-2.5 rounded-xl bg-amber-500 text-white text-xs font-bold disabled:opacity-40 hover:bg-amber-600 transition-colors">
+                          <Save size={12} />
+                        </motion.button>
+                      </div>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+
+                {presets.length === 0 ? (
+                  <div className="flex items-center justify-center py-4 text-slate-300 gap-2">
+                    <Bookmark size={14} />
+                    <span className="text-xs">No hay conexiones guardadas</span>
                   </div>
                 ) : (
-                  <div className="space-y-1.5 max-h-56 overflow-y-auto pr-0.5">
-                    {backupHistory.map((b, i) => {
-                      const isAuto = b.label === "auto";
+                  <div className="space-y-2">
+                    {presets.map((p, i) => {
+                      const colors = {
+                        indigo: "bg-indigo-50 border-indigo-200/60 text-indigo-700",
+                        emerald: "bg-emerald-50 border-emerald-200/60 text-emerald-700",
+                        sky: "bg-sky-50 border-sky-200/60 text-sky-700",
+                        amber: "bg-amber-50 border-amber-200/60 text-amber-700",
+                        rose: "bg-rose-50 border-rose-200/60 text-rose-700",
+                        violet: "bg-violet-50 border-violet-200/60 text-violet-700",
+                      };
                       return (
-                        <motion.div key={b.filename} initial={{ opacity: 0, x: -8 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: i * 0.04 }}
-                          className="flex items-center gap-3 bg-white/60 border border-slate-100 rounded-xl px-3 py-2.5 hover:bg-white/80 transition-all">
-                          <div className={`w-7 h-7 rounded-lg flex items-center justify-center shrink-0 ${isAuto ? "bg-slate-100" : "bg-indigo-100"}`}>
-                            {isAuto ? <Clock size={11} className="text-slate-400" /> : <ShieldCheck size={11} className="text-indigo-500" />}
-                          </div>
+                        <div key={i} className={`flex items-center gap-3 rounded-2xl px-4 py-3 border ${colors[p.color] || colors.indigo}`}>
+                          <Database size={13} className="shrink-0" />
                           <div className="flex-1 min-w-0">
-                            <p className="text-[11px] font-bold text-slate-700 truncate">{b.filename}</p>
-                            <div className="flex items-center gap-2 mt-0.5">
-                              <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded-full ${isAuto ? "bg-slate-100 text-slate-500" : "bg-indigo-50 text-indigo-600"}`}>
-                                {isAuto ? "AUTO" : "MANUAL"}
-                              </span>
-                              <span className="text-[9px] text-slate-400">{b.size} · {fmtDate(b.created_at)}</span>
-                            </div>
+                            <p className="text-xs font-black truncate">{p.name}</p>
+                            <p className="text-[10px] font-mono opacity-60 truncate">{p.url.replace(/:([^@]+)@/, ":***@")}</p>
                           </div>
-                          <a href={downloadBackupFileUrl(b.filename)} download data-testid={`backup-dl-${b.filename}`}
-                            className="w-7 h-7 rounded-lg bg-indigo-50 hover:bg-indigo-100 flex items-center justify-center transition-colors" title="Descargar">
-                            <Download size={11} className="text-indigo-600" />
-                          </a>
-                          <button onClick={() => handleDeleteBackup(b.filename)} data-testid={`backup-del-${b.filename}`}
-                            className="w-7 h-7 rounded-lg bg-red-50 hover:bg-red-100 flex items-center justify-center transition-colors" title="Eliminar">
-                            <Trash2 size={11} className="text-red-400" />
-                          </button>
-                        </motion.div>
+                          <div className="flex gap-1.5">
+                            <motion.button whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}
+                              data-testid={`preset-connect-${i}`}
+                              onClick={async () => {
+                                setNewDbUrl(p.url);
+                                try {
+                                  await switchDatabase(p.url);
+                                  toast({ title: `Conectado a "${p.name}" ✓ — Actualizando...` });
+                                  setTimeout(() => window.location.reload(), 1200);
+                                } catch (e) { toast({ title: e.response?.data?.detail || "Error al conectar", variant: "destructive" }); }
+                              }}
+                              className="px-3 py-1.5 rounded-xl text-[10px] font-bold bg-white/80 hover:bg-white transition-colors border border-white/60">
+                              Conectar
+                            </motion.button>
+                            <button onClick={() => savePresets(presets.filter((_, j) => j !== i))}
+                              data-testid={`preset-delete-${i}`}
+                              className="w-7 h-7 rounded-lg bg-white/60 hover:bg-red-50 flex items-center justify-center transition-colors">
+                              <Trash2 size={10} className="text-red-400" />
+                            </button>
+                          </div>
+                        </div>
                       );
                     })}
                   </div>
                 )}
-              </div>
 
-              {/* MongoDB Atlas guide */}
-              <details className="rounded-2xl overflow-hidden border border-blue-200/60 bg-blue-50/30 group">
-                <summary className="flex items-center gap-2 px-4 py-3 cursor-pointer list-none select-none">
-                  <Database size={13} className="text-blue-500 shrink-0" />
-                  <span className="text-xs font-black text-blue-800 flex-1">Base de datos en la nube — MongoDB Atlas (gratis)</span>
-                  <ChevronRight size={12} className="text-blue-400 group-open:rotate-90 transition-transform" />
-                </summary>
-                <div className="px-4 pb-4 text-[10px] text-blue-700 space-y-2 border-t border-blue-100/60">
-                  <p className="font-black text-xs mt-3">4 pasos — 512 MB gratuitos:</p>
-                  {[
-                    <>Ve a <a href="https://www.mongodb.com/cloud/atlas/register" target="_blank" rel="noreferrer" className="underline font-bold">mongodb.com/cloud/atlas</a> → crea cuenta gratis</>,
-                    <>Crea un cluster → <b>Free Tier (M0 Sandbox)</b> → región más cercana</>,
-                    <>Database Access → crea usuario/contraseña → Network Access → agrega <b>0.0.0.0/0</b></>,
-                    <>Connect → "Connect your application" → copia la URI → pégala abajo en "Cambiar conexión"</>,
-                  ].map((step, i) => (
-                    <div key={i} className="flex items-start gap-2">
-                      <span className="w-4 h-4 rounded-full bg-blue-200 text-blue-700 font-black text-[9px] flex items-center justify-center shrink-0 mt-0.5">{i + 1}</span>
-                      <p>{step}</p>
-                    </div>
-                  ))}
-                  <code className="block bg-white/70 px-3 py-2 rounded-xl text-[9px] font-mono break-all border border-blue-100">
-                    mongodb+srv://usuario:contraseña@cluster.mongodb.net/cinema
-                  </code>
-                </div>
-              </details>
-
-            </div>
-          </div>
-        </motion.div>
-
-        {/* ── EXPORTAR DATOS ── */}
-        <motion.div variants={fadeUp}>
-          <div className="glass rounded-3xl overflow-hidden">
-            <div className="flex items-center gap-3 px-5 py-4 border-b border-white/40">
-              <div className="w-9 h-9 rounded-xl bg-violet-100 flex items-center justify-center">
-                <FileText size={16} className="text-violet-600" />
-              </div>
-              <div>
-                <p className="text-sm font-black text-slate-900" style={{ fontFamily: "Cabinet Grotesk, sans-serif" }}>{s.exportTitle || "Exportar Datos"}</p>
-                <p className="text-[11px] text-slate-400">{s.exportDesc || "Descarga tus reservas en diferentes formatos"}</p>
-              </div>
-            </div>
-            <div className="p-5 space-y-3">
-              <div className="grid grid-cols-3 gap-3">
-                {[
-                  { fmt: "csv",  label: "CSV",   color: "bg-emerald-50 border-emerald-200/60 text-emerald-700 hover:bg-emerald-100",   icon: Download,        onClick: () => handleExport("csv")  },
-                  { fmt: "json", label: "JSON",  color: "bg-indigo-50 border-indigo-200/60 text-indigo-700 hover:bg-indigo-100",       icon: Download,        onClick: () => handleExport("json") },
-                  { fmt: "xlsx", label: "Excel", color: "bg-teal-50 border-teal-200/60 text-teal-700 hover:bg-teal-100",               icon: FileSpreadsheet, onClick: handleExportXLSX           },
-                ].map(({ fmt, label, color, icon: Icon, onClick }) => (
-                  <motion.button key={fmt} whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}
-                    onClick={onClick} data-testid={`export-${fmt}-btn`}
-                    className={`flex flex-col items-center gap-2 py-4 rounded-2xl border text-xs font-bold transition-all ${color}`}>
-                    <Icon size={16} />
-                    <span>{label}</span>
-                  </motion.button>
-                ))}
-              </div>
-              <motion.button whileHover={{ scale: 1.01, boxShadow: "0 8px 24px rgba(124,58,237,0.25)" }} whileTap={{ scale: 0.98 }}
-                onClick={handleExportPDF} disabled={pdfLoading} data-testid="export-pdf-btn"
-                className="w-full flex items-center justify-center gap-2.5 py-4 rounded-2xl text-sm font-bold text-white disabled:opacity-60 transition-all"
-                style={{ background: "linear-gradient(135deg, #7c3aed, #4f46e5)" }}>
-                {pdfLoading
-                  ? <><Loader2 size={15} className="animate-spin" /> Generando PDF...</>
-                  : <><FileText size={15} /> Exportar reporte PDF completo</>}
-              </motion.button>
-
-              {/* ── CSV Import ── */}
-              <div className="border-t border-white/40 pt-3">
-                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2.5">Importar desde CSV</p>
-                <input ref={csvImportRef} type="file" accept=".csv,.txt" onChange={handleCsvImport} className="hidden" id="csv-import-input" data-testid="csv-import-input" />
-                <label htmlFor="csv-import-input"
-                  className={`flex items-center justify-center gap-2 w-full py-3 rounded-2xl text-xs font-bold cursor-pointer border-2 border-dashed transition-all ${csvImportLoading ? "border-violet-200 bg-violet-50 text-violet-300" : "border-violet-300/60 bg-violet-50/40 hover:bg-violet-50 text-violet-700"}`}>
-                  {csvImportLoading ? <Loader2 size={13} className="animate-spin" /> : <Upload size={13} />}
-                  {csvImportLoading ? "Importando reservas..." : "Importar reservas desde CSV / Excel (.csv)"}
-                </label>
-                <p className="text-[9px] text-slate-400 mt-1.5 text-center">
-                  Columnas: nombre, tipo_evento, fecha, total, anticipo, estado — exporta desde Excel como CSV
-                </p>
-                {csvImportResult && (
-                  <motion.div initial={{ opacity: 0, y: -4 }} animate={{ opacity: 1, y: 0 }}
-                    className={`mt-2 flex flex-col gap-1 px-3 py-2.5 rounded-xl text-xs font-semibold ${csvImportResult.ok && csvImportResult.imported > 0 ? "bg-emerald-50 text-emerald-700 border border-emerald-200/60" : "bg-amber-50 text-amber-700 border border-amber-200/60"}`}>
-                    <div className="flex items-center gap-2">
-                      {csvImportResult.imported > 0 ? <CheckCircle size={12} /> : <AlertCircle size={12} />}
-                      {csvImportResult.message}
-                    </div>
-                    {csvImportResult.errors?.length > 0 && (
-                      <div className="text-[10px] opacity-70">
-                        {csvImportResult.errors.map((e, i) => <div key={i}>{e}</div>)}
+                {/* MongoDB Atlas guide */}
+                <details className="rounded-2xl overflow-hidden border border-blue-200/60 bg-blue-50/30 group">
+                  <summary className="flex items-center gap-2 px-4 py-3 cursor-pointer list-none select-none">
+                    <Database size={13} className="text-blue-500 shrink-0" />
+                    <span className="text-xs font-black text-blue-800 flex-1">MongoDB Atlas en la nube (gratis)</span>
+                    <ChevronRight size={12} className="text-blue-400 group-open:rotate-90 transition-transform" />
+                  </summary>
+                  <div className="px-4 pb-4 text-[10px] text-blue-700 space-y-2 border-t border-blue-100/60">
+                    <p className="font-black text-xs mt-3">4 pasos — 512 MB gratuitos:</p>
+                    {[
+                      <>Ve a <a href="https://www.mongodb.com/cloud/atlas/register" target="_blank" rel="noreferrer" className="underline font-bold">mongodb.com/cloud/atlas</a> → crea cuenta gratis</>,
+                      <>Crea un cluster → <b>Free Tier (M0 Sandbox)</b> → región más cercana</>,
+                      <>Database Access → crea usuario/contraseña → Network Access → agrega <b>0.0.0.0/0</b></>,
+                      <>Connect → "Connect your application" → copia la URI → pégala arriba en "Cambiar conexión"</>,
+                    ].map((step, idx) => (
+                      <div key={idx} className="flex items-start gap-2">
+                        <span className="w-4 h-4 rounded-full bg-blue-200 text-blue-700 font-black text-[9px] flex items-center justify-center shrink-0 mt-0.5">{idx + 1}</span>
+                        <p>{step}</p>
                       </div>
-                    )}
-                  </motion.div>
-                )}
+                    ))}
+                    <code className="block bg-white/70 px-3 py-2 rounded-xl text-[9px] font-mono break-all border border-blue-100">
+                      mongodb+srv://usuario:contraseña@cluster.mongodb.net/cinema
+                    </code>
+                  </div>
+                </details>
               </div>
-            </div>
-          </div>
-        </motion.div>
 
-        {/* ── CAMBIAR CONEXIÓN ── */}
-        <motion.div variants={fadeUp}>
-          <div className="glass rounded-3xl overflow-hidden">
-            <div className="flex items-center gap-3 px-5 py-4 border-b border-white/40">
-              <div className="w-9 h-9 rounded-xl bg-sky-100 flex items-center justify-center">
-                <Wifi size={16} className="text-sky-600" />
-              </div>
-              <div>
-                <p className="text-sm font-black text-slate-900" style={{ fontFamily: "Cabinet Grotesk, sans-serif" }}>Cambiar conexión MongoDB</p>
-                <p className="text-[11px] text-slate-400">Conecta a otra base de datos local o en la nube</p>
-              </div>
-            </div>
-            <div className="p-5 space-y-3">
-              {/* Quick fill for Atlas connection if stats shows connection_error */}
-              {dbStats?.connection_error && (
-                <motion.button whileHover={{ scale: 1.01 }} whileTap={{ scale: 0.98 }}
-                  onClick={() => setNewDbUrl(dbStats.current_url?.includes("***") ? "" : (dbStats.current_url || ""))}
-                  className="w-full flex items-center gap-2 px-4 py-2.5 rounded-xl bg-amber-50 border border-amber-200 text-amber-700 text-xs font-bold hover:bg-amber-100 transition-all">
-                  <Wifi size={12} /> Reintentar conexión con URL actual
-                </motion.button>
-              )}
-              <input type="text" value={newDbUrl}
-                onChange={e => { setNewDbUrl(e.target.value); setDbTestResult(null); }}
-                placeholder="mongodb+srv://usuario:contraseña@cluster.mongodb.net"
-                data-testid="db-url-input"
-                className="w-full bg-white/60 border border-slate-200/80 rounded-xl px-4 py-3 text-sm font-mono text-slate-800 placeholder-slate-300 focus:outline-none focus:ring-2 focus:ring-sky-300 focus:border-transparent" />
-              {dbTestResult && (
-                <div className={`flex items-center gap-2 text-xs font-semibold px-3 py-2.5 rounded-xl ${dbTestResult.ok ? "bg-emerald-50 text-emerald-700 border border-emerald-200/60" : "bg-red-50 text-red-600 border border-red-200/60"}`}>
-                  {dbTestResult.ok ? <CheckCircle size={13} /> : <XCircle size={13} />}
-                  {dbTestResult.msg}
-                </div>
-              )}
-              <div className="flex gap-2">
-                <motion.button whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.97 }}
-                  onClick={handleDbTest} disabled={!newDbUrl.trim() || dbTesting} data-testid="db-test-btn"
-                  className="flex items-center gap-2 px-4 py-2.5 rounded-xl border border-slate-200 bg-white text-slate-700 text-xs font-bold hover:bg-slate-50 transition-all disabled:opacity-40">
-                  {dbTesting ? <Loader2 size={12} className="animate-spin" /> : <Wifi size={12} />}
-                  {s.dbTest || "Probar"}
-                </motion.button>
-                <motion.button whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.97 }}
-                  onClick={handleDbConnect} disabled={!newDbUrl.trim() || dbConnecting} data-testid="db-connect-btn"
-                  className="flex items-center gap-2 px-4 py-2.5 rounded-xl btn-primary text-white text-xs font-bold disabled:opacity-40">
-                  {dbConnecting ? <Loader2 size={12} className="animate-spin" /> : <ArrowRight size={12} />}
-                  {s.dbConnect || "Conectar"}
-                </motion.button>
-                {dbStats?.is_custom && (
-                  <motion.button whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.97 }}
-                    onClick={handleDbReset} disabled={dbResetting} data-testid="db-reset-btn"
-                    className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-red-50 text-red-600 text-xs font-bold hover:bg-red-100 transition-all border border-red-200/60 disabled:opacity-40">
-                    {dbResetting ? <Loader2 size={12} className="animate-spin" /> : <RefreshCw size={12} />}
-                    {s.dbReset || "Restaurar local"}
-                  </motion.button>
-                )}
-              </div>
-            </div>
-          </div>
-        </motion.div>
-
-        {/* ── CONEXIONES GUARDADAS (PRESETS) ── */}
-        <motion.div variants={fadeUp}>
-          <div className="glass rounded-3xl overflow-hidden">
-            <div className="flex items-center justify-between px-5 py-4 border-b border-white/40">
-              <div className="flex items-center gap-3">
-                <div className="w-9 h-9 rounded-xl bg-amber-100 flex items-center justify-center">
-                  <Bookmark size={16} className="text-amber-600" />
-                </div>
-                <div>
-                  <p className="text-sm font-black text-slate-900" style={{ fontFamily: "Cabinet Grotesk, sans-serif" }}>Conexiones guardadas</p>
-                  <p className="text-[11px] text-slate-400">Cambia rápido entre bases de datos con un clic</p>
-                </div>
-              </div>
-              <motion.button whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}
-                onClick={() => setShowAddPreset(p => !p)} data-testid="add-preset-btn"
-                className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold bg-amber-100 text-amber-700 hover:bg-amber-200 transition-colors">
-                <Plus size={12} /> Agregar
-              </motion.button>
-            </div>
-            <div className="p-5 space-y-3">
-
-              {/* Add preset form */}
-              <AnimatePresence>
-                {showAddPreset && (
-                  <motion.div key="add-form" initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }} exit={{ opacity: 0, height: 0 }}
-                    className="space-y-2 pb-3 border-b border-white/40">
-                    <input type="text" value={presetName}
-                      onChange={e => setPresetName(e.target.value)}
-                      placeholder="Nombre del preset (ej: Atlas Producción)"
-                      data-testid="preset-name-input"
-                      className="w-full bg-white/60 border border-slate-200/80 rounded-xl px-4 py-2.5 text-sm text-slate-800 placeholder-slate-300 focus:outline-none focus:ring-2 focus:ring-amber-300" />
-                    <div className="flex gap-2">
-                      <input type="text" value={newDbUrl}
-                        onChange={e => { setNewDbUrl(e.target.value); setDbTestResult(null); }}
-                        placeholder="mongodb://... o mongodb+srv://..."
-                        className="flex-1 bg-white/60 border border-slate-200/80 rounded-xl px-3 py-2.5 text-xs font-mono text-slate-800 placeholder-slate-300 focus:outline-none focus:ring-2 focus:ring-amber-300" />
-                      <motion.button whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.97 }}
-                        data-testid="save-preset-btn"
-                        disabled={!presetName.trim() || !newDbUrl.trim()}
-                        onClick={() => {
-                          const newPreset = { name: presetName.trim(), url: newDbUrl.trim(), color: ["indigo","emerald","sky","amber","rose","violet"][presets.length % 6] };
-                          savePresets([...presets, newPreset]);
-                          setPresetName(""); setNewDbUrl(""); setShowAddPreset(false);
-                          toast({ title: `Preset "${newPreset.name}" guardado ✓` });
-                        }}
-                        className="px-4 py-2.5 rounded-xl bg-amber-500 text-white text-xs font-bold disabled:opacity-40 hover:bg-amber-600 transition-colors">
-                        <Save size={12} />
-                      </motion.button>
-                    </div>
-                  </motion.div>
-                )}
-              </AnimatePresence>
-
-              {/* Preset list */}
-              {presets.length === 0 ? (
-                <div className="flex items-center justify-center py-6 text-slate-300 gap-2">
-                  <Bookmark size={16} />
-                  <span className="text-xs">No hay conexiones guardadas</span>
-                </div>
-              ) : (
-                <div className="space-y-2">
-                  {presets.map((p, i) => {
-                    const colors = {
-                      indigo: "bg-indigo-50 border-indigo-200/60 text-indigo-700",
-                      emerald: "bg-emerald-50 border-emerald-200/60 text-emerald-700",
-                      sky: "bg-sky-50 border-sky-200/60 text-sky-700",
-                      amber: "bg-amber-50 border-amber-200/60 text-amber-700",
-                      rose: "bg-rose-50 border-rose-200/60 text-rose-700",
-                      violet: "bg-violet-50 border-violet-200/60 text-violet-700",
-                    };
-                    return (
-                      <div key={i} className={`flex items-center gap-3 rounded-2xl px-4 py-3 border ${colors[p.color] || colors.indigo}`}>
-                        <Database size={13} className="shrink-0" />
-                        <div className="flex-1 min-w-0">
-                          <p className="text-xs font-black truncate">{p.name}</p>
-                          <p className="text-[10px] font-mono opacity-60 truncate">{p.url.replace(/:([^@]+)@/, ":***@")}</p>
-                        </div>
-                        <div className="flex gap-1.5">
-                          <motion.button whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}
-                            data-testid={`preset-connect-${i}`}
-                            onClick={async () => {
-                              setNewDbUrl(p.url);
-                              try {
-                                await switchDatabase(p.url);
-                                toast({ title: `Conectado a "${p.name}" ✓ — Actualizando...` });
-                                setTimeout(() => window.location.reload(), 1200);
-                              } catch (e) { toast({ title: e.response?.data?.detail || "Error al conectar", variant: "destructive" }); }
-                            }}
-                            className="px-3 py-1.5 rounded-xl text-[10px] font-bold bg-white/80 hover:bg-white transition-colors border border-white/60">
-                            Conectar
-                          </motion.button>
-                          <button onClick={() => { savePresets(presets.filter((_, j) => j !== i)); }}
-                            data-testid={`preset-delete-${i}`}
-                            className="w-7 h-7 rounded-lg bg-white/60 hover:bg-red-50 flex items-center justify-center transition-colors">
-                            <Trash2 size={10} className="text-red-400" />
-                          </button>
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              )}
             </div>
           </div>
         </motion.div>

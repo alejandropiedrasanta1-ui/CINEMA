@@ -1,6 +1,6 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { getSocios, deleteSocio, getReservations, getFinancials } from "@/lib/api";
-import { Plus, Trash2, Edit2, Camera, Video, Users, TrendingUp, DollarSign, CheckCircle, Clock } from "lucide-react";
+import { Plus, Trash2, Edit2, Camera, Video, Users, TrendingUp, DollarSign, CheckCircle, Clock, GripVertical } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useSettings } from "@/context/SettingsContext";
 import { useToast } from "@/hooks/use-toast";
@@ -13,16 +13,23 @@ const ROLE_COLORS = {
   "Asistente":  "bg-slate-100/80 text-slate-700 border-slate-200/60",
 };
 
+const ORDER_KEY = "cp_socios_order";
+
 const container = { hidden: { opacity: 0 }, show: { opacity: 1, transition: { staggerChildren: 0.07 } } };
 const item = { hidden: { opacity: 0, y: 20, filter: "blur(4px)" }, show: { opacity: 1, y: 0, filter: "blur(0px)", transition: { duration: 0.4, ease: [0.22, 1, 0.36, 1] } } };
 
 export default function Socios() {
   const [socios, setSocios] = useState([]);
+  const [orderedIds, setOrderedIds] = useState(() => {
+    try { return JSON.parse(localStorage.getItem(ORDER_KEY)) || []; } catch { return []; }
+  });
   const [reservations, setReservations] = useState([]);
   const [financials, setFinancials] = useState(null);
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
   const [editTarget, setEditTarget] = useState(null);
+  const [dragOverId, setDragOverId] = useState(null);
+  const dragIdRef = useRef(null);
   const { formatCurrency } = useSettings();
   const { toast } = useToast();
 
@@ -38,6 +45,53 @@ export default function Socios() {
   };
 
   useEffect(() => { load(); }, []);
+
+  // Persist order
+  useEffect(() => {
+    if (orderedIds.length > 0) localStorage.setItem(ORDER_KEY, JSON.stringify(orderedIds));
+  }, [orderedIds]);
+
+  // Sorted socios list based on saved order
+  const sortedSocios = [...socios].sort((a, b) => {
+    const ai = orderedIds.indexOf(a.id);
+    const bi = orderedIds.indexOf(b.id);
+    if (ai === -1 && bi === -1) return 0;
+    if (ai === -1) return 1;
+    if (bi === -1) return -1;
+    return ai - bi;
+  });
+
+  // ── Drag handlers ────────────────────────────────────────────────────────
+  const handleDragStart = (e, id) => {
+    dragIdRef.current = id;
+    e.dataTransfer.effectAllowed = "move";
+  };
+
+  const handleDragOver = (e, id) => {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = "move";
+    setDragOverId(id);
+  };
+
+  const handleDrop = (e, targetId) => {
+    e.preventDefault();
+    const fromId = dragIdRef.current;
+    if (!fromId || fromId === targetId) { setDragOverId(null); return; }
+    const ids = sortedSocios.map(s => s.id);
+    const fromIdx = ids.indexOf(fromId);
+    const toIdx = ids.indexOf(targetId);
+    const newIds = [...ids];
+    newIds.splice(fromIdx, 1);
+    newIds.splice(toIdx, 0, fromId);
+    setOrderedIds(newIds);
+    setDragOverId(null);
+    dragIdRef.current = null;
+  };
+
+  const handleDragEnd = () => {
+    setDragOverId(null);
+    dragIdRef.current = null;
+  };
 
   const handleDelete = async (id) => {
     if (!window.confirm("¿Eliminar este socio?")) return;
@@ -65,7 +119,7 @@ export default function Socios() {
       <motion.div initial={{ opacity: 0, y: -16 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4 }} className="flex items-center justify-between mb-8">
         <div>
           <h1 className="text-5xl font-black gradient-text tracking-tight" style={{ fontFamily: 'Cabinet Grotesk, sans-serif' }}>Socios</h1>
-          <p className="text-sm text-slate-500 font-medium mt-1.5">{socios.length} socios registrados</p>
+          <p className="text-sm text-slate-500 font-medium mt-1.5">{socios.length} socios — arrastra para reordenar</p>
         </div>
         <motion.button whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.97 }} onClick={() => { setEditTarget(null); setShowForm(true); }}
           data-testid="new-socio-btn" className="flex items-center gap-2 px-5 py-2.5 rounded-full btn-primary text-white text-sm font-bold">
@@ -106,15 +160,31 @@ export default function Socios() {
         </motion.div>
       ) : (
         <motion.div variants={container} initial="hidden" animate="show" className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
-          {socios.map(socio => {
+          {sortedSocios.map(socio => {
             const RoleIcon = ROLE_ICONS[socio.role] || Users;
             const events = getEventsForSocio(socio.id);
-            const { paid, pending, total } = getPaymentSummary(socio.id);
+            const { paid, pending } = getPaymentSummary(socio.id);
+            const isDragOver = dragOverId === socio.id;
             return (
-              <motion.div key={socio.id} variants={item} className="glass rounded-3xl p-6" data-testid={`socio-card-${socio.id}`}>
+              <motion.div
+                key={socio.id}
+                variants={item}
+                draggable
+                onDragStart={e => handleDragStart(e, socio.id)}
+                onDragOver={e => handleDragOver(e, socio.id)}
+                onDrop={e => handleDrop(e, socio.id)}
+                onDragEnd={handleDragEnd}
+                data-testid={`socio-card-${socio.id}`}
+                className={`glass rounded-3xl p-6 transition-all duration-200 ${isDragOver ? "ring-2 ring-indigo-400 scale-[1.02] opacity-80" : ""}`}
+                style={{ cursor: "grab" }}
+              >
                 {/* Photo + name */}
                 <div className="flex items-start justify-between mb-4">
                   <div className="flex items-center gap-3">
+                    {/* Drag handle */}
+                    <div className="flex items-center">
+                      <GripVertical size={14} className="text-slate-300 hover:text-slate-500 transition-colors cursor-grab shrink-0" />
+                    </div>
                     <div className="relative">
                       {socio.photo && socio.photo_content_type ? (
                         <img src={`data:${socio.photo_content_type};base64,${socio.photo}`} alt={socio.name}

@@ -1,0 +1,26 @@
+{
+  "summary": "Frontend testing for UI changes: DB page card cleanup and Socios drag-and-drop. All 8 test scenarios passed.",
+  "backend_issues": {
+    "critical": [],
+    "minor": []
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": [
+      {
+        "screen": "Base de Datos page subtitle",
+        "issues": ["Subtitle still says 'Respaldos, exportación y conexión MongoDB' — 'exportación' reference remains even though Exportar Datos card was removed. Minor cosmetic issue."]
+      }
+    ]
+  },
+  "test_report_links": ["/app/test_reports/iteration_31.json"],
+  "action_items": ["Optional: Update DB page subtitle to remove 'exportación' reference since that card was removed"],
+  "critical_code_review_comments": [],
+  "updated_files": [],
+  "success_rate": {"backend": "N/A", "frontend": "100%"},
+  "seed_data_creation": "",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "All 8 new UI features verified: (1) Respaldos card removed ✓, (2) Exportar Datos removed ✓, (3) Respaldo Automatico has Guardar en servidor + history + badges + Restaurar ✓, (4) Base de Datos MongoDB unified card with stats/connection/Probar/Conectar/Conexiones Guardadas+Agregar ✓, (5) Socios shows 'arrastra para reordenar' subtitle ✓, (6) GripVertical icons on socio cards ✓, (7) Drag-and-drop changes order ✓, (8) localStorage cp_socios_order persists order ✓"
+}
