@@ -330,7 +330,7 @@ export default function DatabasePage() {
         <h1 className="text-5xl font-black gradient-text" style={{ fontFamily: "Cabinet Grotesk, sans-serif" }}>
           Base de Datos
         </h1>
-        <p className="text-sm text-slate-500 font-medium mt-1.5">Respaldos, exportación y conexión MongoDB</p>
+        <p className="text-sm text-slate-500 font-medium mt-1.5">Respaldos y conexión MongoDB</p>
       </motion.div>
 
       <motion.div variants={stagger} initial="hidden" animate="show" className="space-y-4">
