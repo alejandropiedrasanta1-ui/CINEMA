@@ -323,8 +323,14 @@ export default function Dashboard() {
                     </p>
                   </div>
 
-                  {/* ── CENTRO: Fotógrafo + pago ── */}
+                  {/* ── CENTRO: Monto total + Fotógrafo + pago ── */}
                   <div className="flex items-center gap-2.5 flex-1 min-w-0">
+                    {r.total_amount > 0 && (
+                      <>
+                        <span className="text-base font-black text-slate-800 flex-shrink-0">{formatCurrency(r.total_amount)}</span>
+                        <span className="text-slate-300 flex-shrink-0">·</span>
+                      </>
+                    )}
                     {firstPartner ? (
                       <>
                         <Camera size={14} className="text-slate-400 flex-shrink-0" />
