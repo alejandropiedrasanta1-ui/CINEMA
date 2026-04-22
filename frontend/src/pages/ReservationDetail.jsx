@@ -157,36 +157,69 @@ export default function ReservationDetail() {
 
           <motion.div initial={{ opacity:0, y:20 }} animate={{ opacity:1, y:0 }} transition={{ delay:0.2 }} className="glass rounded-3xl p-6">
             <h2 className="text-xs font-black text-slate-500 uppercase tracking-widest mb-5">{dt.receipts}</h2>
-            <motion.div whileHover={{ scale:1.01 }}
-              className={`border-2 border-dashed rounded-3xl p-8 text-center cursor-pointer transition-all duration-300 ${dragOver ? "border-indigo-400 bg-indigo-50/60 scale-[1.02]" : "border-indigo-200/60 bg-indigo-50/20 hover:bg-indigo-50/40 hover:border-indigo-300"}`}
-              onDrop={handleDrop} onDragOver={e => { e.preventDefault(); setDragOver(true); }} onDragLeave={() => setDragOver(false)}
-              onClick={() => fileRef.current?.click()} data-testid="upload-zone">
-              <div className="w-12 h-12 rounded-2xl bg-indigo-100/80 flex items-center justify-center mx-auto mb-3">
-                <Upload size={20} className="text-indigo-500" />
-              </div>
-              <p className="text-sm font-bold text-slate-600">{uploading ? dt.uploading : dt.uploadHint}</p>
-              <p className="text-xs text-slate-400 mt-1">{dt.uploadSub}</p>
-              <input ref={fileRef} type="file" accept="image/*,application/pdf" multiple className="hidden" data-testid="file-input" onChange={e => handleFileUpload(Array.from(e.target.files))} />
-            </motion.div>
 
+            <input ref={fileRef} type="file" accept="image/*,application/pdf" multiple className="hidden" data-testid="file-input" onChange={e => handleFileUpload(Array.from(e.target.files))} />
+
+            {/* Sin imágenes: zona de arrastre grande */}
+            {(!reservation.receipt_images || reservation.receipt_images.length === 0) && (
+              <motion.div whileHover={{ scale:1.01 }}
+                className={`border-2 border-dashed rounded-3xl p-10 text-center cursor-pointer transition-all duration-300 ${dragOver ? "border-indigo-400 bg-indigo-50/60 scale-[1.02]" : "border-indigo-200/60 bg-indigo-50/20 hover:bg-indigo-50/40 hover:border-indigo-300"}`}
+                onDrop={handleDrop} onDragOver={e => { e.preventDefault(); setDragOver(true); }} onDragLeave={() => setDragOver(false)}
+                onClick={() => fileRef.current?.click()} data-testid="upload-zone">
+                <div className="w-14 h-14 rounded-2xl bg-indigo-100/80 flex items-center justify-center mx-auto mb-4">
+                  <Upload size={24} className="text-indigo-500" />
+                </div>
+                <p className="text-base font-bold text-slate-600">{uploading ? dt.uploading : dt.uploadHint}</p>
+                <p className="text-xs text-slate-400 mt-1.5">{dt.uploadSub}</p>
+              </motion.div>
+            )}
+
+            {/* Con imágenes: mostrar en grande */}
             <AnimatePresence>
               {reservation.receipt_images && reservation.receipt_images.length > 0 && (
-                <motion.div initial={{ opacity:0, height:0 }} animate={{ opacity:1, height:"auto" }} className="grid grid-cols-2 sm:grid-cols-3 gap-3 mt-5" data-testid="receipts-grid">
+                <motion.div initial={{ opacity:0 }} animate={{ opacity:1 }} className="space-y-4" data-testid="receipts-grid"
+                  onDrop={handleDrop} onDragOver={e => { e.preventDefault(); setDragOver(true); }} onDragLeave={() => setDragOver(false)}>
                   {reservation.receipt_images.map((img, i) => (
-                    <motion.div key={img.id} initial={{ opacity:0, scale:0.8 }} animate={{ opacity:1, scale:1 }} transition={{ delay:i*0.06 }}
-                      className="relative group rounded-2xl overflow-hidden glass aspect-video flex items-center justify-center">
+                    <motion.div key={img.id} initial={{ opacity:0, y:12 }} animate={{ opacity:1, y:0 }} transition={{ delay:i*0.07 }}
+                      className="relative group rounded-3xl overflow-hidden bg-slate-900/5 border border-white/50"
+                      style={{ boxShadow:"0 4px 24px rgba(0,0,0,0.08)" }}>
                       {img.content_type?.startsWith("image/") ? (
-                        <img src={`data:${img.content_type};base64,${img.data}`} alt={img.filename} className="object-cover w-full h-full cursor-pointer" onClick={() => setLightbox(img)} data-testid={`receipt-img-${img.id}`} />
+                        <>
+                          <img
+                            src={`data:${img.content_type};base64,${img.data}`}
+                            alt={img.filename}
+                            className="w-full object-contain cursor-zoom-in rounded-3xl"
+                            style={{ maxHeight:"520px", minHeight:"200px", background:"#f8fafc" }}
+                            onClick={() => setLightbox(img)}
+                            data-testid={`receipt-img-${img.id}`}
+                          />
+                          {/* Overlay con nombre y acciones */}
+                          <div className="absolute bottom-0 left-0 right-0 flex items-center justify-between px-4 py-3 rounded-b-3xl opacity-0 group-hover:opacity-100 transition-all duration-200"
+                            style={{ background:"linear-gradient(0deg, rgba(15,23,42,0.6) 0%, transparent 100%)" }}>
+                            <p className="text-xs font-semibold text-white/80 truncate">{img.filename}</p>
+                            <motion.button whileHover={{ scale:1.1 }} whileTap={{ scale:0.9 }} onClick={() => handleDeleteReceipt(img.id)}
+                              className="p-2 rounded-full bg-white/20 hover:bg-red-500 text-white transition-colors flex-shrink-0"
+                              data-testid={`delete-receipt-${img.id}`}><Trash2 size={13} /></motion.button>
+                          </div>
+                        </>
                       ) : (
-                        <div className="flex flex-col items-center gap-1 cursor-pointer py-4" onClick={() => setLightbox(img)}>
-                          <ImageIcon size={24} className="text-slate-400" /><p className="text-xs text-slate-500 truncate max-w-full px-2">{img.filename}</p>
+                        <div className="flex flex-col items-center gap-3 py-12 cursor-pointer" onClick={() => setLightbox(img)}>
+                          <ImageIcon size={40} className="text-slate-400" />
+                          <p className="text-sm text-slate-500 font-medium px-4">{img.filename}</p>
                         </div>
                       )}
-                      <motion.button whileHover={{ scale:1.1 }} onClick={() => handleDeleteReceipt(img.id)}
-                        className="absolute top-2 right-2 p-1.5 rounded-full bg-white/80 opacity-0 group-hover:opacity-100 hover:bg-red-100 text-slate-500 hover:text-red-500 transition-all"
-                        data-testid={`delete-receipt-${img.id}`}><Trash2 size={11} /></motion.button>
                     </motion.div>
                   ))}
+
+                  {/* Botón subir otra imagen */}
+                  <motion.button whileHover={{ scale:1.02 }} whileTap={{ scale:0.98 }}
+                    onClick={() => fileRef.current?.click()}
+                    disabled={uploading}
+                    data-testid="upload-another-btn"
+                    className={`w-full flex items-center justify-center gap-2.5 py-3.5 rounded-2xl border-2 border-dashed text-sm font-bold transition-all duration-200 ${dragOver ? "border-indigo-400 bg-indigo-50/60" : "border-indigo-200/70 bg-indigo-50/20 text-indigo-500 hover:bg-indigo-50/50 hover:border-indigo-400"}`}>
+                    <Upload size={16} />
+                    {uploading ? (dt.uploading || "Subiendo…") : "Subir otra imagen"}
+                  </motion.button>
                 </motion.div>
               )}
             </AnimatePresence>
