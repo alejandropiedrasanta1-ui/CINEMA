@@ -1,6 +1,6 @@
 {
   "_meta": {
-    "created_at": "2026-04-21T04:14:45.771188+00:00",
+    "created_at": "2026-04-22T02:27:47.209010+00:00",
     "label": "auto_pre_cleanup"
   },
   "reservations": [
@@ -19,7 +19,14 @@
       "notes": "",
       "receipt_images": [],
       "created_at": "2026-04-15T03:35:04.823990+00:00",
-      "id": "69e6ef83e84ab7ee1b20dc9a"
+      "assigned_partners": [
+        {
+          "socio_id": "69e6fe9ae84ab7ee1b20dcab",
+          "payment": 500,
+          "payment_status": "Pendiente"
+        }
+      ],
+      "id": "69e6fe9ae84ab7ee1b20dca4"
     },
     {
       "client_name": "Test Flotante",
@@ -36,7 +43,7 @@
       "notes": "",
       "receipt_images": [],
       "created_at": "2026-04-16T21:31:55.882979+00:00",
-      "id": "69e6ef83e84ab7ee1b20dc9b"
+      "id": "69e6fe9ae84ab7ee1b20dca5"
     },
     {
       "client_name": "Test Cristal",
@@ -53,7 +60,7 @@
       "notes": "",
       "receipt_images": [],
       "created_at": "2026-04-16T22:01:41.376710+00:00",
-      "id": "69e6ef83e84ab7ee1b20dc9c"
+      "id": "69e6fe9ae84ab7ee1b20dca6"
     },
     {
       "client_name": "Ana Martinez",
@@ -70,7 +77,7 @@
       "notes": "",
       "receipt_images": [],
       "created_at": "2026-04-16T23:59:43.601377+00:00",
-      "id": "69e6ef83e84ab7ee1b20dc9d"
+      "id": "69e6fe9ae84ab7ee1b20dca7"
     },
     {
       "client_name": "hdfghfg",
@@ -87,7 +94,15 @@
       "notes": "",
       "receipt_images": [],
       "created_at": "2026-04-17T00:27:29.065364+00:00",
-      "id": "69e6ef83e84ab7ee1b20dc9e"
+      "assigned_partners": [
+        {
+          "socio_id": "69e6fe9ae84ab7ee1b20dcab",
+          "payment": 1500,
+          "payment_status": "Pendiente"
+        }
+      ],
+      "package_type": "Básico",
+      "id": "69e6fe9ae84ab7ee1b20dca8"
     },
     {
       "client_name": "Desconocido",
@@ -104,7 +119,7 @@
       "notes": "",
       "receipt_images": [],
       "created_at": "2026-04-20T23:57:49.016310+00:00",
-      "id": "69e6ef83e84ab7ee1b20dc9f"
+      "id": "69e6fe9ae84ab7ee1b20dca9"
     },
     {
       "client_name": "Desconocido",
@@ -121,7 +136,7 @@
       "notes": "",
       "receipt_images": [],
       "created_at": "2026-04-20T23:59:51.427110+00:00",
-      "id": "69e6ef83e84ab7ee1b20dca0"
+      "id": "69e6fe9ae84ab7ee1b20dcaa"
     }
   ],
   "socios": [
@@ -135,7 +150,7 @@
       "photo": null,
       "photo_content_type": null,
       "created_at": "2026-04-15T03:37:19.392357+00:00",
-      "id": "69e6ef83e84ab7ee1b20dca1"
+      "id": "69e6fe9ae84ab7ee1b20dcab"
     },
     {
       "name": "pp",
@@ -147,7 +162,7 @@
       "photo": null,
       "photo_content_type": null,
       "created_at": "2026-04-15T17:30:27.487831+00:00",
-      "id": "69e6ef83e84ab7ee1b20dca2"
+      "id": "69e6fe9ae84ab7ee1b20dcac"
     }
   ],
   "app_settings": [
@@ -169,7 +184,7 @@
       "telegram_bot_token": "",
       "telegram_chat_id": "",
       "telegram_enabled": true,
-      "id": "69e6ef83e84ab7ee1b20dca3"
+      "id": "69e6fe9ae84ab7ee1b20dcad"
     }
   ]
 }

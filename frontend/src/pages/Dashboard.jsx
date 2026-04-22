@@ -291,8 +291,8 @@ export default function Dashboard() {
             <p className="text-slate-300 text-xs mt-1">{d.createFirst}</p>
           </div>
         ) : dashboardRecentStyle === "tarjeta" ? (
-          /* ── ESTILO TARJETA ── */
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 p-5">
+          /* ── ESTILO TARJETA (full-width, spacious) ── */
+          <div className="p-5 space-y-3">
             {recent.map((r, idx) => {
               const cfg = getEventConfig(r.event_type);
               const EvIcon = cfg.icon;
@@ -301,27 +301,89 @@ export default function Dashboard() {
               const isPaid = firstPartner?.payment_status === "Pagado";
               return (
                 <motion.div key={r.id} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: idx * 0.06 }}
-                  whileHover={{ y: -2, boxShadow: "0 8px 24px rgba(0,0,0,0.08)" }}
-                  className="bg-white/60 border border-white/70 rounded-2xl p-4 cursor-pointer transition-all"
+                  whileHover={{ y: -2, boxShadow: "0 8px 28px rgba(0,0,0,0.09)" }}
+                  className="w-full bg-white/60 border border-white/70 rounded-2xl p-5 cursor-pointer transition-all"
                   onClick={() => navigate(`/reservaciones/${r.id}`)} data-testid={`recent-row-${r.id}`}>
-                  <div className="flex items-start justify-between mb-3">
-                    <div className="w-10 h-10 rounded-2xl flex items-center justify-center" style={{ background: cfg.fg + "18" }}>
-                      <EvIcon size={18} style={{ color: cfg.fg }} strokeWidth={1.8} />
+                  <div className="flex items-center justify-between mb-4">
+                    <div className="flex items-center gap-3">
+                      <div className="w-12 h-12 rounded-2xl flex items-center justify-center" style={{ background: cfg.fg + "18" }}>
+                        <EvIcon size={22} style={{ color: cfg.fg }} strokeWidth={1.8} />
+                      </div>
+                      <div>
+                        <p className="text-2xl font-black leading-none" style={{ fontFamily: "Cabinet Grotesk, sans-serif", color: cfg.fg }}>{r.event_type || "Evento"}</p>
+                        <p className="text-sm text-slate-500 font-semibold mt-0.5">{formatDate(r.event_date)}</p>
+                      </div>
                     </div>
-                    <span className={`text-[10px] px-2.5 py-1 rounded-full border font-bold ${statusColors[r.status] || FALLBACK_COLOR}`}>
-                      {tr.statuses[r.status] || r.status}
-                    </span>
+                    <div className="flex items-center gap-3">
+                      {r.package_type && (
+                        <span className={`text-xs font-black px-3 py-1 rounded-full ${r.package_type === "Completo" ? "bg-amber-100 text-amber-700" : r.package_type === "Intermedio" ? "bg-indigo-100 text-indigo-700" : "bg-slate-100 text-slate-600"}`}>
+                          {r.package_type}
+                        </span>
+                      )}
+                      {r.total_amount > 0 && <span className="text-xl font-black text-slate-800">{formatCurrency(r.total_amount)}</span>}
+                      <span className={`text-xs px-3 py-1.5 rounded-full border font-bold ${statusColors[r.status] || FALLBACK_COLOR}`}>{tr.statuses[r.status] || r.status}</span>
+                    </div>
                   </div>
-                  <p className="text-lg font-black mb-1" style={{ fontFamily: "Cabinet Grotesk, sans-serif", color: cfg.fg }}>{r.event_type || "Evento"}</p>
-                  <p className="text-sm font-bold text-slate-600 mb-2">{r.total_amount > 0 ? formatCurrency(r.total_amount) : ""} · {formatDate(r.event_date)}</p>
                   {firstPartner ? (
-                    <div className="flex items-center gap-1.5">
-                      <Camera size={11} className="text-slate-400" />
-                      <span className="text-xs font-semibold text-slate-600">{firstPartner.socio.name}</span>
-                      {firstPartner.payment > 0 && <span className={`text-xs font-black ml-1 ${isPaid ? "text-emerald-600" : "text-amber-600"}`}>{formatCurrency(firstPartner.payment)}</span>}
-                      <span className={`text-[9px] font-black px-1.5 py-0.5 rounded-full ${isPaid ? "bg-emerald-100 text-emerald-700" : "bg-amber-100 text-amber-700"}`}>{isPaid ? "Pagado" : "Pendiente"}</span>
+                    <div className="flex items-center gap-3 pt-3 border-t border-white/50">
+                      <Camera size={14} className="text-slate-400" />
+                      <span className="text-sm font-bold text-slate-700">{firstPartner.socio.name}</span>
+                      {firstPartner.payment > 0 && <span className={`text-sm font-black ${isPaid ? "text-emerald-600" : "text-amber-600"}`}>{formatCurrency(firstPartner.payment)}</span>}
+                      <span className={`text-xs font-black px-2.5 py-1 rounded-full ${isPaid ? "bg-emerald-100 text-emerald-700" : "bg-amber-100 text-amber-700"}`}>{isPaid ? "Pagado" : "Pendiente"}</span>
+                      {partners.length > 1 && partners.slice(1).map((p2,pi) => (
+                        <span key={pi} className="text-xs text-slate-500 font-semibold">{p2.socio.name}</span>
+                      ))}
                     </div>
-                  ) : <p className="text-xs text-slate-300">Sin fotógrafo</p>}
+                  ) : (
+                    <div className="flex items-center gap-2 pt-3 border-t border-white/50">
+                      <User size={13} className="text-slate-300" />
+                      <span className="text-sm text-slate-300 font-medium">{language === "es" ? "Sin fotógrafo asignado" : "No photographer assigned"}</span>
+                    </div>
+                  )}
+                </motion.div>
+              );
+            })}
+          </div>
+        ) : dashboardRecentStyle === "linea_paquete" ? (
+          /* ── ESTILO LÍNEA PAQUETE ── */
+          <div className="divide-y divide-white/30">
+            {recent.map((r, idx) => {
+              const cfg = getEventConfig(r.event_type);
+              const EvIcon = cfg.icon;
+              const partners = (r.assigned_partners || []).map(p => ({ ...p, socio: socioMap[p.socio_id] })).filter(p => p.socio);
+              const firstPartner = partners[0];
+              const isPaid = firstPartner?.payment_status === "Pagado";
+              return (
+                <motion.div key={r.id} initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.35 + idx * 0.05 }}
+                  whileHover={{ backgroundColor: "rgba(255,255,255,0.35)" }}
+                  className="flex items-center gap-5 px-6 py-5 cursor-pointer transition-colors"
+                  onClick={() => navigate(`/reservaciones/${r.id}`)} data-testid={`recent-row-${r.id}`}>
+                  <div className="flex items-center gap-3 w-[30%] min-w-0">
+                    <div className="w-11 h-11 rounded-2xl flex items-center justify-center flex-shrink-0" style={{ background: cfg.fg + "18" }}>
+                      <EvIcon size={20} style={{ color: cfg.fg }} strokeWidth={1.8} />
+                    </div>
+                    <p className="text-2xl font-black truncate leading-none" style={{ fontFamily: "Cabinet Grotesk, sans-serif", color: cfg.fg }}>{r.event_type || "Evento"}</p>
+                  </div>
+                  <div className="flex items-center gap-2.5 flex-1 min-w-0">
+                    {firstPartner ? (
+                      <>
+                        <Camera size={14} className="text-slate-400 flex-shrink-0" />
+                        <span className="text-base font-bold text-slate-700 truncate">{firstPartner.socio.name}</span>
+                        {firstPartner.payment > 0 && <span className={`text-base font-black flex-shrink-0 ${isPaid ? "text-emerald-600" : "text-amber-600"}`}>{formatCurrency(firstPartner.payment)}</span>}
+                        <span className={`text-xs font-black px-2.5 py-1 rounded-full flex-shrink-0 ${isPaid ? "bg-emerald-100 text-emerald-700" : "bg-amber-100 text-amber-700"}`}>{isPaid ? "Pagado" : "Pendiente"}</span>
+                        {partners.length > 1 && <span className="text-xs font-bold text-slate-400 flex-shrink-0">+{partners.length - 1}</span>}
+                      </>
+                    ) : (
+                      <><User size={14} className="text-slate-300 flex-shrink-0" /><span className="text-sm text-slate-300 font-medium">Sin fotógrafo</span></>
+                    )}
+                  </div>
+                  <div className="flex items-center gap-3 flex-shrink-0">
+                    {r.package_type ? (
+                      <span className={`text-xs font-black px-3 py-1.5 rounded-full flex-shrink-0 ${r.package_type === "Completo" ? "bg-amber-100 text-amber-700" : r.package_type === "Intermedio" ? "bg-indigo-100 text-indigo-700" : "bg-slate-100 text-slate-600"}`}>{r.package_type}</span>
+                    ) : <span className="text-sm text-slate-300 font-medium">Sin paquete</span>}
+                    <span className="text-base font-bold text-slate-500 whitespace-nowrap">{formatDate(r.event_date)}</span>
+                    <span className={`text-xs px-3 py-1.5 rounded-full border font-bold whitespace-nowrap ${statusColors[r.status] || FALLBACK_COLOR}`}>{tr.statuses[r.status] || r.status}</span>
+                  </div>
                 </motion.div>
               );
             })}

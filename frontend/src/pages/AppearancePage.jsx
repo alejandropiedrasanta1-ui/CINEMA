@@ -1553,13 +1553,32 @@ const RECENT_STYLES = [
   {
     id: "linea",
     label: "Línea",
-    desc: "Una fila horizontal, todo en una línea",
+    desc: "Evento grande · fotógrafo · monto total · fecha",
     preview: (
       <div className="space-y-1.5 pointer-events-none">
         {["Boda","Quinceañera"].map((t,i) => (
           <div key={i} className="flex items-center gap-2 bg-white/70 rounded-xl px-3 py-2">
             <div className="w-5 h-5 rounded-lg bg-rose-100 flex-shrink-0"/>
             <span className="text-xs font-black text-rose-500 flex-1">{t}</span>
+            <span className="text-[10px] text-emerald-600 font-bold">Q 5,000</span>
+            <span className="text-[10px] text-slate-400">15/06</span>
+            <span className="text-[9px] px-1.5 py-0.5 rounded-full bg-indigo-100 text-indigo-600 font-bold">Activo</span>
+          </div>
+        ))}
+      </div>
+    ),
+  },
+  {
+    id: "linea_paquete",
+    label: "Línea Paquete",
+    desc: "Igual que Línea pero muestra el paquete en vez del monto",
+    preview: (
+      <div className="space-y-1.5 pointer-events-none">
+        {[{t:"Boda",p:"Completo"},{t:"XV Años",p:"Básico"}].map(({t,p},i) => (
+          <div key={i} className="flex items-center gap-2 bg-white/70 rounded-xl px-3 py-2">
+            <div className="w-5 h-5 rounded-lg bg-rose-100 flex-shrink-0"/>
+            <span className="text-xs font-black text-rose-500 flex-1">{t}</span>
+            <span className="text-[9px] font-black px-1.5 py-0.5 rounded-full bg-amber-100 text-amber-700">{p}</span>
             <span className="text-[10px] text-slate-400">15/06</span>
             <span className="text-[9px] px-1.5 py-0.5 rounded-full bg-indigo-100 text-indigo-600 font-bold">Activo</span>
           </div>
@@ -1570,14 +1589,16 @@ const RECENT_STYLES = [
   {
     id: "tarjeta",
     label: "Tarjeta",
-    desc: "Cada evento en una tarjeta con más espacio",
+    desc: "Cada evento ocupa una tarjeta completa a todo ancho",
     preview: (
-      <div className="grid grid-cols-2 gap-1.5 pointer-events-none">
+      <div className="space-y-1.5 pointer-events-none">
         {["Boda","XV Años"].map((t,i) => (
-          <div key={i} className="bg-white/70 rounded-xl p-2.5 border border-white/60">
-            <div className="w-6 h-6 rounded-lg bg-rose-100 mb-1.5"/>
-            <p className="text-[11px] font-black text-rose-500">{t}</p>
-            <p className="text-[9px] text-slate-400 mt-0.5">15 Jun · Q 5,000</p>
+          <div key={i} className="bg-white/70 rounded-xl px-3 py-2.5 border border-white/60 flex items-center gap-2.5">
+            <div className="w-7 h-7 rounded-lg bg-rose-100 flex-shrink-0"/>
+            <div className="flex-1">
+              <p className="text-xs font-black text-rose-500">{t}</p>
+              <p className="text-[9px] text-slate-400">Q 5,000 · 15 Jun</p>
+            </div>
             <span className="text-[8px] px-1.5 py-0.5 rounded-full bg-emerald-100 text-emerald-600 font-bold">Completado</span>
           </div>
         ))}
@@ -1632,7 +1653,7 @@ function DashboardRecentStyleSection({ es, dashboardRecentStyle, changeDashboard
       <p className="text-[10px] text-slate-400 mb-3">
         {es ? "Elige cómo se ven las reservas en el Dashboard" : "Choose how reservations look on the Dashboard"}
       </p>
-      <div className="grid grid-cols-2 gap-3">
+      <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
         {RECENT_STYLES.map(style => {
           const active = dashboardRecentStyle === style.id;
           return (
