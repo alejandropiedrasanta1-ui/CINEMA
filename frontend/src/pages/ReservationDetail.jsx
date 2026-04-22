@@ -131,6 +131,15 @@ export default function ReservationDetail() {
               {reservation.event_time && <InfoItem label={dt.time} value={reservation.event_time} />}
               {reservation.venue && <InfoItem label={dt.venue} value={reservation.venue} />}
               {reservation.guests_count && <InfoItem label={dt.guests} value={`${reservation.guests_count} ${dt.persons}`} />}
+              {reservation.package_type && (
+                <InfoItem label="Paquete" value={
+                  <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold ${
+                    reservation.package_type === "Básico" ? "bg-slate-100 text-slate-600" :
+                    reservation.package_type === "Intermedio" ? "bg-indigo-100 text-indigo-700" :
+                    "bg-amber-100 text-amber-700"
+                  }`}>{reservation.package_type}</span>
+                } />
+              )}
               {reservation.client_phone && <InfoItem label={dt.phone} value={reservation.client_phone} />}
               {reservation.client_email && <InfoItem label={dt.email} value={reservation.client_email} />}
             </dl>

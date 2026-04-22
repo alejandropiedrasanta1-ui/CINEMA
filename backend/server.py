@@ -121,6 +121,7 @@ class ReservationCreate(BaseModel):
     advance_paid: float = 0.0
     status: str = "Pendiente"
     notes: Optional[str] = None
+    package_type: Optional[str] = None
 
 
 class ReservationUpdate(BaseModel):
@@ -138,6 +139,7 @@ class ReservationUpdate(BaseModel):
     notes: Optional[str] = None
     locations: Optional[list] = None
     assigned_partners: Optional[list] = None
+    package_type: Optional[str] = None
 
 
 class SocioCreate(BaseModel):

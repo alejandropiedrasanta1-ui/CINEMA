@@ -22,6 +22,7 @@ export default function ReservationForm({ reservation, onClose, onSaved }) {
     event_type:"Boda", event_date:"", event_time:"",
     venue:"", guests_count:"", total_amount:"",
     advance_paid:"0", status:"Pendiente", notes:"",
+    package_type: "",
   });
   const [saving, setSaving] = useState(false);
 
@@ -39,6 +40,7 @@ export default function ReservationForm({ reservation, onClose, onSaved }) {
       advance_paid: reservation.advance_paid||"0",
       status: reservation.status||"Pendiente",
       notes: reservation.notes||"",
+      package_type: reservation.package_type||"",
     });
   }, [reservation]);
 
@@ -166,14 +168,26 @@ export default function ReservationForm({ reservation, onClose, onSaved }) {
         </div>
       </div>
 
-      {/* Fila 4 — Anticipo / Notas */}
-      {(ff.advance !== false || ff.notes !== false) && (
+      {/* Fila 4 — Anticipo / Paquete / Notas */}
+      {(ff.advance !== false || ff.package !== false || ff.notes !== false) && (
         <div className="flex flex-wrap gap-3">
           {ff.advance !== false && (
             <div className="flex-1 min-w-[130px]">
               <label className={lbl} style={ls}>{f.advancePaid}</label>
               <input type="number" value={form.advance_paid} onChange={set("advance_paid")} placeholder="10,000" min="0" step="0.01"
                 data-testid="input-advance" className={inp} style={dc.inpStyle}/>
+            </div>
+          )}
+          {ff.package !== false && (
+            <div className="flex-1 min-w-[150px]">
+              <label className={lbl} style={ls}>{f.package || "Paquete"}</label>
+              <select value={form.package_type} onChange={set("package_type")}
+                data-testid="input-package" className={sel} style={dc.inpStyle}>
+                <option value="">— Sin paquete —</option>
+                <option value="Básico">Básico</option>
+                <option value="Intermedio">Intermedio</option>
+                <option value="Completo">Completo</option>
+              </select>
             </div>
           )}
           {ff.notes !== false && (

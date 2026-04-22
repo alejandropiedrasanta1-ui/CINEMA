@@ -166,6 +166,7 @@ export default function AppearancePage() {
     formFieldsVisibility, changeFormFieldVisibility, resetFormFieldsVisibility,
     socioFieldsVisibility, changeSocioFieldVisibility, resetSocioFieldsVisibility,
     dashboardWidgets, changeDashboardWidgets, resetDashboardWidgets,
+    dashboardRecentStyle, changeDashboardRecentStyle,
     swapNameEventType, changeSwapNameEventType,
     reservationFormDesign, changeReservationFormDesign,
     socioFormDesign, changeSocioFormDesign,
@@ -1438,6 +1439,7 @@ export default function AppearancePage() {
                   { key: "venue",   label: es ? "Lugar del evento"    : "Event venue"       },
                   { key: "guests",  label: es ? "N° de invitados"     : "No. of guests"     },
                   { key: "advance", label: es ? "Anticipo pagado"     : "Deposit paid"      },
+                  { key: "package", label: es ? "Paquete (Básico/Intermedio/Completo)" : "Package (Basic/Mid/Full)" },
                   { key: "notes",   label: es ? "Notas adicionales"   : "Additional notes"  },
                 ].map(field => (
                   <div key={field.key}
@@ -1504,6 +1506,16 @@ export default function AppearancePage() {
               toast={toast}
             />
 
+            <div className="border-t border-white/40" />
+
+            {/* ── Estilo visual — Próximas Reservas ── */}
+            <DashboardRecentStyleSection
+              es={es}
+              dashboardRecentStyle={dashboardRecentStyle}
+              changeDashboardRecentStyle={changeDashboardRecentStyle}
+              toast={toast}
+            />
+
             <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}
               className="flex items-center gap-2 text-[10px] text-sky-600 bg-sky-50/80 px-3 py-2 rounded-xl border border-sky-200/60">
               <ToggleLeft size={11} />
@@ -1532,6 +1544,114 @@ export default function AppearancePage() {
         />
 
       </motion.div>
+    </div>
+  );
+}
+
+// ── Dashboard Recent Style Section ──────────────────────────────────────────
+const RECENT_STYLES = [
+  {
+    id: "linea",
+    label: "Línea",
+    desc: "Una fila horizontal, todo en una línea",
+    preview: (
+      <div className="space-y-1.5 pointer-events-none">
+        {["Boda","Quinceañera"].map((t,i) => (
+          <div key={i} className="flex items-center gap-2 bg-white/70 rounded-xl px-3 py-2">
+            <div className="w-5 h-5 rounded-lg bg-rose-100 flex-shrink-0"/>
+            <span className="text-xs font-black text-rose-500 flex-1">{t}</span>
+            <span className="text-[10px] text-slate-400">15/06</span>
+            <span className="text-[9px] px-1.5 py-0.5 rounded-full bg-indigo-100 text-indigo-600 font-bold">Activo</span>
+          </div>
+        ))}
+      </div>
+    ),
+  },
+  {
+    id: "tarjeta",
+    label: "Tarjeta",
+    desc: "Cada evento en una tarjeta con más espacio",
+    preview: (
+      <div className="grid grid-cols-2 gap-1.5 pointer-events-none">
+        {["Boda","XV Años"].map((t,i) => (
+          <div key={i} className="bg-white/70 rounded-xl p-2.5 border border-white/60">
+            <div className="w-6 h-6 rounded-lg bg-rose-100 mb-1.5"/>
+            <p className="text-[11px] font-black text-rose-500">{t}</p>
+            <p className="text-[9px] text-slate-400 mt-0.5">15 Jun · Q 5,000</p>
+            <span className="text-[8px] px-1.5 py-0.5 rounded-full bg-emerald-100 text-emerald-600 font-bold">Completado</span>
+          </div>
+        ))}
+      </div>
+    ),
+  },
+  {
+    id: "compacto",
+    label: "Compacto",
+    desc: "Filas pequeñas y densas, más eventos visibles",
+    preview: (
+      <div className="space-y-1 pointer-events-none">
+        {["Boda","Quinceañera","Graduación","Corporativo"].map((t,i) => (
+          <div key={i} className="flex items-center gap-1.5 px-2 py-1 bg-white/60 rounded-lg">
+            <div className="w-1.5 h-1.5 rounded-full bg-rose-400 flex-shrink-0"/>
+            <span className="text-[10px] font-bold text-slate-700 flex-1 truncate">{t}</span>
+            <span className="text-[9px] text-slate-400">15/06</span>
+          </div>
+        ))}
+      </div>
+    ),
+  },
+  {
+    id: "banda",
+    label: "Banda",
+    desc: "Barra de color a la izquierda del tipo de evento",
+    preview: (
+      <div className="space-y-1.5 pointer-events-none">
+        {[{t:"Boda",c:"bg-rose-400"},{t:"XV Años",c:"bg-purple-400"}].map(({t,c},i) => (
+          <div key={i} className="flex items-stretch bg-white/70 rounded-xl overflow-hidden">
+            <div className={`w-1.5 ${c}`}/>
+            <div className="flex items-center gap-2 px-2.5 py-2 flex-1">
+              <span className="text-xs font-black text-slate-700 flex-1">{t}</span>
+              <span className="text-[9px] text-slate-400">15/06</span>
+            </div>
+          </div>
+        ))}
+      </div>
+    ),
+  },
+];
+
+function DashboardRecentStyleSection({ es, dashboardRecentStyle, changeDashboardRecentStyle, toast }) {
+  return (
+    <div>
+      <div className="flex items-center gap-2 mb-2">
+        <LayoutDashboard size={12} className="text-slate-400" />
+        <p className="text-[11px] font-black text-slate-400 uppercase tracking-widest">
+          {es ? "Estilo — Próximas Reservas" : "Style — Upcoming Reservations"}
+        </p>
+      </div>
+      <p className="text-[10px] text-slate-400 mb-3">
+        {es ? "Elige cómo se ven las reservas en el Dashboard" : "Choose how reservations look on the Dashboard"}
+      </p>
+      <div className="grid grid-cols-2 gap-3">
+        {RECENT_STYLES.map(style => {
+          const active = dashboardRecentStyle === style.id;
+          return (
+            <button key={style.id} type="button"
+              onClick={() => { changeDashboardRecentStyle(style.id); toast({ title: `Estilo "${style.label}" aplicado ✓` }); }}
+              data-testid={`recent-style-${style.id}`}
+              className={`relative text-left rounded-2xl p-3 border-2 transition-all ${active ? "border-indigo-400 bg-indigo-50/60 shadow-md shadow-indigo-100" : "border-white/70 bg-white/40 hover:bg-white/70 hover:border-slate-200"}`}>
+              {active && (
+                <div className="absolute top-2 right-2 w-5 h-5 rounded-full bg-indigo-500 flex items-center justify-center">
+                  <CheckCircle size={11} className="text-white" />
+                </div>
+              )}
+              <div className="mb-2.5">{style.preview}</div>
+              <p className={`text-xs font-black ${active ? "text-indigo-700" : "text-slate-700"}`}>{style.label}</p>
+              <p className="text-[10px] text-slate-400 mt-0.5 leading-tight">{style.desc}</p>
+            </button>
+          );
+        })}
+      </div>
     </div>
   );
 }

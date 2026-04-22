@@ -371,7 +371,7 @@ export function SettingsProvider({ children }) {
   const changeSocioFormDesign = (val) => { setSocioFormDesign(val); localStorage.setItem("socio_form_design", val); };
 
   // ── Form fields visibility ────────────────────────────────────────────────
-  const FORM_FIELDS_DEFAULT = { email: false, guests: false };
+  const FORM_FIELDS_DEFAULT = { email: false, guests: false, package: false };
   const [formFieldsVisibility, setFormFieldsVisibility] = useState(() => {
     try {
       const saved = localStorage.getItem("form_fields_visibility");
@@ -437,6 +437,15 @@ export function SettingsProvider({ children }) {
   const resetDashboardWidgets = () => {
     setDashboardWidgets(DASHBOARD_WIDGETS_DEFAULT);
     localStorage.removeItem("dashboard_widgets");
+  };
+
+  // ── Dashboard recent style ────────────────────────────────────────────────
+  const [dashboardRecentStyle, setDashboardRecentStyle] = useState(
+    () => localStorage.getItem("dashboard_recent_style") || "linea"
+  );
+  const changeDashboardRecentStyle = (style) => {
+    setDashboardRecentStyle(style);
+    localStorage.setItem("dashboard_recent_style", style);
   };
 
   // ── Island sidebar margins ─────────────────────────────────────────────────
@@ -836,6 +845,7 @@ export function SettingsProvider({ children }) {
       formFieldsVisibility, changeFormFieldVisibility, resetFormFieldsVisibility,
       socioFieldsVisibility, changeSocioFieldVisibility, resetSocioFieldsVisibility,
       dashboardWidgets, changeDashboardWidgets, resetDashboardWidgets,
+      dashboardRecentStyle, changeDashboardRecentStyle,
       // Form design styles
       reservationFormDesign, changeReservationFormDesign,
       socioFormDesign, changeSocioFormDesign,

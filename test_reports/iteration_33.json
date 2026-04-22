@@ -1,0 +1,32 @@
+{
+  "summary": "Frontend-only testing of two new features: 1) Dashboard Recent Style selector with 4 styles (Línea, Tarjeta, Compacto, Banda) in Appearance page. 2) Package field (Básico/Intermedio/Completo) toggle in Appearance → Campos visibles → Reserva. All 8 test cases passed.",
+  "backend_issues": {
+    "critical": [],
+    "minor": []
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": []
+  },
+  "test_report_links": ["/app/test_reports/iteration_33.json"],
+  "action_items": [],
+  "critical_code_review_comments": [],
+  "updated_files": [],
+  "success_rate": {"backend": "N/A", "frontend": "100%"},
+  "seed_data_creation": "",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "Both features fully working. 4 dashboard styles (Tarjeta=grid cards, Compacto=dense dots, Banda=left color stripe, Linea=single row) all render correctly. Package field toggles on/off from Appearance and shows Básico/Intermedio/Completo options in reservation form. Note: btn-nueva-reserva data-testid not found on reservations list; button accessed via 'button:has-text(Nueva Reserva)' instead.",
+  "test_results": {
+    "style_section_exists": "PASS",
+    "all_4_style_buttons_found": "PASS",
+    "tarjeta_renders_grid": "PASS",
+    "compacto_renders_dense": "PASS",
+    "banda_renders_stripe": "PASS",
+    "linea_renders_original": "PASS",
+    "package_toggle_disabled_by_default": "PASS",
+    "package_shows_when_enabled": "PASS - options: Sin paquete, Básico, Intermedio, Completo",
+    "package_hidden_when_disabled": "PASS"
+  }
+}

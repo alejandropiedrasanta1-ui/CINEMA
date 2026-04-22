@@ -131,7 +131,7 @@ export default function Dashboard() {
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
   const navigate = useNavigate();
-  const { tr, formatCurrency, language, activeStatuses, swapNameEventType, dashboardWidgets } = useSettings();
+  const { tr, formatCurrency, language, activeStatuses, swapNameEventType, dashboardWidgets, dashboardRecentStyle } = useSettings();
   const d = tr.dashboard;
 
   // Build dynamic status color lookup
@@ -290,7 +290,100 @@ export default function Dashboard() {
             </p>
             <p className="text-slate-300 text-xs mt-1">{d.createFirst}</p>
           </div>
+        ) : dashboardRecentStyle === "tarjeta" ? (
+          /* ── ESTILO TARJETA ── */
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 p-5">
+            {recent.map((r, idx) => {
+              const cfg = getEventConfig(r.event_type);
+              const EvIcon = cfg.icon;
+              const partners = (r.assigned_partners || []).map(p => ({ ...p, socio: socioMap[p.socio_id] })).filter(p => p.socio);
+              const firstPartner = partners[0];
+              const isPaid = firstPartner?.payment_status === "Pagado";
+              return (
+                <motion.div key={r.id} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: idx * 0.06 }}
+                  whileHover={{ y: -2, boxShadow: "0 8px 24px rgba(0,0,0,0.08)" }}
+                  className="bg-white/60 border border-white/70 rounded-2xl p-4 cursor-pointer transition-all"
+                  onClick={() => navigate(`/reservaciones/${r.id}`)} data-testid={`recent-row-${r.id}`}>
+                  <div className="flex items-start justify-between mb-3">
+                    <div className="w-10 h-10 rounded-2xl flex items-center justify-center" style={{ background: cfg.fg + "18" }}>
+                      <EvIcon size={18} style={{ color: cfg.fg }} strokeWidth={1.8} />
+                    </div>
+                    <span className={`text-[10px] px-2.5 py-1 rounded-full border font-bold ${statusColors[r.status] || FALLBACK_COLOR}`}>
+                      {tr.statuses[r.status] || r.status}
+                    </span>
+                  </div>
+                  <p className="text-lg font-black mb-1" style={{ fontFamily: "Cabinet Grotesk, sans-serif", color: cfg.fg }}>{r.event_type || "Evento"}</p>
+                  <p className="text-sm font-bold text-slate-600 mb-2">{r.total_amount > 0 ? formatCurrency(r.total_amount) : ""} · {formatDate(r.event_date)}</p>
+                  {firstPartner ? (
+                    <div className="flex items-center gap-1.5">
+                      <Camera size={11} className="text-slate-400" />
+                      <span className="text-xs font-semibold text-slate-600">{firstPartner.socio.name}</span>
+                      {firstPartner.payment > 0 && <span className={`text-xs font-black ml-1 ${isPaid ? "text-emerald-600" : "text-amber-600"}`}>{formatCurrency(firstPartner.payment)}</span>}
+                      <span className={`text-[9px] font-black px-1.5 py-0.5 rounded-full ${isPaid ? "bg-emerald-100 text-emerald-700" : "bg-amber-100 text-amber-700"}`}>{isPaid ? "Pagado" : "Pendiente"}</span>
+                    </div>
+                  ) : <p className="text-xs text-slate-300">Sin fotógrafo</p>}
+                </motion.div>
+              );
+            })}
+          </div>
+        ) : dashboardRecentStyle === "compacto" ? (
+          /* ── ESTILO COMPACTO ── */
+          <div className="px-4 py-3 space-y-1">
+            {recent.map((r, idx) => {
+              const cfg = getEventConfig(r.event_type);
+              const firstPartner = (r.assigned_partners || []).map(p => ({ ...p, socio: socioMap[p.socio_id] })).filter(p => p.socio)[0];
+              const isPaid = firstPartner?.payment_status === "Pagado";
+              return (
+                <motion.div key={r.id} initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: idx * 0.04 }}
+                  whileHover={{ backgroundColor: "rgba(255,255,255,0.5)" }}
+                  className="flex items-center gap-3 px-3 py-2 rounded-xl cursor-pointer transition-colors"
+                  onClick={() => navigate(`/reservaciones/${r.id}`)} data-testid={`recent-row-${r.id}`}>
+                  <div className="w-2 h-2 rounded-full flex-shrink-0" style={{ background: cfg.fg }} />
+                  <span className="text-sm font-black flex-1 truncate" style={{ color: cfg.fg }}>{r.event_type}</span>
+                  {firstPartner && <span className="text-xs text-slate-500 truncate max-w-[100px]">{firstPartner.socio.name} · <span className={isPaid ? "text-emerald-600" : "text-amber-600"}>{formatCurrency(firstPartner.payment)}</span></span>}
+                  {r.total_amount > 0 && <span className="text-xs font-bold text-slate-700 flex-shrink-0">{formatCurrency(r.total_amount)}</span>}
+                  <span className="text-xs text-slate-400 flex-shrink-0">{formatDate(r.event_date)}</span>
+                  <span className={`text-[9px] px-2 py-0.5 rounded-full border font-bold flex-shrink-0 ${statusColors[r.status] || FALLBACK_COLOR}`}>{tr.statuses[r.status] || r.status}</span>
+                </motion.div>
+              );
+            })}
+          </div>
+        ) : dashboardRecentStyle === "banda" ? (
+          /* ── ESTILO BANDA ── */
+          <div className="divide-y divide-white/30">
+            {recent.map((r, idx) => {
+              const cfg = getEventConfig(r.event_type);
+              const EvIcon = cfg.icon;
+              const partners = (r.assigned_partners || []).map(p => ({ ...p, socio: socioMap[p.socio_id] })).filter(p => p.socio);
+              const firstPartner = partners[0];
+              const isPaid = firstPartner?.payment_status === "Pagado";
+              return (
+                <motion.div key={r.id} initial={{ opacity: 0, x: -8 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: idx * 0.05 }}
+                  whileHover={{ backgroundColor: "rgba(255,255,255,0.35)" }}
+                  className="flex items-stretch cursor-pointer transition-colors overflow-hidden"
+                  onClick={() => navigate(`/reservaciones/${r.id}`)} data-testid={`recent-row-${r.id}`}>
+                  <div className="w-1.5 flex-shrink-0" style={{ background: cfg.fg }} />
+                  <div className="flex items-center gap-5 px-5 py-4 flex-1">
+                    <p className="text-xl font-black w-[28%] min-w-0 truncate" style={{ fontFamily: "Cabinet Grotesk, sans-serif", color: cfg.fg }}>{r.event_type || "Evento"}</p>
+                    <div className="flex items-center gap-2.5 flex-1 min-w-0">
+                      {firstPartner ? (
+                        <><Camera size={13} className="text-slate-400 flex-shrink-0" /><span className="text-sm font-bold text-slate-700 truncate">{firstPartner.socio.name}</span>
+                        {firstPartner.payment > 0 && <span className={`text-sm font-black flex-shrink-0 ${isPaid ? "text-emerald-600" : "text-amber-600"}`}>{formatCurrency(firstPartner.payment)}</span>}
+                        <span className={`text-[9px] font-black px-2 py-0.5 rounded-full flex-shrink-0 ${isPaid ? "bg-emerald-100 text-emerald-700" : "bg-amber-100 text-amber-700"}`}>{isPaid ? "Pagado" : "Pendiente"}</span></>
+                      ) : <span className="text-sm text-slate-300">Sin fotógrafo</span>}
+                    </div>
+                    <div className="flex items-center gap-3 flex-shrink-0">
+                      {r.total_amount > 0 && <span className="text-sm font-black text-slate-800">{formatCurrency(r.total_amount)}</span>}
+                      <span className="text-sm font-bold text-slate-500">{formatDate(r.event_date)}</span>
+                      <span className={`text-xs px-2.5 py-1 rounded-full border font-bold ${statusColors[r.status] || FALLBACK_COLOR}`}>{tr.statuses[r.status] || r.status}</span>
+                    </div>
+                  </div>
+                </motion.div>
+              );
+            })}
+          </div>
         ) : (
+          /* ── ESTILO LÍNEA (default) ── */
           <div className="divide-y divide-white/30">
             {recent.map((r, idx) => {
               const cfg = getEventConfig(r.event_type);
@@ -311,55 +404,33 @@ export default function Dashboard() {
                   onClick={() => navigate(`/reservaciones/${r.id}`)}
                   data-testid={`recent-row-${r.id}`}
                 >
-                  {/* ── IZQUIERDA: Tipo de evento ── */}
                   <div className="flex items-center gap-3 w-[30%] min-w-0">
-                    <div className="w-11 h-11 rounded-2xl flex items-center justify-center flex-shrink-0"
-                      style={{ background: cfg.fg + "18" }}>
+                    <div className="w-11 h-11 rounded-2xl flex items-center justify-center flex-shrink-0" style={{ background: cfg.fg + "18" }}>
                       <EvIcon size={20} style={{ color: cfg.fg }} strokeWidth={1.8} />
                     </div>
-                    <p className="text-2xl font-black truncate leading-none"
-                      style={{ fontFamily: "Cabinet Grotesk, sans-serif", color: cfg.fg }}>
+                    <p className="text-2xl font-black truncate leading-none" style={{ fontFamily: "Cabinet Grotesk, sans-serif", color: cfg.fg }}>
                       {r.event_type || "Evento"}
                     </p>
                   </div>
-
-                  {/* ── CENTRO: Fotógrafo + pago ── */}
                   <div className="flex items-center gap-2.5 flex-1 min-w-0">
                     {firstPartner ? (
                       <>
                         <Camera size={14} className="text-slate-400 flex-shrink-0" />
                         <span className="text-base font-bold text-slate-700 truncate">{firstPartner.socio.name}</span>
-                        {firstPartner.payment > 0 && (
-                          <span className={`text-base font-black flex-shrink-0 ${isPaid ? "text-emerald-600" : "text-amber-600"}`}>
-                            {formatCurrency(firstPartner.payment)}
-                          </span>
-                        )}
+                        {firstPartner.payment > 0 && <span className={`text-base font-black flex-shrink-0 ${isPaid ? "text-emerald-600" : "text-amber-600"}`}>{formatCurrency(firstPartner.payment)}</span>}
                         <span className={`text-xs font-black px-2.5 py-1 rounded-full flex-shrink-0 ${isPaid ? "bg-emerald-100 text-emerald-700" : "bg-amber-100 text-amber-700"}`}>
                           {isPaid ? (language === "es" ? "Pagado" : "Paid") : (language === "es" ? "Pendiente" : "Pending")}
                         </span>
-                        {partners.length > 1 && (
-                          <span className="text-xs font-bold text-slate-400 flex-shrink-0">+{partners.length - 1}</span>
-                        )}
+                        {partners.length > 1 && <span className="text-xs font-bold text-slate-400 flex-shrink-0">+{partners.length - 1}</span>}
                       </>
                     ) : (
-                      <>
-                        <User size={14} className="text-slate-300 flex-shrink-0" />
-                        <span className="text-sm text-slate-300 font-medium">
-                          {language === "es" ? "Sin fotógrafo asignado" : "No photographer assigned"}
-                        </span>
-                      </>
+                      <><User size={14} className="text-slate-300 flex-shrink-0" /><span className="text-sm text-slate-300 font-medium">{language === "es" ? "Sin fotógrafo asignado" : "No photographer assigned"}</span></>
                     )}
                   </div>
-
-                  {/* ── DERECHA: Monto total + Fecha + etiqueta en una línea ── */}
                   <div className="flex items-center gap-3 flex-shrink-0">
-                    {r.total_amount > 0 && (
-                      <span className="text-base font-black text-slate-800 whitespace-nowrap">{formatCurrency(r.total_amount)}</span>
-                    )}
+                    {r.total_amount > 0 && <span className="text-base font-black text-slate-800 whitespace-nowrap">{formatCurrency(r.total_amount)}</span>}
                     <span className="text-base font-bold text-slate-500 whitespace-nowrap">{formatDate(r.event_date)}</span>
-                    <span className={`text-xs px-3 py-1.5 rounded-full border font-bold whitespace-nowrap ${statusColors[r.status] || FALLBACK_COLOR}`}>
-                      {tr.statuses[r.status] || r.status}
-                    </span>
+                    <span className={`text-xs px-3 py-1.5 rounded-full border font-bold whitespace-nowrap ${statusColors[r.status] || FALLBACK_COLOR}`}>{tr.statuses[r.status] || r.status}</span>
                   </div>
                 </motion.div>
               );
