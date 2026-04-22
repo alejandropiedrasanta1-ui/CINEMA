@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { getReservations, deleteReservation } from "@/lib/api";
-import { Plus, Trash2, Eye, Search, FileDown } from "lucide-react";
+import { Plus, Trash2, Eye, Search, FileDown, ChevronDown, ChevronUp, SlidersHorizontal } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useSettings, STATUS_COLOR_CLASSES } from "@/context/SettingsContext";
 import ReservationForm from "@/components/ReservationForm";
@@ -17,6 +17,11 @@ export default function Reservations() {
   const [search, setSearch] = useState("");
   const [filterType, setFilterType] = useState("all");
   const [filterStatus, setFilterStatus] = useState("all");
+  const [filterPackage, setFilterPackage] = useState("all");
+  const [filterDateFrom, setFilterDateFrom] = useState("");
+  const [filterDateTo, setFilterDateTo] = useState("");
+  const [visibleCount, setVisibleCount] = useState(8);
+  const [showExtraFilters, setShowExtraFilters] = useState(false);
   const [showForm, setShowForm] = useState(false);
   const navigate = useNavigate();
   const { toast } = useToast();
@@ -75,8 +80,20 @@ export default function Reservations() {
       || (r.client_phone||"").toLowerCase().includes(q);
     const mt = filterType === "all" || r.event_type === filterType;
     const ms2 = filterStatus === "all" || r.status === filterStatus;
-    return ms && mt && ms2;
+    const mp = filterPackage === "all" || (r.package_type || "") === filterPackage;
+    const mdf = !filterDateFrom || (r.event_date && r.event_date >= filterDateFrom);
+    const mdt = !filterDateTo || (r.event_date && r.event_date <= filterDateTo);
+    return ms && mt && ms2 && mp && mdf && mdt;
   });
+
+  const visibleRows = filtered.slice(0, visibleCount);
+  const hasMore = filtered.length > visibleCount;
+
+  const resetFilters = () => {
+    setSearch(""); setFilterType("all"); setFilterStatus("all");
+    setFilterPackage("all"); setFilterDateFrom(""); setFilterDateTo("");
+    setVisibleCount(8);
+  };
 
   return (
     <div className="px-6 py-8 max-w-7xl mx-auto">
@@ -91,24 +108,68 @@ export default function Reservations() {
         </motion.button>
       </motion.div>
 
-      <motion.div initial={{ opacity:0, y:10 }} animate={{ opacity:1, y:0 }} transition={{ duration:0.35, delay:0.1 }} className="flex flex-col sm:flex-row gap-3 mb-6">
-        <div className="relative flex-1">
-          <Search size={14} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" />
-          <input value={search} onChange={e => setSearch(e.target.value)}
-            placeholder={es ? "Buscar por nombre, teléfono, evento, lugar…" : "Search by name, phone, event, venue…"}
-            className="w-full pl-10 pr-4 py-2.5 text-sm glass rounded-2xl border-white/50 bg-transparent focus:outline-none focus:ring-2 focus:ring-[var(--t-from)]/30 placeholder-slate-400 text-slate-700"
-            data-testid="search-input" />
+      <motion.div initial={{ opacity:0, y:10 }} animate={{ opacity:1, y:0 }} transition={{ duration:0.35, delay:0.1 }} className="flex flex-col gap-3 mb-6">
+        {/* Fila principal de búsqueda */}
+        <div className="flex flex-col sm:flex-row gap-3">
+          <div className="relative flex-1">
+            <Search size={14} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" />
+            <input value={search} onChange={e => { setSearch(e.target.value); setVisibleCount(8); }}
+              placeholder={es ? "Buscar por nombre, teléfono, evento, lugar…" : "Search by name, phone, event, venue…"}
+              className="w-full pl-10 pr-4 py-2.5 text-sm glass rounded-2xl border-white/50 bg-transparent focus:outline-none focus:ring-2 focus:ring-[var(--t-from)]/30 placeholder-slate-400 text-slate-700"
+              data-testid="search-input" />
+          </div>
+          <select value={filterType} onChange={e => { setFilterType(e.target.value); setVisibleCount(8); }} data-testid="filter-type"
+            className="text-sm glass rounded-2xl px-4 py-2.5 bg-transparent text-slate-700 focus:outline-none focus:ring-2 focus:ring-[var(--t-from)]/30 font-medium">
+            <option value="all" className="bg-white">{l.all}</option>
+            {EVENT_TYPES.map(t => <option key={t} value={t} className="bg-white">{getEventTypeName(t)}</option>)}
+          </select>
+          <select value={filterStatus} onChange={e => { setFilterStatus(e.target.value); setVisibleCount(8); }} data-testid="filter-status"
+            className="text-sm glass rounded-2xl px-4 py-2.5 bg-transparent text-slate-700 focus:outline-none focus:ring-2 focus:ring-[var(--t-from)]/30 font-medium">
+            <option value="all" className="bg-white">{l.all}</option>
+            {activeStatuses.map(s => <option key={s.key} value={s.key} className="bg-white">{s.label}</option>)}
+          </select>
+          <motion.button whileHover={{ scale:1.03 }} whileTap={{ scale:0.97 }}
+            onClick={() => setShowExtraFilters(v => !v)} data-testid="toggle-extra-filters"
+            className={`flex items-center gap-2 px-4 py-2.5 rounded-2xl text-sm font-bold transition-all ${showExtraFilters ? "btn-primary text-white" : "glass text-slate-600"}`}>
+            <SlidersHorizontal size={14} /> {es ? "Más filtros" : "More filters"}
+          </motion.button>
         </div>
-        <select value={filterType} onChange={e => setFilterType(e.target.value)} data-testid="filter-type"
-          className="text-sm glass rounded-2xl px-4 py-2.5 bg-transparent text-slate-700 focus:outline-none focus:ring-2 focus:ring-[var(--t-from)]/30 font-medium">
-          <option value="all" className="bg-white">{l.all}</option>
-          {EVENT_TYPES.map(t => <option key={t} value={t} className="bg-white">{getEventTypeName(t)}</option>)}
-        </select>
-        <select value={filterStatus} onChange={e => setFilterStatus(e.target.value)} data-testid="filter-status"
-          className="text-sm glass rounded-2xl px-4 py-2.5 bg-transparent text-slate-700 focus:outline-none focus:ring-2 focus:ring-[var(--t-from)]/30 font-medium">
-          <option value="all" className="bg-white">{l.all}</option>
-          {activeStatuses.map(s => <option key={s.key} value={s.key} className="bg-white">{s.label}</option>)}
-        </select>
+
+        {/* Filtros extra */}
+        <AnimatePresence>
+          {showExtraFilters && (
+            <motion.div initial={{ opacity:0, height:0 }} animate={{ opacity:1, height:"auto" }} exit={{ opacity:0, height:0 }} transition={{ duration:0.25 }}
+              className="overflow-hidden">
+              <div className="flex flex-col sm:flex-row gap-3 pt-1">
+                <div className="flex flex-col gap-1 flex-1">
+                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-wider px-1">{es ? "Paquete" : "Package"}</label>
+                  <select value={filterPackage} onChange={e => { setFilterPackage(e.target.value); setVisibleCount(8); }} data-testid="filter-package"
+                    className="text-sm glass rounded-2xl px-4 py-2.5 bg-transparent text-slate-700 focus:outline-none focus:ring-2 focus:ring-[var(--t-from)]/30 font-medium">
+                    <option value="all" className="bg-white">{es ? "Todos los paquetes" : "All packages"}</option>
+                    {["Básico","Intermedio","Completo"].map(p => <option key={p} value={p} className="bg-white">{p}</option>)}
+                  </select>
+                </div>
+                <div className="flex flex-col gap-1 flex-1">
+                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-wider px-1">{es ? "Desde" : "From"}</label>
+                  <input type="date" value={filterDateFrom} onChange={e => { setFilterDateFrom(e.target.value); setVisibleCount(8); }} data-testid="filter-date-from"
+                    className="text-sm glass rounded-2xl px-4 py-2.5 bg-transparent text-slate-700 focus:outline-none focus:ring-2 focus:ring-[var(--t-from)]/30 font-medium" />
+                </div>
+                <div className="flex flex-col gap-1 flex-1">
+                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-wider px-1">{es ? "Hasta" : "To"}</label>
+                  <input type="date" value={filterDateTo} onChange={e => { setFilterDateTo(e.target.value); setVisibleCount(8); }} data-testid="filter-date-to"
+                    className="text-sm glass rounded-2xl px-4 py-2.5 bg-transparent text-slate-700 focus:outline-none focus:ring-2 focus:ring-[var(--t-from)]/30 font-medium" />
+                </div>
+                <div className="flex flex-col gap-1 justify-end">
+                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-wider px-1 opacity-0">x</label>
+                  <motion.button whileHover={{ scale:1.03 }} whileTap={{ scale:0.97 }} onClick={resetFilters} data-testid="reset-filters-btn"
+                    className="px-4 py-2.5 rounded-2xl glass text-sm font-bold text-slate-600 hover:bg-red-50 hover:text-red-500 transition-colors">
+                    {es ? "Limpiar" : "Clear"}
+                  </motion.button>
+                </div>
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
       </motion.div>
 
       <motion.div initial={{ opacity:0, y:20 }} animate={{ opacity:1, y:0 }} transition={{ duration:0.4, delay:0.15 }} className="glass rounded-3xl overflow-hidden">
@@ -122,6 +183,7 @@ export default function Reservations() {
             <p className="text-slate-500 font-medium">{l.noResults}</p>
           </div>
         ) : (
+          <>
           <table className="w-full text-sm" data-testid="reservations-table">
             <thead>
               <tr className="border-b border-white/30">
@@ -132,14 +194,13 @@ export default function Reservations() {
             </thead>
             <AnimatePresence>
               <tbody className="divide-y divide-white/20">
-                {filtered.map((r, idx) => (
+                {visibleRows.map((r, idx) => (
                   <motion.tr key={r.id} initial={{ opacity:0, x:-10 }} animate={{ opacity:1, x:0 }} transition={{ delay:idx*0.04 }}
                     whileHover={{ backgroundColor:"rgba(255,255,255,0.35)" }} className="cursor-pointer transition-colors"
                     onClick={() => navigate(`/reservaciones/${r.id}`)} data-testid={`reservation-row-${r.id}`}>
                     <td className="px-5 py-4">
                       <div className="flex items-center gap-3">
                         {swapNameEventType ? (
-                          // Swap ON: mostrar tipo de evento en la columna principal
                           (() => {
                             const cfg = getEventConfig(r.event_type);
                             const EvIcon = cfg.icon;
@@ -156,7 +217,6 @@ export default function Reservations() {
                             );
                           })()
                         ) : (
-                          // Default: mostrar nombre del cliente
                           <>
                             <div className="w-8 h-8 rounded-2xl flex items-center justify-center flex-shrink-0" style={{ backgroundColor:"color-mix(in srgb, var(--t-from) 12%, white)" }}>
                               <span className="text-xs font-black" style={{ color:"var(--t-from)" }}>{r.client_name?.charAt(0).toUpperCase()}</span>
@@ -171,10 +231,8 @@ export default function Reservations() {
                     </td>
                     <td className="px-5 py-4 text-slate-600 hidden sm:table-cell">
                       {swapNameEventType ? (
-                        // Swap ON: mostrar nombre del cliente en columna tipo
                         <span className="font-medium text-slate-700">{r.client_name}</span>
                       ) : (
-                        // Default: mostrar tipo de evento
                         (() => {
                           const cfg = getEventConfig(r.event_type);
                           const EvIcon = cfg.icon;
@@ -219,6 +277,29 @@ export default function Reservations() {
               </tbody>
             </AnimatePresence>
           </table>
+
+          {/* Botón Mostrar más / Mostrar menos */}
+          {(hasMore || visibleCount > 8) && (
+            <div className="flex items-center justify-center gap-4 py-4 border-t border-white/30">
+              {hasMore && (
+                <motion.button whileHover={{ scale:1.03 }} whileTap={{ scale:0.97 }}
+                  onClick={() => setVisibleCount(v => v + 8)} data-testid="show-more-btn"
+                  className="flex items-center gap-2 px-5 py-2 rounded-full glass text-sm font-bold text-slate-600 hover:bg-white/60 transition-all">
+                  <ChevronDown size={16} />
+                  {es ? `Mostrar más (${filtered.length - visibleCount} restantes)` : `Show more (${filtered.length - visibleCount} remaining)`}
+                </motion.button>
+              )}
+              {visibleCount > 8 && (
+                <motion.button whileHover={{ scale:1.03 }} whileTap={{ scale:0.97 }}
+                  onClick={() => setVisibleCount(8)} data-testid="show-less-btn"
+                  className="flex items-center gap-2 px-5 py-2 rounded-full glass text-sm font-bold text-slate-400 hover:bg-white/60 transition-all">
+                  <ChevronUp size={16} />
+                  {es ? "Mostrar menos" : "Show less"}
+                </motion.button>
+              )}
+            </div>
+          )}
+          </>
         )}
       </motion.div>
 

@@ -341,7 +341,7 @@ export default function CalendarView() {
                           >
                             <EvIcon size={9} style={{ color: c.fg }} strokeWidth={2.2} className="flex-shrink-0" />
                             <span className="text-[10px] font-bold truncate leading-tight" style={{ color: c.fg }}>
-                              {swapNameEventType ? ev.event_type : ev.client_name}
+                              {ev.event_type || ev.client_name}
                             </span>
                           </motion.div>
                         );
