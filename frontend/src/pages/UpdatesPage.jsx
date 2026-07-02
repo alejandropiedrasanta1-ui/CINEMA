@@ -2,10 +2,11 @@ import { useEffect, useState, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Upload, Trash2, Download, Star, RefreshCw, Package,
-  Clock, FileArchive, ArrowRight, Monitor, Cloud, CheckCircle2, Database
+  Clock, FileArchive, ArrowRight, Monitor, Cloud, CheckCircle2, Database, Globe, Sparkles
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-import { getUpdatesHistory, uploadAppUpdate, deleteUpdate, setLatestUpdate, getUpdateDownloadUrl } from "@/lib/api";
+import { useSettings } from "@/context/SettingsContext";
+import { getUpdatesHistory, uploadAppUpdate, deleteUpdate, setLatestUpdate, getUpdateDownloadUrl, checkForUpdates } from "@/lib/api";
 
 function formatBytes(bytes) {
   if (!bytes) return "—";
@@ -37,6 +38,7 @@ const STEPS = [
 
 export default function UpdatesPage() {
   const { toast } = useToast();
+  const { autoCheckUpdates, changeAutoCheckUpdates } = useSettings();
   const fileRef = useRef();
 
   // Upload state
@@ -50,6 +52,26 @@ export default function UpdatesPage() {
   // History
   const [history, setHistory] = useState([]);
   const [loadingHistory, setLoadingHistory] = useState(true);
+
+  // Online check
+  const [checking, setChecking] = useState(false);
+  const [checkResult, setCheckResult] = useState(null);
+
+  const handleCheckOnline = async (silent = false) => {
+    setChecking(true);
+    try {
+      const r = await checkForUpdates();
+      if (r.has_update) setCheckResult({ status: "update", ...r });
+      else setCheckResult({ status: "latest", version: r.remote_version || r.local_version });
+    } catch {
+      if (!silent) toast({ title: "No se pudo consultar la base de datos", variant: "destructive" });
+    } finally { setChecking(false); }
+  };
+
+  useEffect(() => {
+    if (autoCheckUpdates) handleCheckOnline(true);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const load = async () => {
     setLoadingHistory(true);
@@ -124,6 +146,116 @@ export default function UpdatesPage() {
             </div>
           </div>
         ))}
+      </motion.div>
+
+      {/* Online update check */}
+      <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.08 }}
+        className="glass rounded-3xl p-6 mb-5">
+        <div className="flex flex-col sm:flex-row sm:items-center gap-4">
+          <div className="flex items-center gap-3 flex-1">
+            <div className="w-11 h-11 rounded-2xl bg-indigo-100 flex items-center justify-center flex-shrink-0">
+              <Globe size={20} className="text-indigo-600" />
+            </div>
+            <div>
+              <p className="text-sm font-black text-slate-800" style={{ fontFamily: "Cabinet Grotesk, sans-serif" }}>
+                Buscar actualización en línea
+              </p>
+              <p className="text-xs text-slate-400">Consulta la base de datos compartida en busca de nuevas versiones</p>
+            </div>
+          </div>
+          <motion.button whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.97 }}
+            onClick={() => handleCheckOnline(false)}
+            disabled={checking}
+            data-testid="check-updates-btn"
+            className="flex items-center justify-center gap-2 px-5 py-2.5 rounded-2xl btn-primary text-white text-xs font-bold disabled:opacity-60 flex-shrink-0">
+            {checking
+              ? <><RefreshCw size={14} className="animate-spin" /> Buscando…</>
+              : <><RefreshCw size={14} /> Buscar actualización</>}
+          </motion.button>
+        </div>
+
+        {/* Auto-check toggle */}
+        <div className="flex items-center justify-between mt-4 pt-4 border-t border-white/40">
+          <div>
+            <p className="text-xs font-bold text-slate-600">Chequeo automático</p>
+            <p className="text-[10px] text-slate-400">Busca actualizaciones automáticamente al abrir la app</p>
+          </div>
+          <button type="button"
+            onClick={() => { changeAutoCheckUpdates(!autoCheckUpdates); toast({ title: !autoCheckUpdates ? "Chequeo automático activado ✓" : "Chequeo automático desactivado" }); }}
+            data-testid="auto-check-toggle"
+            className={`relative w-12 h-6 rounded-full transition-all flex-shrink-0 ${autoCheckUpdates ? "btn-primary" : "bg-slate-200"}`}>
+            <span className={`absolute top-0.5 w-5 h-5 rounded-full bg-white shadow transition-all ${autoCheckUpdates ? "left-[26px]" : "left-0.5"}`} />
+          </button>
+        </div>
+
+        {/* Check result */}
+        <AnimatePresence mode="wait">
+          {checkResult?.status === "latest" && (
+            <motion.div key="latest"
+              initial={{ opacity: 0, scale: 0.92, y: -8 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.96 }}
+              transition={{ type: "spring", stiffness: 260, damping: 20 }}
+              data-testid="up-to-date-banner"
+              className="relative overflow-hidden rounded-3xl p-5 mt-4 text-white"
+              style={{ background: "linear-gradient(135deg, #059669, #10b981 60%, #34d399)" }}>
+              <motion.div className="absolute -right-8 -top-8 w-44 h-44 rounded-full border-4 border-white/20"
+                animate={{ scale: [1, 1.35, 1], opacity: [0.5, 0.12, 0.5] }} transition={{ duration: 2.6, repeat: Infinity }} />
+              <motion.div className="absolute -right-2 -top-2 w-24 h-24 rounded-full border-4 border-white/25"
+                animate={{ scale: [1, 1.5, 1], opacity: [0.6, 0.15, 0.6] }} transition={{ duration: 2.6, repeat: Infinity, delay: 0.5 }} />
+              <div className="flex items-center gap-4 relative z-10">
+                <motion.div
+                  animate={{ rotate: [0, 8, -8, 0], scale: [1, 1.06, 1] }}
+                  transition={{ duration: 2, repeat: Infinity }}
+                  className="w-14 h-14 rounded-2xl bg-white/20 flex items-center justify-center flex-shrink-0">
+                  <CheckCircle2 size={30} />
+                </motion.div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-lg sm:text-xl font-black leading-tight" style={{ fontFamily: "Cabinet Grotesk, sans-serif" }}>
+                    ¡Ya estás actualizado! 🎉
+                  </p>
+                  <p className="text-sm text-white/85">
+                    Tienes la versión más reciente{checkResult.version ? ` — v${checkResult.version}` : ""}
+                  </p>
+                </div>
+                <motion.div animate={{ y: [0, -5, 0], rotate: [0, 12, 0] }} transition={{ duration: 1.8, repeat: Infinity }}
+                  className="hidden sm:block flex-shrink-0">
+                  <Sparkles size={26} className="text-white/70" />
+                </motion.div>
+              </div>
+            </motion.div>
+          )}
+          {checkResult?.status === "update" && (
+            <motion.div key="update"
+              initial={{ opacity: 0, scale: 0.92, y: -8 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.96 }}
+              transition={{ type: "spring", stiffness: 260, damping: 20 }}
+              data-testid="update-available-banner"
+              className="relative overflow-hidden rounded-3xl p-5 mt-4 text-white"
+              style={{ background: "linear-gradient(135deg, #4f46e5, #7c3aed)" }}>
+              <div className="flex flex-col sm:flex-row sm:items-center gap-4 relative z-10">
+                <motion.div animate={{ rotate: 360 }} transition={{ duration: 6, repeat: Infinity, ease: "linear" }}
+                  className="w-14 h-14 rounded-2xl bg-white/20 flex items-center justify-center flex-shrink-0">
+                  <RefreshCw size={26} />
+                </motion.div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-lg font-black leading-tight" style={{ fontFamily: "Cabinet Grotesk, sans-serif" }}>
+                    Nueva versión disponible: v{checkResult.remote_version}
+                  </p>
+                  <p className="text-sm text-white/80">
+                    {checkResult.notes || "Descárgala para actualizar tu app de escritorio"}
+                  </p>
+                </div>
+                <a href={checkResult.download_url || (checkResult.id ? getUpdateDownloadUrl(checkResult.id) : "#")}
+                  target="_blank" rel="noreferrer" data-testid="download-update-banner-btn"
+                  className="flex items-center justify-center gap-1.5 bg-white/20 hover:bg-white/30 px-5 py-2.5 rounded-full text-xs font-bold transition-colors flex-shrink-0">
+                  <Download size={14} /> Descargar
+                </a>
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
       </motion.div>
 
       {/* How it works */}

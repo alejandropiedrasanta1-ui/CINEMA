@@ -7,7 +7,7 @@ Modos de base de datos:
   MONGO_URL=embedded          → Almacenamiento local en cinema_data.json (predeterminado)
   MONGO_URL=mongodb://...     → MongoDB externo (local o Atlas)
 """
-from fastapi import FastAPI, APIRouter, HTTPException, UploadFile, File, Form
+from fastapi import FastAPI, APIRouter, HTTPException, UploadFile, File, Form, Body
 from fastapi.responses import JSONResponse, Response, FileResponse, StreamingResponse
 from fastapi.staticfiles import StaticFiles
 from starlette.middleware.cors import CORSMiddleware
@@ -133,7 +133,7 @@ async def _load_embedded_data():
 async def _save_embedded_data():
     try:
         data = {}
-        for col_name in ['reservations', 'socios', 'app_settings']:
+        for col_name in ['reservations', 'socios', 'app_settings', 'saved_themes']:
             docs = await db[col_name].find({}).to_list(100000)
             data[col_name] = [_serialize_doc(d) for d in docs]
         DATA_FILE.write_text(
@@ -1153,6 +1153,70 @@ async def _check_for_updates():
     except Exception as e:
         logger.warning(f"Update check failed: {e}")
         _update_status = {"checked": True, "has_update": False}
+
+
+# ── APPEARANCE CLOUD SYNC ────────────────────────────────────────────────────
+
+@api_router.get("/settings/appearance")
+async def get_appearance_snapshot():
+    doc = await db.app_settings.find_one({}, {"_id": 0, "appearance_snapshot": 1, "appearance_updated_at": 1})
+    doc = doc or {}
+    return {"snapshot": doc.get("appearance_snapshot"), "updated_at": doc.get("appearance_updated_at")}
+
+
+@api_router.put("/settings/appearance")
+async def save_appearance_snapshot(payload: dict = Body(...)):
+    snapshot = payload.get("snapshot") or {}
+    updated_at = datetime.now(timezone.utc).isoformat()
+    await db.app_settings.update_one(
+        {},
+        {"$set": {"appearance_snapshot": snapshot, "appearance_updated_at": updated_at}},
+        upsert=True,
+    )
+    if _using_embedded:
+        asyncio.create_task(_save_embedded_data())
+    return {"updated_at": updated_at}
+
+
+# ── SAVED THEMES ─────────────────────────────────────────────────────────────
+
+@api_router.get("/themes")
+async def list_saved_themes():
+    docs = await db.saved_themes.find({}, sort=[("created_at", -1)]).to_list(200)
+    return [
+        {"id": str(d["_id"]), "name": d["name"], "snapshot": d.get("snapshot", {}), "created_at": d["created_at"]}
+        for d in docs
+    ]
+
+
+@api_router.post("/themes")
+async def create_saved_theme(payload: dict = Body(...)):
+    name = (payload.get("name") or "").strip()
+    if not name:
+        raise HTTPException(status_code=400, detail="El nombre del tema es requerido")
+    doc = {
+        "name": name,
+        "snapshot": payload.get("snapshot") or {},
+        "created_at": datetime.now(timezone.utc).isoformat(),
+    }
+    result = await db.saved_themes.insert_one(doc)
+    if _using_embedded:
+        asyncio.create_task(_save_embedded_data())
+    return {"id": str(result.inserted_id), "name": name, "created_at": doc["created_at"]}
+
+
+@api_router.delete("/themes/{theme_id}")
+async def delete_saved_theme(theme_id: str):
+    try:
+        oid = ObjectId(theme_id)
+    except Exception:
+        raise HTTPException(status_code=400, detail="ID inválido")
+    result = await db.saved_themes.delete_one({"_id": oid})
+    if result.deleted_count == 0:
+        raise HTTPException(status_code=404, detail="Tema no encontrado")
+    if _using_embedded:
+        asyncio.create_task(_save_embedded_data())
+    return {"message": "Tema eliminado"}
 
 
 @api_router.get("/updates/check")

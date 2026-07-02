@@ -1,4 +1,4 @@
-from fastapi import FastAPI, APIRouter, HTTPException, UploadFile, File, Form, Request
+from fastapi import FastAPI, APIRouter, HTTPException, UploadFile, File, Form, Request, Body
 from fastapi.responses import JSONResponse, Response, RedirectResponse, StreamingResponse
 from contextlib import asynccontextmanager
 from dotenv import load_dotenv
@@ -2459,6 +2459,88 @@ async def delete_update(update_id: str):
         if newer:
             await db.app_updates.update_one({"_id": newer["_id"]}, {"$set": {"is_latest": True}})
     return {"message": "Actualización eliminada"}
+
+
+@api_router.get("/updates/check")
+async def check_updates_cloud():
+    """Cloud version is always the source of truth → always up to date."""
+    doc = await db.app_updates.find_one({"is_latest": True}, sort=[("created_at", -1)])
+    if not doc:
+        return {"checked": True, "has_update": False, "is_cloud": True, "remote_version": None}
+    return {
+        "checked": True,
+        "has_update": False,
+        "is_cloud": True,
+        "id": str(doc["_id"]),
+        "remote_version": doc["version"],
+        "local_version": doc["version"],
+        "filename": doc["filename"],
+        "notes": doc.get("notes", ""),
+        "created_at": doc["created_at"],
+    }
+
+
+@api_router.post("/updates/dismiss")
+async def dismiss_update_cloud():
+    return {"message": "OK"}
+
+
+# ── APPEARANCE CLOUD SYNC ────────────────────────────────────────────────────
+
+@api_router.get("/settings/appearance")
+async def get_appearance_snapshot():
+    doc = await db.app_settings.find_one({}, {"_id": 0, "appearance_snapshot": 1, "appearance_updated_at": 1})
+    doc = doc or {}
+    return {"snapshot": doc.get("appearance_snapshot"), "updated_at": doc.get("appearance_updated_at")}
+
+
+@api_router.put("/settings/appearance")
+async def save_appearance_snapshot(payload: dict = Body(...)):
+    snapshot = payload.get("snapshot") or {}
+    updated_at = datetime.now(timezone.utc).isoformat()
+    await db.app_settings.update_one(
+        {},
+        {"$set": {"appearance_snapshot": snapshot, "appearance_updated_at": updated_at}},
+        upsert=True,
+    )
+    return {"updated_at": updated_at}
+
+
+# ── SAVED THEMES ─────────────────────────────────────────────────────────────
+
+@api_router.get("/themes")
+async def list_saved_themes():
+    docs = await db.saved_themes.find({}, sort=[("created_at", -1)]).to_list(200)
+    return [
+        {"id": str(d["_id"]), "name": d["name"], "snapshot": d.get("snapshot", {}), "created_at": d["created_at"]}
+        for d in docs
+    ]
+
+
+@api_router.post("/themes")
+async def create_saved_theme(payload: dict = Body(...)):
+    name = (payload.get("name") or "").strip()
+    if not name:
+        raise HTTPException(status_code=400, detail="El nombre del tema es requerido")
+    doc = {
+        "name": name,
+        "snapshot": payload.get("snapshot") or {},
+        "created_at": datetime.now(timezone.utc).isoformat(),
+    }
+    result = await db.saved_themes.insert_one(doc)
+    return {"id": str(result.inserted_id), "name": name, "created_at": doc["created_at"]}
+
+
+@api_router.delete("/themes/{theme_id}")
+async def delete_saved_theme(theme_id: str):
+    try:
+        oid = ObjectId(theme_id)
+    except Exception:
+        raise HTTPException(status_code=400, detail="ID inválido")
+    result = await db.saved_themes.delete_one({"_id": oid})
+    if result.deleted_count == 0:
+        raise HTTPException(status_code=404, detail="Tema no encontrado")
+    return {"message": "Tema eliminado"}
 
 
 app.include_router(api_router)

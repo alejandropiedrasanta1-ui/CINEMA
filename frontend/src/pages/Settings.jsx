@@ -11,32 +11,10 @@ import { useSettings, CURRENCIES } from "@/context/SettingsContext";
 import { useToast } from "@/hooks/use-toast";
 import { getAppSettings, updateAppSettings, getDbStats, testDbConnection, switchDatabase, resetDatabase, sendTestReminder, testEmailConnection, getBackupHistory, createServerBackup, deleteBackupFile, downloadBackupUrl, restoreBackup } from "@/lib/api";
 import { useNotifications } from "@/hooks/useNotifications";
+import { Section, SectionSearchBar } from "@/components/appearance/SectionShell";
+import { SectionSearchContext } from "@/lib/sectionSearch";
 
-const item = {
-  hidden: { opacity: 0, y: 20 },
-  show: { opacity: 1, y: 0, transition: { duration: 0.4, ease: [0.22, 1, 0.36, 1] } },
-};
 const container = { hidden: { opacity: 0 }, show: { opacity: 1, transition: { staggerChildren: 0.1 } } };
-
-function Section({ icon: Icon, title, desc, children, badge }) {
-  return (
-    <motion.div variants={item} className="glass rounded-3xl p-7">
-      <div className="flex items-center justify-between mb-5">
-        <div className="flex items-center gap-3">
-          <div className="w-9 h-9 rounded-2xl btn-primary flex items-center justify-center">
-            <Icon size={15} className="text-white" />
-          </div>
-          <div>
-            <h2 className="text-sm font-black text-slate-900" style={{ fontFamily: 'Cabinet Grotesk, sans-serif' }}>{title}</h2>
-            <p className="text-xs text-slate-400">{desc}</p>
-          </div>
-        </div>
-        {badge}
-      </div>
-      {children}
-    </motion.div>
-  );
-}
 
 function StatCard({ label, value }) {
   return (
@@ -58,6 +36,7 @@ function buildWhatsappLink(phone, events) {
 }
 
 export default function Settings() {
+  const [searchQuery, setSearchQuery] = useState("");
   const { language, currency, tr, changeLanguage, changeCurrency } = useSettings();
   const { requestPermission, showNotification, startPolling } = useNotifications();
   const { toast } = useToast();
@@ -553,6 +532,14 @@ export default function Settings() {
         <p className="text-sm text-slate-500 font-medium mt-1.5">{s.subtitle}</p>
       </motion.div>
 
+      <SectionSearchBar
+        value={searchQuery}
+        onChange={setSearchQuery}
+        placeholder={language === "es" ? "Buscar función… (ej: idioma, recordatorio, escritorio)" : "Search feature… (e.g. language, reminder, desktop)"}
+        testId="settings-search-input"
+      />
+
+      <SectionSearchContext.Provider value={searchQuery}>
       <motion.div variants={container} initial="hidden" animate="show" className="space-y-5">
 
         {/* Language */}
@@ -1348,6 +1335,7 @@ export default function Settings() {
 
 
       </motion.div>
+      </SectionSearchContext.Provider>
     </div>
   );
 }

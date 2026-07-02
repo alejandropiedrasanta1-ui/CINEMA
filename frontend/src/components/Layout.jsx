@@ -3,17 +3,19 @@ import { LayoutDashboard, CalendarDays, List, Menu, X, SlidersHorizontal, Users,
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useSettings, PRESETS } from "@/context/SettingsContext";
+import WelcomeTour from "@/components/WelcomeTour";
 import axios from "axios";
 
 const IS_DESKTOP = (window.__API_BASE_URL__ || process.env.REACT_APP_BACKEND_URL || "").includes("localhost");
 const API_BASE = window.__API_BASE_URL__ || process.env.REACT_APP_BACKEND_URL;
 
 function UpdateBanner() {
+  const { autoCheckUpdates } = useSettings();
   const [update, setUpdate] = useState(null);
   const [dismissed, setDismissed] = useState(false);
 
   useEffect(() => {
-    if (!IS_DESKTOP) return;
+    if (!IS_DESKTOP || !autoCheckUpdates) return;
     axios.get(`${API_BASE}/api/updates/check`)
       .then(r => { if (r.data?.has_update) setUpdate(r.data); })
       .catch(() => {});
@@ -48,7 +50,7 @@ function UpdateBanner() {
 
 export default function Layout({ children }) {
   const [mobileOpen, setMobileOpen] = useState(false);
-  const { tr, preset, logoUrl, logoSize, sidebarCompact, iconSize, sidebarStyle, islandMargins } = useSettings();
+  const { tr, preset, logoUrl, logoSize, sidebarCompact, iconSize, sidebarStyle, islandMargins, navConfig } = useSettings();
   const presetLabel = PRESETS.find(p => p.id === preset)?.name || "Glass Aurora";
   const sidebarLogoH = Math.min(Math.max(logoSize || 40, 24), 80);
 
@@ -102,20 +104,24 @@ export default function Layout({ children }) {
     ? `calc(${sidebarWidth} + ${sidebarStyle === "island" ? mSide + 12 : 14}px)`
     : sidebarWidth;
 
-  const navItems = [
-    { path: "/dashboard",      label: tr.nav.dashboard,          icon: LayoutDashboard },
-    { path: "/reservaciones",  label: tr.nav.reservations,       icon: List },
-    { path: "/calendario",     label: tr.nav.calendar,           icon: CalendarDays },
-    { path: "/socios",         label: tr.nav.socios || "Socios", icon: Users },
-    { path: "/base-de-datos",  label: tr.nav.database || "Base de Datos", icon: Database },
-    { path: "/apariencia",     label: tr.nav.appearance || "Apariencia",  icon: Palette },
-    { path: "/ajustes",        label: tr.nav.settings,           icon: SlidersHorizontal },
-    { path: "/actualizaciones", label: "Actualizaciones",        icon: RefreshCw },
-  ];
+  const NAV_DEFS = {
+    "/dashboard":       { label: tr.nav.dashboard,                   icon: LayoutDashboard },
+    "/reservaciones":   { label: tr.nav.reservations,                icon: List },
+    "/calendario":      { label: tr.nav.calendar,                    icon: CalendarDays },
+    "/socios":          { label: tr.nav.socios || "Socios",          icon: Users },
+    "/base-de-datos":   { label: tr.nav.database || "Base de Datos", icon: Database },
+    "/apariencia":      { label: tr.nav.appearance || "Apariencia",  icon: Palette },
+    "/ajustes":         { label: tr.nav.settings,                    icon: SlidersHorizontal },
+    "/actualizaciones": { label: "Actualizaciones",                  icon: RefreshCw },
+  };
+  const navItems = (navConfig || Object.keys(NAV_DEFS).map(p => ({ path: p, custom: "" })))
+    .map(c => NAV_DEFS[c.path] ? { path: c.path, label: c.custom || NAV_DEFS[c.path].label, icon: NAV_DEFS[c.path].icon } : null)
+    .filter(Boolean);
 
   return (
     <div className="flex min-h-screen" style={{ position: "relative", zIndex: 1 }}>
       <UpdateBanner />
+      <WelcomeTour />
       {/* Desktop Sidebar */}
       <aside
         className="hidden md:flex flex-col min-h-screen glass-sidebar fixed left-0 top-0 z-20 transition-all duration-300"

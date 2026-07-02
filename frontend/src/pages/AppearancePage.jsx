@@ -13,35 +13,14 @@ import { generateAllReservationsPDF, PDF_THEMES } from "@/lib/generatePDF";
 import { getReservations } from "@/lib/api";
 import { Slider } from "@/components/ui/slider";
 import { Switch } from "@/components/ui/switch";
+import { Section, SectionSearchBar } from "@/components/appearance/SectionShell";
+import { SectionSearchContext, matchesSearch } from "@/lib/sectionSearch";
+import { NavMenuSection } from "@/components/appearance/NavMenuSection";
+import { SavedThemesSection } from "@/components/appearance/SavedThemesSection";
+import { UiModeSection } from "@/components/appearance/UiModeSection";
+import { TutorialSection } from "@/components/appearance/TutorialSection";
 
-const fadeIn = {
-  hidden: { opacity: 0, y: 20 },
-  show: { opacity: 1, y: 0, transition: { duration: 0.4, ease: [0.22, 1, 0.36, 1] } },
-};
 const stagger = { hidden: { opacity: 0 }, show: { opacity: 1, transition: { staggerChildren: 0.06 } } };
-
-function Section({ icon: Icon, title, desc, children, badge, isNew }) {
-  return (
-    <motion.div variants={fadeIn} className="glass rounded-3xl p-7">
-      <div className="flex items-center justify-between mb-5">
-        <div className="flex items-center gap-3">
-          <div className="w-9 h-9 rounded-2xl btn-primary flex items-center justify-center shrink-0">
-            <Icon size={15} className="text-white" />
-          </div>
-          <div>
-            <h2 className="text-sm font-black text-slate-900 flex items-center gap-2" style={{ fontFamily: "Cabinet Grotesk, sans-serif" }}>
-              {title}
-              {isNew && <span className="text-[8px] font-black px-1.5 py-0.5 rounded-full bg-emerald-100 text-emerald-600 uppercase tracking-wide">NUEVO</span>}
-            </h2>
-            <p className="text-xs text-slate-400">{desc}</p>
-          </div>
-        </div>
-        {badge}
-      </div>
-      {children}
-    </motion.div>
-  );
-}
 
 function Toggle({ value, onChange, testId }) {
   return (
@@ -179,6 +158,7 @@ export default function AppearancePage() {
   const [activeEventType, setActiveEventType] = useState(null);
   const [typeNameEdit, setTypeNameEdit] = useState("");
   const [panelSize, setPanelSize] = useState("medium"); // small | medium | full
+  const [searchQuery, setSearchQuery] = useState("");
   const logoInputRef = React.useRef();
   const pdfLogoInputRef = React.useRef();
 
@@ -267,7 +247,23 @@ export default function AppearancePage() {
         </div>
       </motion.div>
 
+      <SectionSearchBar
+        value={searchQuery}
+        onChange={setSearchQuery}
+        placeholder={es ? "Buscar función… (ej: fuente, color, menú, tema, tutorial)" : "Search feature… (e.g. font, color, menu, theme)"}
+        testId="appearance-search-input"
+      />
+
+      <SectionSearchContext.Provider value={searchQuery}>
       <motion.div variants={stagger} initial="hidden" animate="show" className="space-y-5">
+
+        {/* ═══════════════════════════════════════════════════════════════
+            NUEVAS SECCIONES: MODO GLOBAL · TEMAS · MENÚ · TUTORIAL
+        ═══════════════════════════════════════════════════════════════ */}
+        <UiModeSection />
+        <SavedThemesSection />
+        <NavMenuSection />
+        <TutorialSection />
 
         {/* ═══════════════════════════════════════════════════════════════
             1. PALETA DE COLORES
@@ -1528,6 +1524,7 @@ export default function AppearancePage() {
         {/* ═══════════════════════════════════════════════════════════════
             TÍTULOS DEL SITIO
         ═══════════════════════════════════════════════════════════════ */}
+        {(!searchQuery.trim() || matchesSearch(searchQuery, "titulos del sitio nombres estados etiquetas paginas menu dashboard labels site titles nav")) && (
         <SiteTitlesSection
           es={es}
           customLabels={customLabels}
@@ -1542,8 +1539,10 @@ export default function AppearancePage() {
           removeCustomStatus={removeCustomStatus}
           resetCustomStatuses={resetCustomStatuses}
         />
+        )}
 
       </motion.div>
+      </SectionSearchContext.Provider>
     </div>
   );
 }

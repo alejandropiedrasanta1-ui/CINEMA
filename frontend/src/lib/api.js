@@ -80,3 +80,11 @@ export const uploadAppUpdate = (file, version, notes, channel) => {
   form.append("channel", channel || "stable");
   return api.post("/updates/upload", form).then(r => r.data);
 };
+export const checkForUpdates = () => api.get("/updates/check").then(r => r.data);
+
+// Appearance cloud sync & saved themes
+export const getCloudAppearance = () => api.get("/settings/appearance").then(r => r.data);
+export const saveCloudAppearance = (snapshot) => api.put("/settings/appearance", { snapshot }).then(r => r.data);
+export const getSavedThemes = () => api.get("/themes").then(r => r.data);
+export const createSavedTheme = (name, snapshot) => api.post("/themes", { name, snapshot }).then(r => r.data);
+export const deleteSavedTheme = (id) => api.delete(`/themes/${id}`).then(r => r.data);

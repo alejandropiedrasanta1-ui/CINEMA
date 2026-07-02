@@ -1,5 +1,20 @@
-import { createContext, useContext, useState, useEffect, useCallback } from "react";
+import { createContext, useContext, useState, useEffect, useCallback, useRef } from "react";
 import { setEventConfigOverrides } from "@/lib/eventConfig";
+import { getCloudAppearance, saveCloudAppearance } from "@/lib/api";
+
+export const NAV_PATHS = ["/dashboard", "/reservaciones", "/calendario", "/socios", "/base-de-datos", "/apariencia", "/ajustes", "/actualizaciones"];
+
+export const APPEARANCE_KEYS = [
+  "theme", "preset", "animations", "radius", "pdf_theme", "dark_mode", "font_scale", "bg_intensity",
+  "sidebar_compact", "date_format", "font_family", "card_style", "anim_speed", "shadow_depth",
+  "page_width", "btn_corner", "scrollbar", "custom_bg", "bg_color1", "bg_color2", "custom_accent",
+  "saturation", "hover_effect", "glass_blur", "layout_density", "page_transition", "icon_size",
+  "sidebar_style", "bg_image", "advanced_style", "custom_labels", "custom_statuses",
+  "reservation_form_design", "socio_form_design", "swap_name_event_type",
+  "form_fields_visibility", "socio_fields_visibility", "dashboard_widgets", "dashboard_recent_style",
+  "island_margins", "cp_event_configs", "cp_logo_url", "cp_pdf_logo_url", "cp_logo_size",
+  "cp_use_pdf_logo", "cp_custom_pdf_logo", "nav_config", "ui_mode",
+];
 
 export const THEMES = {
   indigo:   { id: "indigo",   name: "Índigo",    from: "#6366f1", to: "#9333ea", shadow: "rgba(99,102,241,0.28)",  blobs: ["#a5b4fc","#fda4af","#7dd3fc","#d9f99d"] },
@@ -461,6 +476,42 @@ export function SettingsProvider({ children }) {
     });
   };
 
+  // ── Nav menu config (order + custom names) ────────────────────────────────
+  const [navConfig, setNavConfig] = useState(() => {
+    try {
+      const saved = JSON.parse(localStorage.getItem("nav_config") || "null");
+      if (!saved) return NAV_PATHS.map(p => ({ path: p, custom: "" }));
+      const known = saved.filter(i => NAV_PATHS.includes(i.path));
+      const missing = NAV_PATHS.filter(p => !known.find(i => i.path === p)).map(p => ({ path: p, custom: "" }));
+      return [...known, ...missing];
+    } catch { return NAV_PATHS.map(p => ({ path: p, custom: "" })); }
+  });
+  const changeNavConfig = (next) => { setNavConfig(next); localStorage.setItem("nav_config", JSON.stringify(next)); };
+  const resetNavConfig = () => { setNavConfig(NAV_PATHS.map(p => ({ path: p, custom: "" }))); localStorage.removeItem("nav_config"); };
+
+  // ── UI mode (classic | davinci) ────────────────────────────────────────────
+  const [uiMode, setUiMode] = useState(() => localStorage.getItem("ui_mode") || "classic");
+  const changeUiMode = (m) => {
+    setUiMode(m);
+    localStorage.setItem("ui_mode", m);
+    document.documentElement.dataset.uiMode = m === "classic" ? "" : m;
+  };
+
+  // ── Auto check updates ─────────────────────────────────────────────────────
+  const [autoCheckUpdates, setAutoCheckUpdates] = useState(() => (localStorage.getItem("auto_check_updates") ?? "true") !== "false");
+  const changeAutoCheckUpdates = (v) => { setAutoCheckUpdates(v); localStorage.setItem("auto_check_updates", String(v)); };
+
+  // ── Welcome tutorial ───────────────────────────────────────────────────────
+  const [tutorialEnabled, setTutorialEnabled] = useState(() => (localStorage.getItem("tutorial_enabled") ?? "true") !== "false");
+  const changeTutorialEnabled = (v) => { setTutorialEnabled(v); localStorage.setItem("tutorial_enabled", String(v)); };
+  const [showTour, setShowTour] = useState(false);
+  useEffect(() => {
+    if (tutorialEnabled && !localStorage.getItem("tour_done")) setShowTour(true);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+  const startTour = () => setShowTour(true);
+  const endTour = () => { localStorage.setItem("tour_done", "true"); setShowTour(false); };
+
   const changePdfTheme = (t) => { setPdfTheme(t); localStorage.setItem("pdf_theme", t); };
 
   useEffect(() => {
@@ -487,6 +538,7 @@ export function SettingsProvider({ children }) {
     document.documentElement.dataset.pageTransition = pageTransition === "fade" ? "" : pageTransition;
     document.documentElement.dataset.iconSize     = iconSize === "medium" ? "" : iconSize;
     document.documentElement.dataset.sidebarStyle = sidebarStyle === "normal" ? "" : sidebarStyle;
+    document.documentElement.dataset.uiMode = uiMode === "classic" ? "" : uiMode;
     if (bgImage) {
       document.documentElement.style.setProperty("--bg-image", `url('${bgImage}')`);
       document.documentElement.dataset.bgImage = "true";
@@ -775,6 +827,75 @@ export function SettingsProvider({ children }) {
     if ("useCustomPdf"  in updates) { setUseCustomPdfLogo(updates.useCustomPdf); localStorage.setItem("cp_custom_pdf_logo", String(updates.useCustomPdf)); }
   };
 
+  // ── Appearance cloud sync ────────────────────────────────────────────────
+  const syncReadyRef = useRef(false);
+  const pushTimerRef = useRef(null);
+  const [appearanceSync, setAppearanceSync] = useState({ status: "idle", at: null });
+
+  const getAppearanceSnapshot = () => {
+    const snap = {};
+    APPEARANCE_KEYS.forEach(k => { const v = localStorage.getItem(k); if (v !== null) snap[k] = v; });
+    return snap;
+  };
+
+  const writeSnapshotLocal = (snap) => {
+    APPEARANCE_KEYS.forEach(k => {
+      if (snap && snap[k] != null) localStorage.setItem(k, snap[k]);
+      else localStorage.removeItem(k);
+    });
+  };
+
+  const applyAppearanceSnapshot = async (snap) => {
+    writeSnapshotLocal(snap || {});
+    try {
+      const r = await saveCloudAppearance(snap || {});
+      localStorage.setItem("appearance_synced_at", r.updated_at);
+    } catch {}
+    window.location.reload();
+  };
+
+  const resetAppearanceToDefault = () => applyAppearanceSnapshot({ __default: "1" });
+
+  // Pull cloud appearance on startup (all devices share the same style)
+  useEffect(() => {
+    (async () => {
+      try {
+        const { snapshot, updated_at } = await getCloudAppearance();
+        const localSyncedAt = localStorage.getItem("appearance_synced_at");
+        // Only apply non-empty cloud snapshots (empty = never synced → local wins)
+        if (snapshot && Object.keys(snapshot).length > 0 && updated_at && updated_at !== localSyncedAt) {
+          if (JSON.stringify(snapshot) !== JSON.stringify(getAppearanceSnapshot())) {
+            writeSnapshotLocal(snapshot);
+            localStorage.setItem("appearance_synced_at", updated_at);
+            window.location.reload();
+            return;
+          }
+          localStorage.setItem("appearance_synced_at", updated_at);
+        }
+      } catch {}
+      syncReadyRef.current = true;
+    })();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Auto-push local appearance changes to the cloud (debounced)
+  useEffect(() => {
+    if (!syncReadyRef.current) return;
+    if (pushTimerRef.current) clearTimeout(pushTimerRef.current);
+    setAppearanceSync(s => ({ ...s, status: "saving" }));
+    pushTimerRef.current = setTimeout(async () => {
+      try {
+        const r = await saveCloudAppearance(getAppearanceSnapshot());
+        localStorage.setItem("appearance_synced_at", r.updated_at);
+        setAppearanceSync({ status: "synced", at: r.updated_at });
+      } catch {
+        setAppearanceSync(s => ({ ...s, status: "error" }));
+      }
+    }, 2000);
+    return () => clearTimeout(pushTimerRef.current);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [theme, preset, animations, radius, pdfTheme, darkMode, fontScale, bgIntensity, sidebarCompact, dateFormat, fontFamily, cardStyle, animSpeed, shadowDepth, pageWidth, btnCorner, scrollbar, customBgEnabled, bgColor1, bgColor2, customAccent, saturation, hoverEffect, glassBlur, layoutDensity, pageTransition, iconSize, sidebarStyle, bgImage, advancedStyle, customLabels, customStatuses, reservationFormDesign, socioFormDesign, swapNameEventType, formFieldsVisibility, socioFieldsVisibility, dashboardWidgets, dashboardRecentStyle, islandMargins, eventConfigs, logoUrl, pdfLogoUrl, logoSize, usePdfLogo, useCustomPdfLogo, navConfig, uiMode]);
+
   const baseT = T[language] || T.es;
   const tr = (() => {
     const noLabels = !Object.keys(customLabels).length;
@@ -850,6 +971,14 @@ export function SettingsProvider({ children }) {
       reservationFormDesign, changeReservationFormDesign,
       socioFormDesign, changeSocioFormDesign,
       swapNameEventType, changeSwapNameEventType,
+      // Nav menu / UI mode / updates / tutorial
+      navConfig, changeNavConfig, resetNavConfig,
+      uiMode, changeUiMode,
+      autoCheckUpdates, changeAutoCheckUpdates,
+      tutorialEnabled, changeTutorialEnabled,
+      showTour, startTour, endTour,
+      // Appearance cloud sync
+      getAppearanceSnapshot, applyAppearanceSnapshot, resetAppearanceToDefault, appearanceSync,
     }}>
       {children}
     </SettingsContext.Provider>
