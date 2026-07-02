@@ -18,9 +18,9 @@ const TOUR_STEPS = [
   { route: "/base-de-datos", target: '[data-testid="backup-server-btn"]', title: "Respaldos automáticos", desc: "Crea copias de seguridad, restáuralas y exporta a CSV/Excel cuando quieras." },
   { route: "/apariencia", target: '[data-testid="appearance-search-input"]', title: "Buscador de funciones", desc: "¿No encuentras una opción? Escribe aquí (ej: «fuente», «color») y aparecerá la sección exacta." },
   { route: "/apariencia", target: '[data-testid="section-saved-themes-section"]', title: "Temas guardados", desc: "Guarda tu apariencia con nombre, restáurala cuando quieras y se sincroniza sola con la nube." },
-  { route: "/apariencia", target: '[data-testid="section-ui-mode-section"]', title: "Modo DaVinci Resolve", desc: "Transforma toda la app a un diseño profesional oscuro tipo collage, estilo software de edición." },
   { route: "/apariencia", target: '[data-testid="section-nav-menu-section"]', title: "Personaliza el menú", desc: "Reordena y renombra las opciones del menú lateral a tu gusto." },
   { route: "/ajustes", target: '[data-testid="settings-search-input"]', title: "Ajustes generales", desc: "Idioma, moneda, zona horaria y recordatorios multi-canal (Email, Telegram, WhatsApp)." },
+  { route: "/ajustes", target: '[data-testid="section-toggle-seguridad"]', title: "Seguridad", desc: "Protege la app con contraseña y bloquea el clic derecho, copiar y la selección de texto." },
   { route: "/ajustes", target: null, title: "App de Escritorio", desc: "Descarga la versión local para Windows: funciona sin internet y se actualiza sola desde la nube." },
   { route: "/actualizaciones", target: '[data-testid="check-updates-btn"]', title: "Actualizaciones en línea", desc: "Busca nuevas versiones en la base de datos con un clic. ¡Listo! Ya conoces toda la app. 🎉" },
 ];

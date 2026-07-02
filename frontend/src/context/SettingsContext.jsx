@@ -1,6 +1,6 @@
 import { createContext, useContext, useState, useEffect, useCallback, useRef } from "react";
 import { setEventConfigOverrides } from "@/lib/eventConfig";
-import { getCloudAppearance, saveCloudAppearance } from "@/lib/api";
+import { getCloudAppearance, saveCloudAppearance, getSecurityStatus } from "@/lib/api";
 
 export const NAV_PATHS = ["/dashboard", "/reservaciones", "/calendario", "/socios", "/base-de-datos", "/apariencia", "/ajustes", "/actualizaciones"];
 
@@ -13,7 +13,7 @@ export const APPEARANCE_KEYS = [
   "reservation_form_design", "socio_form_design", "swap_name_event_type",
   "form_fields_visibility", "socio_fields_visibility", "dashboard_widgets", "dashboard_recent_style",
   "island_margins", "cp_event_configs", "cp_logo_url", "cp_pdf_logo_url", "cp_logo_size",
-  "cp_use_pdf_logo", "cp_custom_pdf_logo", "nav_config", "ui_mode",
+  "cp_use_pdf_logo", "cp_custom_pdf_logo", "nav_config",
 ];
 
 export const THEMES = {
@@ -489,14 +489,6 @@ export function SettingsProvider({ children }) {
   const changeNavConfig = (next) => { setNavConfig(next); localStorage.setItem("nav_config", JSON.stringify(next)); };
   const resetNavConfig = () => { setNavConfig(NAV_PATHS.map(p => ({ path: p, custom: "" }))); localStorage.removeItem("nav_config"); };
 
-  // ── UI mode (classic | davinci) ────────────────────────────────────────────
-  const [uiMode, setUiMode] = useState(() => localStorage.getItem("ui_mode") || "classic");
-  const changeUiMode = (m) => {
-    setUiMode(m);
-    localStorage.setItem("ui_mode", m);
-    document.documentElement.dataset.uiMode = m === "classic" ? "" : m;
-  };
-
   // ── Auto check updates ─────────────────────────────────────────────────────
   const [autoCheckUpdates, setAutoCheckUpdates] = useState(() => (localStorage.getItem("auto_check_updates") ?? "true") !== "false");
   const changeAutoCheckUpdates = (v) => { setAutoCheckUpdates(v); localStorage.setItem("auto_check_updates", String(v)); };
@@ -538,7 +530,6 @@ export function SettingsProvider({ children }) {
     document.documentElement.dataset.pageTransition = pageTransition === "fade" ? "" : pageTransition;
     document.documentElement.dataset.iconSize     = iconSize === "medium" ? "" : iconSize;
     document.documentElement.dataset.sidebarStyle = sidebarStyle === "normal" ? "" : sidebarStyle;
-    document.documentElement.dataset.uiMode = uiMode === "classic" ? "" : uiMode;
     if (bgImage) {
       document.documentElement.style.setProperty("--bg-image", `url('${bgImage}')`);
       document.documentElement.dataset.bgImage = "true";
@@ -894,7 +885,48 @@ export function SettingsProvider({ children }) {
     }, 2000);
     return () => clearTimeout(pushTimerRef.current);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [theme, preset, animations, radius, pdfTheme, darkMode, fontScale, bgIntensity, sidebarCompact, dateFormat, fontFamily, cardStyle, animSpeed, shadowDepth, pageWidth, btnCorner, scrollbar, customBgEnabled, bgColor1, bgColor2, customAccent, saturation, hoverEffect, glassBlur, layoutDensity, pageTransition, iconSize, sidebarStyle, bgImage, advancedStyle, customLabels, customStatuses, reservationFormDesign, socioFormDesign, swapNameEventType, formFieldsVisibility, socioFieldsVisibility, dashboardWidgets, dashboardRecentStyle, islandMargins, eventConfigs, logoUrl, pdfLogoUrl, logoSize, usePdfLogo, useCustomPdfLogo, navConfig, uiMode]);
+  }, [theme, preset, animations, radius, pdfTheme, darkMode, fontScale, bgIntensity, sidebarCompact, dateFormat, fontFamily, cardStyle, animSpeed, shadowDepth, pageWidth, btnCorner, scrollbar, customBgEnabled, bgColor1, bgColor2, customAccent, saturation, hoverEffect, glassBlur, layoutDensity, pageTransition, iconSize, sidebarStyle, bgImage, advancedStyle, customLabels, customStatuses, reservationFormDesign, socioFormDesign, swapNameEventType, formFieldsVisibility, socioFieldsVisibility, dashboardWidgets, dashboardRecentStyle, islandMargins, eventConfigs, logoUrl, pdfLogoUrl, logoSize, usePdfLogo, useCustomPdfLogo, navConfig]);
+
+  // ── App security (password lock + page protection) ─────────────────────────
+  const [security, setSecurity] = useState({ loaded: false, passwordEnabled: false, hint: "", protectionEnabled: false });
+  const [appLocked, setAppLocked] = useState(false);
+
+  const refreshSecurity = async () => {
+    try {
+      const s = await getSecurityStatus();
+      setSecurity({ loaded: true, passwordEnabled: !!s.password_enabled, hint: s.hint || "", protectionEnabled: !!s.protection_enabled });
+      return s;
+    } catch {
+      setSecurity(prev => ({ ...prev, loaded: true }));
+      return null;
+    }
+  };
+
+  useEffect(() => {
+    (async () => {
+      const s = await refreshSecurity();
+      if (s?.password_enabled && sessionStorage.getItem("cp_app_unlocked") !== "true") setAppLocked(true);
+    })();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const unlockApp = () => { sessionStorage.setItem("cp_app_unlocked", "true"); setAppLocked(false); };
+
+  useEffect(() => {
+    if (!security.protectionEnabled) return;
+    document.body.classList.add("page-protected");
+    const isEditable = (el) => el && el.closest && el.closest('input, textarea, select, [contenteditable="true"]');
+    const block = (e) => {
+      if (e.type === "dragstart" && e.target.closest && e.target.closest('[draggable="true"]')) return;
+      if (!isEditable(e.target)) e.preventDefault();
+    };
+    const events = ["contextmenu", "copy", "cut", "paste", "selectstart", "dragstart"];
+    events.forEach(ev => document.addEventListener(ev, block));
+    return () => {
+      document.body.classList.remove("page-protected");
+      events.forEach(ev => document.removeEventListener(ev, block));
+    };
+  }, [security.protectionEnabled]);
 
   const baseT = T[language] || T.es;
   const tr = (() => {
@@ -971,14 +1003,15 @@ export function SettingsProvider({ children }) {
       reservationFormDesign, changeReservationFormDesign,
       socioFormDesign, changeSocioFormDesign,
       swapNameEventType, changeSwapNameEventType,
-      // Nav menu / UI mode / updates / tutorial
+      // Nav menu / updates / tutorial
       navConfig, changeNavConfig, resetNavConfig,
-      uiMode, changeUiMode,
       autoCheckUpdates, changeAutoCheckUpdates,
       tutorialEnabled, changeTutorialEnabled,
       showTour, startTour, endTour,
       // Appearance cloud sync
       getAppearanceSnapshot, applyAppearanceSnapshot, resetAppearanceToDefault, appearanceSync,
+      // Security
+      security, appLocked, unlockApp, refreshSecurity,
     }}>
       {children}
     </SettingsContext.Provider>

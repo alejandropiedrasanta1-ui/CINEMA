@@ -18,6 +18,8 @@ import io
 import os
 import re
 import json
+import hashlib
+import secrets
 import logging
 import base64
 import uuid
@@ -598,6 +600,7 @@ async def get_app_settings():
     doc = await db.app_settings.find_one({}, {"_id": 0})
     if not doc:
         return {}
+    doc.pop("app_password_hash", None)
     if doc.get("resend_api_key"):
         key = doc["resend_api_key"]
         doc["resend_api_key"] = "re_" + "*" * 20 + key[-4:] if len(key) > 4 else "****"
@@ -1217,6 +1220,88 @@ async def delete_saved_theme(theme_id: str):
     if _using_embedded:
         asyncio.create_task(_save_embedded_data())
     return {"message": "Tema eliminado"}
+
+
+# ── APP SECURITY (password lock + page protection) ──────────────────────────
+
+PBKDF2_ITERATIONS = 260000
+
+
+def _hash_app_password(password: str) -> str:
+    salt = secrets.token_hex(16)
+    dk = hashlib.pbkdf2_hmac("sha256", password.encode(), bytes.fromhex(salt), PBKDF2_ITERATIONS)
+    return f"pbkdf2_sha256${PBKDF2_ITERATIONS}${salt}${dk.hex()}"
+
+
+def _verify_app_password(password: str, stored: str) -> bool:
+    try:
+        _, iterations, salt, hash_hex = stored.split("$")
+        dk = hashlib.pbkdf2_hmac("sha256", password.encode(), bytes.fromhex(salt), int(iterations))
+        return secrets.compare_digest(dk.hex(), hash_hex)
+    except Exception:
+        return False
+
+
+@api_router.get("/security/status")
+async def get_security_status():
+    doc = await db.app_settings.find_one({}, {"_id": 0, "app_password_hash": 1, "app_password_hint": 1, "page_protection_enabled": 1}) or {}
+    return {
+        "password_enabled": bool(doc.get("app_password_hash")),
+        "hint": doc.get("app_password_hint") or "",
+        "protection_enabled": bool(doc.get("page_protection_enabled")),
+    }
+
+
+@api_router.post("/security/set-password")
+async def set_app_password_endpoint(payload: dict = Body(...)):
+    password = (payload.get("password") or "").strip()
+    hint = (payload.get("hint") or "").strip()
+    current = payload.get("current_password") or ""
+    if len(password) < 4:
+        raise HTTPException(status_code=400, detail="La contraseña debe tener al menos 4 caracteres")
+    doc = await db.app_settings.find_one({}, {"app_password_hash": 1}) or {}
+    if doc.get("app_password_hash") and not _verify_app_password(current, doc["app_password_hash"]):
+        raise HTTPException(status_code=401, detail="La contraseña actual es incorrecta")
+    await db.app_settings.update_one(
+        {},
+        {"$set": {"app_password_hash": _hash_app_password(password), "app_password_hint": hint}},
+        upsert=True,
+    )
+    if _using_embedded:
+        asyncio.create_task(_save_embedded_data())
+    return {"message": "Contraseña guardada"}
+
+
+@api_router.post("/security/verify")
+async def verify_app_password_endpoint(payload: dict = Body(...)):
+    doc = await db.app_settings.find_one({}, {"app_password_hash": 1}) or {}
+    if not doc.get("app_password_hash"):
+        return {"valid": True}
+    if not _verify_app_password(payload.get("password") or "", doc["app_password_hash"]):
+        raise HTTPException(status_code=401, detail="Contraseña incorrecta")
+    return {"valid": True}
+
+
+@api_router.post("/security/remove-password")
+async def remove_app_password_endpoint(payload: dict = Body(...)):
+    doc = await db.app_settings.find_one({}, {"app_password_hash": 1}) or {}
+    if not doc.get("app_password_hash"):
+        raise HTTPException(status_code=400, detail="No hay contraseña configurada")
+    if not _verify_app_password(payload.get("current_password") or "", doc["app_password_hash"]):
+        raise HTTPException(status_code=401, detail="La contraseña actual es incorrecta")
+    await db.app_settings.update_one({}, {"$unset": {"app_password_hash": "", "app_password_hint": ""}})
+    if _using_embedded:
+        asyncio.create_task(_save_embedded_data())
+    return {"message": "Contraseña eliminada"}
+
+
+@api_router.put("/security/protection")
+async def set_page_protection_endpoint(payload: dict = Body(...)):
+    enabled = bool(payload.get("enabled"))
+    await db.app_settings.update_one({}, {"$set": {"page_protection_enabled": enabled}}, upsert=True)
+    if _using_embedded:
+        asyncio.create_task(_save_embedded_data())
+    return {"enabled": enabled}
 
 
 @api_router.get("/updates/check")

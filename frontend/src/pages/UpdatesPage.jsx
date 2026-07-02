@@ -391,7 +391,7 @@ export default function UpdatesPage() {
           </div>
         ) : history.length === 0 ? (
           <div className="py-16 text-center">
-            <Package size={36} className="mx-auto text-slate-200 mb-3" />
+            <Package size={36} className="mx-auto text-slate-200 mb-3 animate-float" />
             <p className="text-slate-400 text-sm font-medium">Aún no hay versiones registradas</p>
             <p className="text-slate-300 text-xs mt-1">Ve a <strong>Ajustes → App para Windows</strong> y descarga la app — se registrará automáticamente aquí</p>
           </div>

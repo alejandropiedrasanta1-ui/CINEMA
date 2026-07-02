@@ -13,6 +13,7 @@ import { getAppSettings, updateAppSettings, getDbStats, testDbConnection, switch
 import { useNotifications } from "@/hooks/useNotifications";
 import { Section, SectionSearchBar } from "@/components/appearance/SectionShell";
 import { SectionSearchContext } from "@/lib/sectionSearch";
+import { SecuritySection } from "@/components/SecuritySection";
 
 const container = { hidden: { opacity: 0 }, show: { opacity: 1, transition: { staggerChildren: 0.1 } } };
 
@@ -651,6 +652,9 @@ export default function Settings() {
         </Section>
 
         {/* Notifications */}
+        {/* ── SEGURIDAD ── */}
+        <SecuritySection />
+
         <Section icon={Bell} title={s.notifTitle} desc={s.notifDesc}
           badge={
             <span className={`text-[10px] font-black px-2.5 py-1 rounded-full ${notif.reminders_enabled ? "bg-emerald-100 text-emerald-700" : "bg-slate-100 text-slate-400"}`}>

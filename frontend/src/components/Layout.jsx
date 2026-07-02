@@ -166,8 +166,9 @@ export default function Layout({ children }) {
               {({ isActive }) => (
                 <>
                   <motion.span
-                    animate={{ scale: isActive ? 1.1 : 1 }}
-                    transition={{ duration: 0.2 }}
+                    animate={{ scale: isActive ? [1.08, 1.18, 1.08] : 1 }}
+                    transition={isActive ? { duration: 2.4, repeat: Infinity, ease: "easeInOut" } : { duration: 0.2 }}
+                    whileHover={{ rotate: [0, -12, 12, 0], scale: 1.25, transition: { duration: 0.45 } }}
                     className="flex-shrink-0"
                   >
                     <Icon size={compact ? iconPx : iconPxInline} strokeWidth={isActive ? 2.2 : 1.5} />

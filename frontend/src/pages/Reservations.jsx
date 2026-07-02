@@ -179,7 +179,7 @@ export default function Reservations() {
           </div>
         ) : filtered.length === 0 ? (
           <div className="py-20 text-center">
-            <div className="w-16 h-16 rounded-3xl glass flex items-center justify-center mx-auto mb-4"><Search size={24} className="text-slate-300" /></div>
+            <div className="w-16 h-16 rounded-3xl glass flex items-center justify-center mx-auto mb-4 animate-float"><Search size={24} className="text-slate-300" /></div>
             <p className="text-slate-500 font-medium">{l.noResults}</p>
           </div>
         ) : (

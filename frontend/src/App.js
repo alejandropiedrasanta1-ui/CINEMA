@@ -13,6 +13,7 @@ import DatabasePage from "@/pages/DatabasePage";
 import AppearancePage from "@/pages/AppearancePage";
 import UpdatesPage from "@/pages/UpdatesPage";
 import { Toaster } from "@/components/ui/toaster";
+import LockScreen from "@/components/LockScreen";
 import { useEffect } from "react";
 import { useNotifications } from "@/hooks/useNotifications";
 
@@ -64,7 +65,7 @@ function AnimatedRoutes() {
 
 // Inner component — has access to SettingsContext
 function AppInner() {
-  const { animations } = useSettings();
+  const { animations, appLocked } = useSettings();
   const { start } = useNotifications();
 
   useEffect(() => {
@@ -80,6 +81,15 @@ function AppInner() {
       }
     }
   }, [start]);
+
+  if (appLocked) {
+    return (
+      <MotionConfig reducedMotion={animations ? "never" : "always"}>
+        <LockScreen />
+        <Toaster />
+      </MotionConfig>
+    );
+  }
 
   return (
     <MotionConfig reducedMotion={animations ? "never" : "always"}>

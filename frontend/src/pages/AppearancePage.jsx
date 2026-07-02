@@ -17,7 +17,6 @@ import { Section, SectionSearchBar } from "@/components/appearance/SectionShell"
 import { SectionSearchContext, matchesSearch } from "@/lib/sectionSearch";
 import { NavMenuSection } from "@/components/appearance/NavMenuSection";
 import { SavedThemesSection } from "@/components/appearance/SavedThemesSection";
-import { UiModeSection } from "@/components/appearance/UiModeSection";
 import { TutorialSection } from "@/components/appearance/TutorialSection";
 
 const stagger = { hidden: { opacity: 0 }, show: { opacity: 1, transition: { staggerChildren: 0.06 } } };
@@ -258,9 +257,8 @@ export default function AppearancePage() {
       <motion.div variants={stagger} initial="hidden" animate="show" className="space-y-5">
 
         {/* ═══════════════════════════════════════════════════════════════
-            NUEVAS SECCIONES: MODO GLOBAL · TEMAS · MENÚ · TUTORIAL
+            NUEVAS SECCIONES: TEMAS · MENÚ · TUTORIAL
         ═══════════════════════════════════════════════════════════════ */}
-        <UiModeSection />
         <SavedThemesSection />
         <NavMenuSection />
         <TutorialSection />

@@ -88,3 +88,10 @@ export const saveCloudAppearance = (snapshot) => api.put("/settings/appearance",
 export const getSavedThemes = () => api.get("/themes").then(r => r.data);
 export const createSavedTheme = (name, snapshot) => api.post("/themes", { name, snapshot }).then(r => r.data);
 export const deleteSavedTheme = (id) => api.delete(`/themes/${id}`).then(r => r.data);
+
+// App security
+export const getSecurityStatus = () => api.get("/security/status").then(r => r.data);
+export const setAppPassword = (password, hint, current_password) => api.post("/security/set-password", { password, hint, current_password }).then(r => r.data);
+export const verifyAppPassword = (password) => api.post("/security/verify", { password }).then(r => r.data);
+export const removeAppPassword = (current_password) => api.post("/security/remove-password", { current_password }).then(r => r.data);
+export const setPageProtection = (enabled) => api.put("/security/protection", { enabled }).then(r => r.data);

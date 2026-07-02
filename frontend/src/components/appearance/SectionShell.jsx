@@ -30,10 +30,10 @@ export function Section({ icon: Icon, title, desc, children, badge, isNew, keywo
         onClick={() => setOpen(o => !o)}
         onKeyDown={e => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); setOpen(o => !o); } }}
         data-testid={`section-toggle-${slug}`}
-        className="w-full flex items-center justify-between p-7 cursor-pointer select-none hover:bg-white/20 transition-colors"
+        className="w-full flex items-center justify-between p-7 cursor-pointer select-none hover:bg-white/20 transition-colors group"
       >
         <div className="flex items-center gap-3 min-w-0">
-          <div className="w-9 h-9 rounded-2xl btn-primary flex items-center justify-center shrink-0">
+          <div className="w-9 h-9 rounded-2xl btn-primary flex items-center justify-center shrink-0 transition-transform duration-300 group-hover:scale-110 group-hover:-rotate-6">
             <Icon size={15} className="text-white" />
           </div>
           <div className="min-w-0">

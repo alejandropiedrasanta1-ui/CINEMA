@@ -23,12 +23,32 @@ function StatCard({ icon: Icon, label, value, sub, gradient }) {
   return (
     <motion.div variants={item} whileHover={{ y: -4, transition: { duration: 0.2 } }} className="glass rounded-3xl p-6 cursor-default group">
       <div className="flex items-start justify-between mb-4">
-        <div className="w-10 h-10 rounded-2xl flex items-center justify-center shadow-sm" style={{ background: gradient }}>
-          <Icon size={16} strokeWidth={1.5} className="text-white" />
+        <div className="relative w-10 h-10">
+          <motion.div
+            className="absolute inset-0 rounded-2xl"
+            style={{ background: gradient }}
+            animate={{ scale: [1, 1.55], opacity: [0.35, 0] }}
+            transition={{ duration: 2.4, repeat: Infinity, ease: "easeOut" }}
+          />
+          <motion.div
+            animate={{ y: [0, -4, 0] }}
+            transition={{ duration: 3, repeat: Infinity, ease: "easeInOut" }}
+            whileHover={{ rotate: [0, -10, 10, 0], scale: 1.12, transition: { duration: 0.45 } }}
+            className="relative w-10 h-10 rounded-2xl flex items-center justify-center shadow-sm"
+            style={{ background: gradient }}
+          >
+            <Icon size={16} strokeWidth={1.5} className="text-white" />
+          </motion.div>
         </div>
-        <TrendingUp size={12} className="text-slate-300 group-hover:text-slate-500 transition-colors" />
+        <motion.span animate={{ y: [0, -3, 0] }} transition={{ duration: 2.2, repeat: Infinity, ease: "easeInOut" }}>
+          <TrendingUp size={12} className="text-slate-300 group-hover:text-emerald-500 transition-colors" />
+        </motion.span>
       </div>
-      <p className="text-3xl font-black text-slate-900 tracking-tight mb-1" style={{ fontFamily: 'Cabinet Grotesk, sans-serif' }}>{value}</p>
+      <motion.p
+        initial={{ opacity: 0, scale: 0.9 }}
+        animate={{ opacity: 1, scale: 1 }}
+        transition={{ type: "spring", stiffness: 220, damping: 18, delay: 0.15 }}
+        className="text-3xl font-black text-slate-900 tracking-tight mb-1" style={{ fontFamily: 'Cabinet Grotesk, sans-serif' }}>{value}</motion.p>
       <p className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-0.5">{label}</p>
       {sub && <p className="text-xs text-slate-400">{sub}</p>}
     </motion.div>
@@ -282,7 +302,7 @@ export default function Dashboard() {
 
         {recent.length === 0 ? (
           <div className="py-16 text-center">
-            <div className="w-16 h-16 rounded-3xl bg-slate-100/80 flex items-center justify-center mx-auto mb-3">
+            <div className="w-16 h-16 rounded-3xl bg-slate-100/80 flex items-center justify-center mx-auto mb-3 animate-float">
               <CalendarDays size={24} className="text-slate-300" />
             </div>
             <p className="text-slate-400 text-sm font-medium">

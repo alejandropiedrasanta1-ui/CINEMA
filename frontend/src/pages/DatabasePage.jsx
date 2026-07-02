@@ -55,6 +55,33 @@ function timeAgo(date) {
   return `hace ${Math.floor(h / 24)}d`;
 }
 
+// ─── Collapsible body wrapper ────────────────────────────────────────────────
+function CollapseBody({ open, children }) {
+  return (
+    <AnimatePresence initial={false}>
+      {open && (
+        <motion.div
+          initial={{ height: 0, opacity: 0 }}
+          animate={{ height: "auto", opacity: 1 }}
+          exit={{ height: 0, opacity: 0 }}
+          transition={{ duration: 0.28, ease: [0.22, 1, 0.36, 1] }}
+          className="overflow-hidden">
+          {children}
+        </motion.div>
+      )}
+    </AnimatePresence>
+  );
+}
+
+function BlockChevron({ open, danger }) {
+  return (
+    <motion.span animate={{ rotate: open ? 180 : 0 }} transition={{ duration: 0.25 }}
+      className={danger ? "text-red-300" : "text-slate-400"}>
+      <ChevronDown size={15} />
+    </motion.span>
+  );
+}
+
 function fmtSize(bytes) {
   if (bytes < 1024) return `${bytes} B`;
   if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
@@ -106,6 +133,8 @@ export default function DatabasePage() {
   const [dbTesting, setDbTesting]       = useState(false);
   const [dbResetting, setDbResetting]   = useState(false);
   const [showClear, setShowClear]       = useState(false);
+  const [openBlocks, setOpenBlocks] = useState({ backup: true, conn: true, cleanup: false, updates: false, options: false, danger: false });
+  const toggleBlock = (k) => setOpenBlocks(p => ({ ...p, [k]: !p[k] }));
   const [clearLoading, setClearLoading] = useState(false);
 
   // ── Connection mode ────────────────────────────────────────────────────────
@@ -397,7 +426,8 @@ export default function DatabasePage() {
             className={`glass rounded-3xl overflow-hidden transition-all duration-300 ${autoBackup.config.enabled ? "ring-2 ring-emerald-400/50" : ""}`}>
 
             {/* Header */}
-            <div className="flex items-center justify-between px-5 py-4 border-b border-white/40">
+            <div onClick={() => toggleBlock("backup")} data-testid="db-block-toggle-backup"
+              className="flex items-center justify-between px-5 py-4 border-b border-white/40 cursor-pointer select-none">
               <div className="flex items-center gap-3">
                 <div className={`w-9 h-9 rounded-xl flex items-center justify-center transition-colors ${autoBackup.config.enabled ? "bg-emerald-200" : "bg-slate-100"}`}>
                   <Zap size={16} className={autoBackup.config.enabled ? "text-emerald-700" : "text-slate-400"} />
@@ -420,7 +450,8 @@ export default function DatabasePage() {
                 {/* Toggle */}
                 <button
                   data-testid="auto-backup-toggle"
-                  onClick={() => {
+                  onClick={(e) => {
+                    e.stopPropagation();
                     const next = !autoBackup.config.enabled;
                     autoBackup.updateConfig({ enabled: next });
                     if (next) toast({ title: "Respaldo automático activado ✓" });
@@ -429,9 +460,11 @@ export default function DatabasePage() {
                   className={`w-11 h-6 rounded-full transition-all duration-300 relative ${autoBackup.config.enabled ? "bg-emerald-500" : "bg-slate-200"}`}>
                   <span className={`absolute top-0.5 w-5 h-5 bg-white rounded-full shadow transition-all duration-300 ${autoBackup.config.enabled ? "left-[22px]" : "left-0.5"}`} />
                 </button>
+                <BlockChevron open={openBlocks.backup} />
               </div>
             </div>
 
+            <CollapseBody open={openBlocks.backup}>
             <div className="p-5 space-y-4">
 
               {/* ── Status display when active ── */}
@@ -678,6 +711,7 @@ export default function DatabasePage() {
               </div>
 
             </div>
+            </CollapseBody>
           </div>
         </motion.div>
 
@@ -685,7 +719,8 @@ export default function DatabasePage() {
         <motion.div variants={fadeUp}>
           <div className="glass rounded-3xl overflow-hidden">
             {/* Header */}
-            <div className="flex items-center justify-between px-5 py-4 border-b border-white/40">
+            <div onClick={() => toggleBlock("conn")} data-testid="db-block-toggle-conn"
+              className="flex items-center justify-between px-5 py-4 border-b border-white/40 cursor-pointer select-none">
               <div className="flex items-center gap-3">
                 <div className="w-9 h-9 rounded-xl bg-indigo-100 flex items-center justify-center">
                   <Database size={16} className="text-indigo-600" />
@@ -702,12 +737,14 @@ export default function DatabasePage() {
                     {dbStats.is_custom ? "BD Personalizada" : "BD Local"}
                   </span>
                 )}
-                <button onClick={loadDbStats} className="w-8 h-8 rounded-xl hover:bg-white/60 flex items-center justify-center text-slate-400 hover:text-slate-700 transition-all">
+                <button onClick={(e) => { e.stopPropagation(); loadDbStats(); }} className="w-8 h-8 rounded-xl hover:bg-white/60 flex items-center justify-center text-slate-400 hover:text-slate-700 transition-all">
                   <RefreshCw size={13} className={dbLoading ? "animate-spin" : ""} />
                 </button>
+                <BlockChevron open={openBlocks.conn} />
               </div>
             </div>
 
+            <CollapseBody open={openBlocks.conn}>
             <div className="p-5 space-y-5">
 
               {/* ── Stats ── */}
@@ -1044,13 +1081,15 @@ export default function DatabasePage() {
               </div>
 
             </div>
+            </CollapseBody>
           </div>
         </motion.div>
 
         {/* ── LIMPIEZA DE BASE DE DATOS ── */}
         <motion.div variants={fadeUp}>
           <div className="glass rounded-3xl overflow-hidden">
-            <div className="flex items-center gap-3 px-5 py-4 border-b border-white/40">
+            <div onClick={() => toggleBlock("cleanup")} data-testid="db-block-toggle-cleanup"
+              className="flex items-center gap-3 px-5 py-4 border-b border-white/40 cursor-pointer select-none">
               <div className="w-9 h-9 rounded-xl bg-orange-100 flex items-center justify-center">
                 <Scissors size={16} className="text-orange-600" />
               </div>
@@ -1058,7 +1097,9 @@ export default function DatabasePage() {
                 <p className="text-sm font-black text-slate-900" style={{ fontFamily: "Cabinet Grotesk, sans-serif" }}>Limpieza de base de datos</p>
                 <p className="text-[11px] text-slate-400">Elimina registros innecesarios y libera espacio</p>
               </div>
+              <span className="ml-auto"><BlockChevron open={openBlocks.cleanup} /></span>
             </div>
+            <CollapseBody open={openBlocks.cleanup}>
             <div className="p-5 space-y-3">
 
               {/* Preview counts */}
@@ -1106,13 +1147,15 @@ export default function DatabasePage() {
               </div>
               <p className="text-[10px] text-slate-400 text-center">Se crea un respaldo automático antes de cada limpieza</p>
             </div>
+            </CollapseBody>
           </div>
         </motion.div>
 
         {/* ── ACTUALIZACIONES EN LA BASE DE DATOS ── */}
         <motion.div variants={fadeUp}>
           <div className="glass rounded-3xl overflow-hidden">
-            <div className="flex items-center justify-between px-5 py-4 border-b border-white/40">
+            <div onClick={() => toggleBlock("updates")} data-testid="db-block-toggle-updates"
+              className="flex items-center justify-between px-5 py-4 border-b border-white/40 cursor-pointer select-none">
               <div className="flex items-center gap-3">
                 <div className="w-9 h-9 rounded-xl bg-violet-100 flex items-center justify-center">
                   <Package size={16} className="text-violet-600" />
@@ -1124,11 +1167,13 @@ export default function DatabasePage() {
               </div>
               <div className="flex items-center gap-2">
                 <span className="text-[10px] font-black px-2.5 py-1 rounded-full bg-violet-100 text-violet-700">{dbUpdates.length} versiones</span>
-                <button onClick={loadDbUpdates} className="w-8 h-8 rounded-xl hover:bg-white/60 flex items-center justify-center text-slate-400 hover:text-slate-700 transition-all">
+                <button onClick={(e) => { e.stopPropagation(); loadDbUpdates(); }} className="w-8 h-8 rounded-xl hover:bg-white/60 flex items-center justify-center text-slate-400 hover:text-slate-700 transition-all">
                   <RefreshCw size={13} className={updatesLoading ? "animate-spin" : ""} />
                 </button>
+                <BlockChevron open={openBlocks.updates} />
               </div>
             </div>
+            <CollapseBody open={openBlocks.updates}>
             <div className="p-5">
               {updatesLoading ? (
                 <div className="space-y-2">{[...Array(2)].map((_,i) => <div key={i} className="h-12 glass rounded-2xl animate-pulse"/>)}</div>
@@ -1174,13 +1219,15 @@ export default function DatabasePage() {
                 </div>
               )}
             </div>
+            </CollapseBody>
           </div>
         </motion.div>
 
         {/* ── OPCIONES DE BASE DE DATOS ── */}
         <motion.div variants={fadeUp}>
           <div className="glass rounded-3xl overflow-hidden">
-            <div className="flex items-center gap-3 px-5 py-4 border-b border-white/40">
+            <div onClick={() => toggleBlock("options")} data-testid="db-block-toggle-options"
+              className="flex items-center gap-3 px-5 py-4 border-b border-white/40 cursor-pointer select-none">
               <div className="w-9 h-9 rounded-xl bg-slate-100 flex items-center justify-center">
                 <ToggleRight size={16} className="text-slate-600" />
               </div>
@@ -1188,7 +1235,9 @@ export default function DatabasePage() {
                 <p className="text-sm font-black text-slate-900" style={{ fontFamily: "Cabinet Grotesk, sans-serif" }}>Opciones de base de datos</p>
                 <p className="text-[11px] text-slate-400">Activa o desactiva funciones de la base de datos</p>
               </div>
+              <span className="ml-auto"><BlockChevron open={openBlocks.options} /></span>
             </div>
+            <CollapseBody open={openBlocks.options}>
             <div className="p-5 space-y-1">
               {[
                 { key: "autoTest",     icon: Wifi,          label: "Probar conexión antes de conectar",      sub: "Verifica que el servidor esté disponible antes de cambiar" },
@@ -1214,13 +1263,15 @@ export default function DatabasePage() {
                 </div>
               ))}
             </div>
+            </CollapseBody>
           </div>
         </motion.div>
 
         {/* ── ZONA DE PELIGRO ── */}
         <motion.div variants={fadeUp}>
           <div className="rounded-3xl border-2 border-dashed border-red-200/80 bg-red-50/20 overflow-hidden">
-            <div className="flex items-center gap-3 px-5 py-4 border-b border-red-100/60">
+            <div onClick={() => toggleBlock("danger")} data-testid="db-block-toggle-danger"
+              className="flex items-center gap-3 px-5 py-4 border-b border-red-100/60 cursor-pointer select-none">
               <div className="w-9 h-9 rounded-xl bg-red-100 flex items-center justify-center">
                 <AlertCircle size={16} className="text-red-500" />
               </div>
@@ -1228,7 +1279,9 @@ export default function DatabasePage() {
                 <p className="text-sm font-black text-red-700" style={{ fontFamily: "Cabinet Grotesk, sans-serif" }}>Zona de peligro</p>
                 <p className="text-[11px] text-red-400">Acciones irreversibles — se crea respaldo automático primero</p>
               </div>
+              <span className="ml-auto"><BlockChevron open={openBlocks.danger} danger /></span>
             </div>
+            <CollapseBody open={openBlocks.danger}>
             <div className="p-5">
               {!showClear ? (
                 <motion.button whileHover={{ scale: 1.01 }} whileTap={{ scale: 0.98 }}
@@ -1261,6 +1314,7 @@ export default function DatabasePage() {
                 </motion.div>
               )}
             </div>
+            </CollapseBody>
           </div>
         </motion.div>
 
