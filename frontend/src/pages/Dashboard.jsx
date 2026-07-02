@@ -331,7 +331,7 @@ export default function Dashboard() {
                       {firstPartner.payment > 0 && <span className={`text-sm font-black ${isPaid ? "text-emerald-600" : "text-amber-600"}`}>{formatCurrency(firstPartner.payment)}</span>}
                       <span className={`text-xs font-black px-2.5 py-1 rounded-full ${isPaid ? "bg-emerald-100 text-emerald-700" : "bg-amber-100 text-amber-700"}`}>{isPaid ? "Pagado" : "Pendiente"}</span>
                       {partners.length > 1 && partners.slice(1).map((p2,pi) => (
-                        <span key={pi} className="text-xs text-slate-500 font-semibold">{p2.socio.name}</span>
+                        <span key={p2.socio?.id || p2.socio?.name || pi} className="text-xs text-slate-500 font-semibold">{p2.socio.name}</span>
                       ))}
                     </div>
                   ) : (

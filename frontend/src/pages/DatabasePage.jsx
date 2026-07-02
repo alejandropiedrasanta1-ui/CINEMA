@@ -147,7 +147,9 @@ export default function DatabasePage() {
       const res = await fetch(`${BASE}/api/data/cleanup?action=preview&months_old=6`, { method: "POST" });
       const data = await res.json();
       if (data.ok) setCleanupPreview(data);
-    } catch {}
+    } catch (err) {
+      console.error("[loadCleanupPreview]", err);
+    }
   };
 
   const loadDbStats = () => {
@@ -803,7 +805,7 @@ export default function DatabasePage() {
                         violet: "bg-violet-50 border-violet-200/60 text-violet-700",
                       };
                       return (
-                        <div key={i} className={`flex items-center gap-3 rounded-2xl px-4 py-3 border ${colors[p.color] || colors.indigo}`}>
+                        <div key={p.url || p.name || i} className={`flex items-center gap-3 rounded-2xl px-4 py-3 border ${colors[p.color] || colors.indigo}`}>
                           <Database size={13} className="shrink-0" />
                           <div className="flex-1 min-w-0">
                             <p className="text-xs font-black truncate">{p.name}</p>

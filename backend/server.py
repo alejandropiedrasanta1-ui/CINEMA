@@ -2196,7 +2196,7 @@ async def _run_frontend_build():
             stdout=asyncio.subprocess.PIPE,
             stderr=asyncio.subprocess.PIPE,
             env={
-                **dict(__import__("os").environ),
+                **os.environ,
                 "CI": "false",
                 "GENERATE_SOURCEMAP": "false",
                 "REACT_APP_BACKEND_URL": "http://localhost:8001",
